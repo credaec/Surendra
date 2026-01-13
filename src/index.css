@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Mode Colors (Matching original hex values) */
+    --background: 255 255 255;
+    /* #ffffff */
+    --foreground: 15 23 42;
+    /* #0f172a */
+    --surface: 248 250 252;
+    /* #f8fafc */
+    --border: 226 232 240;
+    /* #e2e8f0 */
+
+    --primary: 15 23 42;
+    /* #0f172a */
+    --primary-foreground: 248 250 252;
+    /* #f8fafc */
+
+    --secondary: 241 245 249;
+    /* #f1f5f9 */
+    --secondary-foreground: 15 23 42;
+    /* #0f172a */
+
+    --muted: 100 116 139;
+    /* #64748b */
+    --muted-foreground: 248 250 252;
+    /* #f8fafc */
+
+    --accent: 59 130 246;
+    /* #3b82f6 */
+    --accent-foreground: 255 255 255;
+    /* #ffffff */
+
+    --destructive: 239 68 68;
+    /* #ef4444 */
+    --destructive-foreground: 255 255 255;
+    /* #ffffff */
+  }
+
+  .dark {
+    /* Dark Mode Colors */
+    --background: 15 23 42;
+    /* Slate 900 */
+    --foreground: 248 250 252;
+    /* Slate 50 */
+    --surface: 30 41 59;
+    /* Slate 800 */
+    --border: 51 65 85;
+    /* Slate 700 */
+
+    --primary: 248 250 252;
+    /* Slate 50 */
+    --primary-foreground: 15 23 42;
+    /* Slate 900 */
+
+    --secondary: 30 41 59;
+    /* Slate 800 */
+    --secondary-foreground: 248 250 252;
+    /* Slate 50 */
+
+    --muted: 148 163 184;
+    /* Slate 400 */
+    --muted-foreground: 15 23 42;
+
+    --accent: 59 130 246;
+    /* Blue 500 */
+    --accent-foreground: 255 255 255;
+
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+}
+
+/* Custom Scrollbar for Webkit */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-slate-700 hover:bg-slate-600;
+}
