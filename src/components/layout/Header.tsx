@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Bell, Search, ChevronDown, Check, Info, LogOut, Settings } from 'lucide-react';
+import { Bell, ChevronDown, Info, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import { useLanguage } from '../../context/LanguageContext';
+import GlobalSearch from './GlobalSearch';
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
@@ -12,7 +13,7 @@ const Header: React.FC = () => {
 
     // Notifications State
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications, setNotifications] = useState([
+    const [notifications] = useState([
         { id: 1, title: 'Project Update', message: 'BCS Skylights deadline extended to March 1st.', time: '2 hours ago', unread: true },
         { id: 2, title: 'Admin Notice', message: 'Please update your proof documents for last week.', time: '5 hours ago', unread: true },
         { id: 3, title: 'System', message: 'Timesheet for Jan 6-12 has been approved.', time: '1 day ago', unread: false },
@@ -47,18 +48,7 @@ const Header: React.FC = () => {
         <>
             <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-50 sticky-header-shadow">
                 {/* Search Bar */}
-                <div className="flex items-center w-96">
-                    <div className="relative w-full">
-                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400" />
-                        </span>
-                        <input
-                            type="text"
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out"
-                            placeholder={t('Search projects, employees...', 'Search projects, employees...')}
-                        />
-                    </div>
-                </div>
+                <GlobalSearch />
 
                 {/* Right Side Actions */}
                 <div className="flex items-center space-x-4">

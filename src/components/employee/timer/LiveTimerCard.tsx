@@ -1,10 +1,10 @@
 import React from 'react';
-import { Play, Pause, Square, RotateCcw } from 'lucide-react';
+import { Play, Pause, Square } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import TimeEntryDetail from '../dashboard/RecentEntries'; // Or import types properly
 
 interface LiveTimerCardProps {
     isRunning: boolean;
+    isPaused?: boolean;
     elapsedSeconds: number;
     project?: string;
     task?: string;
@@ -16,6 +16,7 @@ interface LiveTimerCardProps {
 
 const LiveTimerCard: React.FC<LiveTimerCardProps> = ({
     isRunning,
+    isPaused,
     elapsedSeconds,
     project,
     task,
@@ -41,12 +42,12 @@ const LiveTimerCard: React.FC<LiveTimerCardProps> = ({
                     "mb-6 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center border",
                     isRunning
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100 animate-pulse"
-                        : elapsedSeconds > 0
+                        : isPaused
                             ? "bg-amber-50 text-amber-600 border-amber-100"
                             : "bg-slate-100 text-slate-500 border-slate-200"
                 )}>
-                    <div className={cn("h-2 w-2 rounded-full mr-2", isRunning ? "bg-emerald-500" : elapsedSeconds > 0 ? "bg-amber-500" : "bg-slate-400")} />
-                    {isRunning ? "Running" : elapsedSeconds > 0 ? "Paused" : "Not Started"}
+                    <div className={cn("h-2 w-2 rounded-full mr-2", isRunning ? "bg-emerald-500" : isPaused ? "bg-amber-500" : "bg-slate-400")} />
+                    {isRunning ? "Running" : isPaused ? "Paused" : "Not Started"}
                 </div>
 
                 {/* Timer Display */}

@@ -4,23 +4,13 @@ import {
     PieChart, Pie, Cell, Legend
 } from 'recharts';
 
-const ReportsCharts: React.FC = () => {
+interface ReportsChartsProps {
+    trendData: { name: string; hours: number }[];
+    pieData: { name: string; value: number; color: string }[];
+}
+
+const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData }) => {
     const [trendView, setTrendView] = useState<'day' | 'week'>('day');
-
-    const trendData = [
-        { name: 'Mon', hours: 8.5 },
-        { name: 'Tue', hours: 7.2 },
-        { name: 'Wed', hours: 9.0 },
-        { name: 'Thu', hours: 6.5 },
-        { name: 'Fri', hours: 7.8 },
-        { name: 'Sat', hours: 0 },
-        { name: 'Sun', hours: 0 },
-    ];
-
-    const pieData = [
-        { name: 'Billable', value: 38, color: '#10b981' }, // emerald-500
-        { name: 'Non-Billable', value: 12, color: '#94a3b8' }, // slate-400
-    ];
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { UploadCloud, FileText, X } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+
 
 interface ProofUploadCardProps {
     isRequired: boolean;

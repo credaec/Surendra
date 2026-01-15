@@ -12,27 +12,25 @@ import {
     Receipt,
     Settings,
     DollarSign,
-    CalendarDays,
-    ShieldAlert,
-    LogOut
+    Calendar
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import RoleSwitcher from './RoleSwitcher';
 
 const Sidebar: React.FC = () => {
     const navItems = [
-        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { name: 'Time Tracker', path: '/live-tracking', icon: Clock },
-        { name: 'Projects', path: '/projects', icon: Briefcase },
-        { name: 'Tasks / Categories', path: '/tasks', icon: CheckSquare },
-        { name: 'Clients', path: '/clients', icon: Users },
-        { name: 'Team / Employees', path: '/team', icon: UserCheck },
-        { name: 'Approvals', path: '/approvals', icon: FileCheck },
-        { name: 'Reports', path: '/reports', icon: BarChart3 },
-        { name: 'Invoices / Billing', path: '/invoices', icon: Receipt },
-        { name: 'Payroll / Costing', path: '/payroll', icon: DollarSign },
-        { name: 'Leaves / Holidays', path: '/leaves', icon: CalendarDays },
-        { name: 'Settings', path: '/settings', icon: Settings },
-        { name: 'Audit Logs', path: '/audit-logs', icon: ShieldAlert },
+        { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+        { name: 'Time Tracker', path: '/admin/timesheets', icon: Clock },
+        { name: 'Projects', path: '/admin/projects', icon: Briefcase },
+        { name: 'Tasks / Categories', path: '/admin/tasks', icon: CheckSquare },
+        { name: 'Clients', path: '/admin/clients', icon: Users },
+        { name: 'Team / Employees', path: '/admin/team', icon: UserCheck },
+        { name: 'Approvals', path: '/admin/approvals', icon: FileCheck },
+        { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
+        { name: 'Invoices / Billing', path: '/admin/billing/invoices', icon: Receipt },
+        { name: 'Payroll / Costing', path: '/admin/payroll', icon: DollarSign },
+        { name: 'Team Availability', path: '/admin/availability', icon: Calendar },
+        { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];
 
     return (
@@ -61,15 +59,9 @@ const Sidebar: React.FC = () => {
                 ))}
             </nav>
 
-            <div className="p-4 border-t border-slate-800 bg-slate-950">
-                <button
-                    onClick={() => window.location.href = '/login'}
-                    className="flex items-center w-full px-3 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors"
-                >
-                    <LogOut className="h-5 w-5 mr-3" />
-                    Sign Out
-                </button>
-            </div>
+
+
+            <RoleSwitcher currentMode="ADMIN" />
         </aside>
     );
 };

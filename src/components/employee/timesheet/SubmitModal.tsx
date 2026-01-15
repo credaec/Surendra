@@ -6,9 +6,11 @@ interface SubmitModalProps {
     onClose: () => void;
     onConfirm: () => void;
     validationErrors: string[];
+    weekRange?: string;
+    totalHours?: number;
 }
 
-const SubmitModal: React.FC<SubmitModalProps> = ({ isOpen, onClose, onConfirm, validationErrors }) => {
+const SubmitModal: React.FC<SubmitModalProps> = ({ isOpen, onClose, onConfirm, validationErrors, weekRange, totalHours }) => {
     if (!isOpen) return null;
 
     const hasErrors = validationErrors.length > 0;
@@ -33,6 +35,12 @@ const SubmitModal: React.FC<SubmitModalProps> = ({ isOpen, onClose, onConfirm, v
                         <h3 className="text-lg font-bold text-slate-900">
                             {hasErrors ? 'Submission Blocked' : 'Submit Timesheet?'}
                         </h3>
+                        {!hasErrors && weekRange && (
+                            <div className="mt-1 text-sm text-slate-600">
+                                <span className="font-semibold">{weekRange}</span>
+                                {totalHours !== undefined && <span> • {totalHours} Hours</span>}
+                            </div>
+                        )}
 
                         {hasErrors ? (
                             <div className="mt-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">

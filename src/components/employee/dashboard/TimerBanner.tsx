@@ -1,6 +1,5 @@
 import React from 'react';
-import { Pause, Square, Clock, FileText } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { Pause, Square, FileText } from 'lucide-react';
 
 // Mock active timer data (would come from context/store)
 interface TimerBannerProps {
@@ -14,12 +13,38 @@ interface TimerBannerProps {
 
 const TimerBanner: React.FC<TimerBannerProps> = ({
     isActive,
-    startTime = "01:25:40",
-    project = "Skyline Tower Design",
-    task = "Engineering Design",
+    startTime, // Expecting ISO string or similar real start time
+    project = "Unknown Project",
+    task = "Unknown Task",
     onPause,
     onStop
 }) => {
+    const [elapsed, setElapsed] = React.useState(0);
+
+    React.useEffect(() => {
+        if (!isActive || !startTime) return;
+
+        // Calculate initial elapsed
+        const start = new Date(startTime).getTime();
+        const now = Date.now();
+        setElapsed(Math.floor((now - start) / 1000));
+
+        const interval = setInterval(() => {
+            const currentNow = Date.now();
+            setElapsed(Math.floor((currentNow - start) / 1000));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [isActive, startTime]);
+
+    // Format
+    const formatTime = (totalSeconds: number) => {
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
     if (!isActive) return null;
 
     return (
@@ -30,7 +55,7 @@ const TimerBanner: React.FC<TimerBannerProps> = ({
                 <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-2">
                         <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-xl font-mono font-bold text-white tracking-wider">{startTime}</span>
+                        <span className="text-xl font-mono font-bold text-white tracking-wider">{formatTime(elapsed)}</span>
                     </div>
 
                     <div className="h-5 w-px bg-white/20" />
@@ -61,7 +86,6 @@ const TimerBanner: React.FC<TimerBannerProps> = ({
                         <Square className="h-3 w-3 mr-1.5 fill-current" /> Stop
                     </button>
                 </div>
-
             </div>
         </div>
     );

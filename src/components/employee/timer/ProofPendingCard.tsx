@@ -1,7 +1,13 @@
 import React from 'react';
 import { AlertCircle, ArrowRight } from 'lucide-react';
 
-const ProofPendingCard: React.FC = () => {
+interface ProofPendingCardProps {
+    count: number;
+}
+
+const ProofPendingCard: React.FC<ProofPendingCardProps> = ({ count }) => {
+    if (count === 0) return null;
+
     return (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
             <div className="flex items-start space-x-3">
@@ -9,7 +15,7 @@ const ProofPendingCard: React.FC = () => {
                 <div className="flex-1">
                     <h3 className="text-sm font-semibold text-amber-900">Missing Proof</h3>
                     <p className="text-xs text-amber-700 mt-1">
-                        You have 2 time entries from yesterday that require proof documents.
+                        You have {count} time entries that require proof documents.
                     </p>
                     <button className="mt-2 text-xs font-medium text-amber-800 hover:text-amber-900 flex items-center">
                         Upload Now <ArrowRight className="h-3 w-3 ml-1" />

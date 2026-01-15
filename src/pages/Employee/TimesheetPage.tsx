@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import AddEntryModal from '../../components/employee/timesheet/AddEntryModal';
 import TimesheetHeader from '../../components/employee/timesheet/TimesheetHeader';
 import StatusBanner from '../../components/employee/timesheet/StatusBanner';
 import type { TimesheetStatus } from '../../components/employee/timesheet/StatusBanner';
@@ -8,41 +9,91 @@ import DailyEntriesTable from '../../components/employee/timesheet/DailyEntriesT
 import type { TimeEntryRow } from '../../components/employee/timesheet/DailyEntriesTable';
 import { WeeklySummaryCard, ProofPendingTimesheetCard, ValidationChecklist } from '../../components/employee/timesheet/TimesheetSidebar';
 import SubmitModal from '../../components/employee/timesheet/SubmitModal';
+import { useAuth } from '../../context/AuthContext';
+import { mockBackend } from '../../services/mockBackend';
+import { useLocation } from 'react-router-dom';
+import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 
 const TimesheetPage: React.FC = () => {
-    // 1. Data State (Mock)
+    const { user } = useAuth();
+
+    // 1. Data State
     const [status, setStatus] = useState<TimesheetStatus>('DRAFT');
-    const [selectedDate, setSelectedDate] = useState('2026-01-14');
-    const [dateRange, setDateRange] = useState('Jan 13 – Jan 19');
+    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+    const [isAddEntryModalOpen, setIsAddEntryModalOpen] = useState(false);
+    const [entries, setEntries] = useState<any[]>([]);
 
-    // Mock Weekly Data
-    const weekStats: DayStats[] = [
-        { date: '2026-01-13', dayName: 'Mon', totalHours: 8.5, billableHours: 8.5, nonBillableHours: 0 },
-        { date: '2026-01-14', dayName: 'Tue', totalHours: 7.5, billableHours: 6.5, nonBillableHours: 1, isToday: true },
-        { date: '2026-01-15', dayName: 'Wed', totalHours: 4.0, billableHours: 4.0, nonBillableHours: 0 },
-        { date: '2026-01-16', dayName: 'Thu', totalHours: 0, billableHours: 0, nonBillableHours: 0 },
-        { date: '2026-01-17', dayName: 'Fri', totalHours: 0, billableHours: 0, nonBillableHours: 0 },
-        { date: '2026-01-18', dayName: 'Sat', totalHours: 0, billableHours: 0, nonBillableHours: 0 },
-        { date: '2026-01-19', dayName: 'Sun', totalHours: 0, billableHours: 0, nonBillableHours: 0 },
-    ];
+    const location = useLocation();
 
-    // Mock Entries Data (filtered by selected day in a real app)
-    const mockEntries: TimeEntryRow[] = [
-        { id: '1', startTime: '09:00 AM', endTime: '01:00 PM', duration: '4h 00m', project: 'BCS Skylights', category: 'Engineering', isBillable: true, hasProof: true, status: 'DRAFT' },
-        { id: '2', startTime: '02:00 PM', endTime: '04:30 PM', duration: '2h 30m', project: 'Dr. Wade Residence', category: 'Drafting', notes: 'Revisions for living room', isBillable: true, hasProof: false, status: 'DRAFT' },
-        { id: '3', startTime: '04:30 PM', endTime: '05:30 PM', duration: '1h 00m', project: 'Internal', category: 'Meeting', isBillable: false, hasProof: false, status: 'DRAFT' },
-    ];
+    // 2. Load User Data
+    useEffect(() => {
+        if (user) {
+            const userEntries = mockBackend.getEntries(user.id);
+            setEntries(userEntries);
+        }
+    }, [user]);
 
-    // 2. Logic
+    // Handle incoming navigation state for "Manual Entry"
+    useEffect(() => {
+        if (location.state && (location.state as any).openAddEntry) {
+            // Check if we have an AddEntryModal, if not, just log or show alert for now
+            // Ideally toggle a state: setIsAddEntryModalOpen(true);
+            console.log("Auto-opening Add Entry Modal");
+            // setIsAddEntryModalOpen(true); // TODO: Implement AddEntryModal
+        }
+    }, [location]);
+
+    // 3. Calculate Week Stats
+    const weekStart = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 }); // Monday start
+    const weekStats: DayStats[] = useMemo(() => {
+        return Array.from({ length: 7 }).map((_, i) => {
+            const date = addDays(weekStart, i);
+            const dateStr = format(date, 'yyyy-MM-dd');
+
+            // Filter entries for this day
+            const dayEntries = entries.filter(e => e.date === dateStr);
+
+            const totalHours = dayEntries.reduce((sum, e) => sum + e.durationMinutes / 60, 0);
+            const billableHours = dayEntries.filter(e => e.isBillable).reduce((sum, e) => sum + e.durationMinutes / 60, 0);
+
+            return {
+                date: dateStr,
+                dayName: format(date, 'EEE'),
+                totalHours,
+                billableHours,
+                nonBillableHours: totalHours - billableHours,
+                isToday: isSameDay(date, new Date())
+            };
+        });
+    }, [entries, selectedDate]); // Re-calc when entries or selected week changes
+
+    // 4. Get Current Day Entries for Table
+    const currentDayEntries: TimeEntryRow[] = useMemo(() => {
+        const dayEntries = entries.filter(e => e.date === selectedDate);
+        return dayEntries.map(e => ({
+            id: e.id,
+            startTime: '09:00 AM', // Mock start/end for now if not tracked
+            endTime: '05:00 PM',
+            duration: `${Math.floor(e.durationMinutes / 60)}h ${e.durationMinutes % 60}m`,
+            project: mockBackend.getProjectById(e.projectId)?.name || 'Unknown Project',
+            category: e.categoryId,
+            notes: e.description,
+            isBillable: e.isBillable,
+            hasProof: e.proofUrl ? true : false,
+            status: e.status
+        }));
+    }, [entries, selectedDate]);
+
+    // 5. Logic
     const isLocked = status === 'SUBMITTED' || status === 'APPROVED' || status === 'LOCKED';
 
-    // Validation Simulation
     const getValidationErrors = () => {
-        // Needs proper logic checking all entries
-        // For demo, we check if specific mock entry is missing proof
-        const missingProof = mockEntries.find(e => e.project === 'Dr. Wade Residence' && !e.hasProof);
-        return missingProof ? [`Proof required for entry on ${selectedDate} (Dr. Wade Residence)`] : [];
+        // Simple validation: check if any billable entry on selected day is missing proof
+        // Real app would check whole week
+        return currentDayEntries
+            .filter(e => e.isBillable && !e.hasProof)
+            .map(e => `Proof required for ${e.project}`);
     };
 
     const handleSubmit = () => {
@@ -52,119 +103,158 @@ const TimesheetPage: React.FC = () => {
     const confirmSubmit = () => {
         setStatus('SUBMITTED');
         setIsSubmitModalOpen(false);
+        // Here we would call mockBackend.submitTimesheet(weekId)
+    };
+
+    const handlePrevWeek = () => {
+        setSelectedDate(prev => format(addDays(parseISO(prev), -7), 'yyyy-MM-dd'));
+    };
+
+    const handleNextWeek = () => {
+        setSelectedDate(prev => format(addDays(parseISO(prev), 7), 'yyyy-MM-dd'));
+    };
+
+    const handleAddEntry = () => {
+        setIsAddEntryModalOpen(true);
+    };
+
+    const refreshData = () => {
+        if (user) {
+            const userEntries = mockBackend.getEntries(user.id);
+            setEntries(userEntries);
+        }
     };
 
     // Safe date formatting
     const currentDayStat = weekStats.find(d => d.date === selectedDate);
-    const dayName = currentDayStat?.dayName || 'Day';
-    const dayNumber = selectedDate ? selectedDate.split('-')[2] : '??';
-    const dateDisplay = `${dayName}, Jan ${dayNumber}`;
+    const dayName = currentDayStat?.dayName || format(parseISO(selectedDate), 'EEE');
+    const dayNumber = selectedDate.split('-')[2];
 
-    console.log('TimesheetPage Rendered', { status, selectedDate });
-
-    // Error Boundary Class (Inline for debugging)
-    class ErrorBoundary extends React.Component<{ name: string, children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
-        constructor(props: any) {
-            super(props);
-            this.state = { hasError: false, error: null };
-        }
-        static getDerivedStateFromError(error: Error) {
-            return { hasError: true, error };
-        }
-        componentDidCatch(error: Error, errorInfo: any) {
-            console.error(`Error in ${this.props.name}:`, error, errorInfo);
-        }
-        render() {
-            if (this.state.hasError) {
-                return (
-                    <div className="p-4 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                        <strong>Error in {this.props.name}:</strong>
-                        <pre className="mt-2 text-xs overflow-auto">{this.state.error?.message}</pre>
-                    </div>
-                );
-            }
-            return this.props.children;
-        }
-    }
+    const weekRangeLabel = `${format(weekStart, 'MMM d')} – ${format(addDays(weekStart, 6), 'MMM d, yyyy')}`;
 
     return (
-        <div className="max-w-[1600px] mx-auto pb-12">
+        <div className="max-w-7xl mx-auto p-8 animate-in fade-in duration-500 pb-24">
+            <TimesheetHeader
+                weekRange={weekRangeLabel}
+                canSubmit={status === 'DRAFT' && weekStats.reduce((acc, curr) => acc + curr.totalHours, 0) > 0}
+                onSubmit={handleSubmit}
+                onAddEntry={handleAddEntry}
+                onPrevWeek={handlePrevWeek}
+                onNextWeek={handleNextWeek}
+            />
 
-            <ErrorBoundary name="Header">
-                <TimesheetHeader
-                    dateRange={dateRange}
-                    canSubmit={status === 'DRAFT'}
-                    onSubmit={handleSubmit}
-                    onAddEntry={() => alert("Add Entry Drawer")}
-                    onPrevWeek={() => {
-                        setDateRange('Jan 06 – Jan 12');
-                        setSelectedDate('2026-01-07');
-                    }}
-                    onNextWeek={() => {
-                        setDateRange('Jan 20 – Jan 26');
-                        setSelectedDate('2026-01-21');
-                    }}
-                />
-            </ErrorBoundary>
+            {/* Status Banner */}
+            <StatusBanner status={status} rejectionReason={undefined} />
 
-            <ErrorBoundary name="StatusBanner">
-                <StatusBanner status={status} rejectionReason="Missing proof for Monday logs" />
-            </ErrorBoundary>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                {/* Left: Main Grid & Table (3 cols) */}
+                <div className="xl:col-span-3 space-y-6">
+                    {/* Weekly Calendar Grid */}
+                    <WeeklyGrid
+                        days={weekStats}
+                        selectedDate={selectedDate}
+                        onSelectDate={setSelectedDate}
+                    />
 
-                {/* Left Column (Main Work Area) - 8 Cols */}
-                <div className="xl:col-span-8">
-                    <ErrorBoundary name="WeeklyGrid">
-                        <WeeklyGrid
-                            days={weekStats}
-                            selectedDate={selectedDate}
-                            onSelectDate={setSelectedDate}
-                        />
-                    </ErrorBoundary>
+                    {/* Daily Entries */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[400px]">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <div>
+                                <h3 className="font-semibold text-slate-900 flex items-center">
+                                    <span className="text-2xl mr-2 font-bold text-blue-600">{dayNumber}</span>
+                                    <span>{dayName}</span>
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    {currentDayEntries.length} entries • {currentDayStat?.totalHours.toFixed(1)}h total
+                                </p>
+                            </div>
 
-                    <ErrorBoundary name="DailyEntriesTable">
-                        <DailyEntriesTable
-                            dateDisplay={dateDisplay}
-                            totalHours={currentDayStat?.totalHours || 0}
-                            entries={selectedDate === '2026-01-14' ? mockEntries : []}
-                            isLocked={isLocked}
-                            onEdit={(id) => console.log('Edit', id)}
-                            onDelete={(id) => console.log('Delete', id)}
-                            onView={(id) => console.log('View', id)}
-                            onAdd={() => console.log('Add')}
-                        />
-                    </ErrorBoundary>
+                            {!isLocked && (
+                                <button
+                                    onClick={handleAddEntry}
+                                    className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                                >
+                                    + Add Entry
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="p-0">
+                            {currentDayEntries.length > 0 ? (
+                                <DailyEntriesTable
+                                    entries={currentDayEntries as any} // Cast to satisfy mismatched interface if any, ideally fix interface
+                                    isLocked={isLocked}
+                                    dateDisplay={new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                    totalHours={entries.filter(e => e.date === selectedDate).reduce((acc, curr) => acc + curr.durationMinutes / 60, 0)}
+                                    // Todo: Implement these handlers
+                                    onEdit={(id) => console.log('Edit', id)}
+                                    onDelete={(id) => {
+                                        mockBackend.deleteEntry(id);
+                                        refreshData();
+                                    }}
+                                    onView={(id) => console.log('View', id)}
+                                    onAdd={handleAddEntry}
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                                    <p>No entries for {selectedDate}</p>
+                                    {!isLocked && <p className="text-sm mt-2">Click "+ Add Entry" to log time.</p>}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Right Column (Controls) - 4 Cols */}
-                <div className="xl:col-span-4 space-y-6">
-                    <ErrorBoundary name="WeeklySummaryCard">
-                        <WeeklySummaryCard />
-                    </ErrorBoundary>
+                {/* Right: Sidebar Widgets (1 col) */}
+                <div className="space-y-6">
+                    <WeeklySummaryCard
+                        totalHours={weekStats.reduce((acc, curr) => acc + curr.totalHours, 0)}
+                        billableHours={weekStats.reduce((acc, curr) => acc + curr.billableHours, 0)}
+                        expectedHours={40} // Mock expected
+                    />
 
-                    {status === 'DRAFT' && (
-                        <ErrorBoundary name="ProofPendingTimesheetCard">
-                            <ProofPendingTimesheetCard />
-                        </ErrorBoundary>
+                    <ValidationChecklist
+                        errors={getValidationErrors()}
+                        warnings={[]}
+                    />
+
+                    <ProofPendingTimesheetCard
+                        missingCount={currentDayEntries.filter(e => e.isBillable && !e.hasProof).length}
+                    />
+
+                    {!isLocked && (
+                        <div className="pt-4">
+                            <button
+                                onClick={handleSubmit}
+                                className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center justify-center group"
+                            >
+                                <span>Submit Timesheet</span>
+                                <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+                            </button>
+                            <p className="text-center text-xs text-slate-400 mt-3">
+                                By submitting, you certify that these hours are accurate.
+                            </p>
+                        </div>
                     )}
-
-                    <ErrorBoundary name="ValidationChecklist">
-                        <ValidationChecklist />
-                    </ErrorBoundary>
                 </div>
-
             </div>
 
-            <ErrorBoundary name="SubmitModal">
-                <SubmitModal
-                    isOpen={isSubmitModalOpen}
-                    onClose={() => setIsSubmitModalOpen(false)}
-                    onConfirm={confirmSubmit}
-                    validationErrors={getValidationErrors()}
-                />
-            </ErrorBoundary>
+            <SubmitModal
+                isOpen={isSubmitModalOpen}
+                onClose={() => setIsSubmitModalOpen(false)}
+                onConfirm={confirmSubmit}
+                weekRange={weekRangeLabel}
+                totalHours={weekStats.reduce((acc, curr) => acc + curr.totalHours, 0)}
+                validationErrors={getValidationErrors()}
+            />
 
+            <AddEntryModal
+                isOpen={isAddEntryModalOpen}
+                onClose={() => setIsAddEntryModalOpen(false)}
+                onSave={refreshData}
+                selectedDate={selectedDate}
+            />
         </div>
     );
 };

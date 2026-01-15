@@ -22,7 +22,7 @@ const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [msLoading, setMsLoading] = useState(false);
+    // const [msLoading, setMsLoading] = useState(false);
 
     // Determine redirect path
     useEffect(() => {
@@ -33,34 +33,32 @@ const LoginPage: React.FC = () => {
     }, [user, navigate]);
 
     // Auto-fill demo credentials based on role
+    // Auto-fill demo credentials based on role
     useEffect(() => {
         if (role === 'ADMIN') {
-            setEmail('admin@credence.com');
-            setPassword('admin123');
+            setEmail('dhiraj@credaec.in');
+            setPassword(''); // clear password or set default
         } else {
-            setEmail('employee@credence.com');
-            setPassword('emp123');
+            setEmail('naresh@credaec.in');
+            setPassword('');
         }
     }, [role]);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
+        try {
+            await login(email, role);
+            // Navigation handled by useEffect
+        } catch (error) {
+            alert('Login failed: Invalid credentials or role. Please check your email and role selection.');
             setLoading(false);
-            login(role, 'CREDENTIALS');
-        }, 800);
+        }
     };
 
     const handleMicrosoftLogin = () => {
-        setMsLoading(true);
-        setTimeout(() => {
-            setMsLoading(false);
-            // Assume MS Login is for Employees typically
-            login('EMPLOYEE', 'MICROSOFT');
-        }, 1500);
+        alert("Microsoft Logic not implemented yet. Please use Standard Login.");
     };
 
     return (
@@ -124,7 +122,7 @@ const LoginPage: React.FC = () => {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                                     placeholder="name@company.com"
                                 />
                             </div>
@@ -139,7 +137,7 @@ const LoginPage: React.FC = () => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -172,17 +170,17 @@ const LoginPage: React.FC = () => {
                     {/* Microsoft SSO Button */}
                     <button
                         onClick={handleMicrosoftLogin}
-                        disabled={msLoading}
+                        // disabled={msLoading}
                         className="w-full flex items-center justify-center px-4 py-2.5 border border-slate-200 rounded-lg shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                     >
-                        {msLoading ? (
+                        {/* {msLoading ? (
                             <span className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-slate-600"></span>
-                        ) : (
-                            <>
-                                <MicrosoftIcon />
-                                Sign in with Microsoft
-                            </>
-                        )}
+                        ) : ( */}
+                        <>
+                            <MicrosoftIcon />
+                            Sign in with Microsoft
+                        </>
+                        {/* )} */}
                     </button>
 
                     <div className="mt-8 pt-6 border-t border-slate-100 text-center">

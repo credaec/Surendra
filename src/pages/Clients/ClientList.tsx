@@ -1,17 +1,34 @@
 import React, { useState } from 'react';
 import { Plus, Search, Filter, MoreVertical, MapPin } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-// Mock Data
-const mockClients = [
-    { id: '1', name: 'Apex Constructors', company: 'Apex Constructors LLC', country: 'USA', currency: 'USD', projects: 4, hours: 1240, status: 'ACTIVE' },
-    { id: '2', name: 'Urban Developers', company: 'Urban Dev Group', country: 'USA', currency: 'USD', projects: 2, hours: 450, status: 'ACTIVE' },
-    { id: '3', name: 'Tech Corp', company: 'Tech Corp Int.', country: 'UK', currency: 'GBP', projects: 1, hours: 120, status: 'INACTIVE' },
-    { id: '4', name: 'Private Client', company: 'N/A', country: 'India', currency: 'INR', projects: 1, hours: 50, status: 'ACTIVE' },
-];
+import { useNavigate } from 'react-router-dom';
+import { mockBackend } from '../../services/mockBackend';
+import type { Client } from '../../types/schema';
 
 const ClientListPage: React.FC = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [clients, setClients] = useState<Client[]>(mockBackend.getClients());
+
+    // Basic Add Client (for now - could be a modal later)
+    const handleAddClient = () => {
+        const name = prompt("Enter Client Name:");
+        if (name) {
+            mockBackend.addClient({
+                name,
+                companyName: name,
+                status: 'ACTIVE',
+                currency: 'USD'
+            });
+            // Refresh list
+            setClients(mockBackend.getClients());
+        }
+    };
+
+    const filteredClients = clients.filter(c =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.companyName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -22,7 +39,10 @@ const ClientListPage: React.FC = () => {
                     <p className="text-slate-500 mt-1">Manage your client base and billing details.</p>
                 </div>
 
-                <button className="flex items-center px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm ring-offset-2 focus:ring-2 ring-blue-500">
+                <button
+                    onClick={handleAddClient}
+                    className="flex items-center px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm ring-offset-2 focus:ring-2 ring-blue-500"
+                >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Client
                 </button>
@@ -54,18 +74,17 @@ const ClientListPage: React.FC = () => {
                             <th className="px-6 py-4">Client Name</th>
                             <th className="px-6 py-4">Location</th>
                             <th className="px-6 py-4">Currency</th>
-                            <th className="px-6 py-4">Active Projects</th>
-                            <th className="px-6 py-4">Total Hours (Month)</th>
+                            <th className="px-6 py-4">Total Projects</th>
                             <th className="px-6 py-4">Status</th>
                             <th className="px-6 py-4"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {mockClients.map((client) => (
+                        {filteredClients.map((client) => (
                             <tr
                                 key={client.id}
                                 className="hover:bg-slate-50 transition-colors group cursor-pointer"
-                                onClick={() => window.location.href = `/clients/${client.id}`} // Simple nav for now, preferably use useNavigate
+                                onClick={() => navigate(`/admin/clients/${client.id}`)}
                             >
                                 <td className="px-6 py-4">
                                     <div className="flex items-center">
@@ -74,24 +93,21 @@ const ClientListPage: React.FC = () => {
                                         </div>
                                         <div>
                                             <div className="font-medium text-slate-900">{client.name}</div>
-                                            <div className="text-slate-500 text-xs">{client.company}</div>
+                                            <div className="text-slate-500 text-xs">{client.companyName}</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-slate-600">
                                     <div className="flex items-center">
                                         <MapPin className="h-3 w-3 mr-1 text-slate-400" />
-                                        {client.country}
+                                        USA
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-slate-600">
                                     <span className="font-mono bg-slate-100 px-2 py-1 rounded text-xs">{client.currency}</span>
                                 </td>
                                 <td className="px-6 py-4 text-slate-900 font-medium">
-                                    {client.projects} Projects
-                                </td>
-                                <td className="px-6 py-4 text-slate-600">
-                                    {client.hours}h
+                                    {client.totalProjects} Projects
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium",

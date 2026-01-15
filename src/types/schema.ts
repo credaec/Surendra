@@ -13,6 +13,7 @@ export interface User {
     status: UserStatus;
     avatarUrl?: string; // For UI
     department?: string;
+    designation?: string;
     joiningDate?: string;
     hourlyCostRate?: number; // Admin only, internal cost
 }
@@ -126,7 +127,7 @@ export interface Task {
     dueDate?: string;
 }
 
-export type TimeEntryStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED';
+export type TimeEntryStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED' | 'PAUSED';
 
 export interface TimeEntry {
     id: string;
@@ -156,4 +157,21 @@ export interface Timesheet {
     status: TimeEntryStatus;
     submittedAt?: string;
     approvedBy?: string;
+}
+
+export interface AvailabilityEvent {
+    id: string;
+    title: string;
+    type: 'HOLIDAY' | 'LEAVE' | 'busy' | 'available' | 'tentative';
+    subType?: 'NATIONAL' | 'COMPANY' | 'SICK' | 'CASUAL' | 'WFH' | 'OTHER';
+    startDate: string;
+    endDate: string;
+    start?: Date;
+    end?: Date;
+    isAllDay?: boolean;
+    resourceId?: string; // Employee ID if LEAVE
+    userId?: string; // Legacy/Optional
+    notes?: string;
+    createdBy?: string;
+    createdAt: string;
 }

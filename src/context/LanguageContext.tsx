@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 type Language = 'English (US)' | 'Spanish' | 'French' | 'German';
 
@@ -21,7 +21,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     // Mock Translation Function
-    const t = (key: string, defaultText: string) => {
+    const t = (_key: string, defaultText: string) => {
         if (language === 'English (US)') return defaultText;
 
         // Simple mock translations for demonstration

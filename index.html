@@ -1,13 +1,35 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>credence-time-tracker</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>credence-time-tracker</title>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      var div = document.createElement('div');
+      div.style.color = 'white';
+      div.style.backgroundColor = 'red';
+      div.style.padding = '20px';
+      div.style.fontSize = '20px';
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.width = '100%';
+      div.style.zIndex = '9999';
+      div.innerText = 'Global Error: ' + msg + '\nLocation: ' + url + ':' + lineNo + ':' + columnNo;
+      document.body.appendChild(div);
+      console.error('Global Error detected:', msg, error);
+      return false;
+    };
+  </script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

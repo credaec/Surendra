@@ -1,25 +1,33 @@
 import React from 'react';
 import { cn } from '../../../lib/utils';
-import { Image, DollarSign, Search, Eye } from 'lucide-react';
+import { DollarSign, Search, Eye } from 'lucide-react';
+
+import type { TimeEntry } from '../../../types/schema';
+
+interface ExtendedTimeEntry extends TimeEntry {
+    projectName: string;
+    taskCategory: string;
+    durationSeconds: number;
+}
 
 interface ReportsTableProps {
+    entries: ExtendedTimeEntry[];
     searchQuery: string;
     onSearchChange: (query: string) => void;
 }
 
-const ReportsTable: React.FC<ReportsTableProps> = ({ searchQuery, onSearchChange }) => {
-    // Mock Data for Table
-    const entries = [
-        { id: 1, date: 'Jan 14, 2026', project: 'BCS Skylights', category: 'Engineering', duration: '4h 30m', billable: true, proof: true, status: 'APPROVED' },
-        { id: 2, date: 'Jan 14, 2026', project: 'Dr. Wade Residence', category: 'Drafting', duration: '2h 15m', billable: true, proof: false, status: 'SUBMITTED' },
-        { id: 3, date: 'Jan 13, 2026', project: 'Internal', category: 'Meeting', duration: '1h 00m', billable: false, proof: false, status: 'APPROVED' },
-        { id: 4, date: 'Jan 12, 2026', project: 'City Mall', category: 'Site Visit', duration: '3h 45m', billable: true, proof: true, status: 'LOCKED' },
-    ];
-
+const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSearchChange }) => {
+    // Filter by search query (Project or Task Category)
     const filteredEntries = entries.filter(e =>
-        e.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.category.toLowerCase().includes(searchQuery.toLowerCase())
+        e.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.taskCategory.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const formatDuration = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return `${h}h ${m}m`;
+    };
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -57,40 +65,30 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ searchQuery, onSearchChange
                         {filteredEntries.map((entry) => (
                             <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
                                 <td className="px-6 py-4 font-medium text-slate-900">{entry.date}</td>
-                                <td className="px-6 py-4 text-slate-700">{entry.project}</td>
+                                <td className="px-6 py-4 text-slate-700">{entry.projectName}</td>
                                 <td className="px-6 py-4">
                                     <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-medium border border-slate-200">
-                                        {entry.category}
+                                        {entry.taskCategory}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right font-mono font-medium text-slate-900">
-                                    {entry.duration}
+                                    {formatDuration(entry.durationSeconds)}
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center justify-center space-x-2">
-                                        {entry.billable ? (
-                                            <div className="text-emerald-500" title="Billable">
-                                                <DollarSign className="h-4 w-4" />
-                                            </div>
-                                        ) : (
-                                            <div className="text-slate-300" title="Non-Billable">
-                                                <DollarSign className="h-4 w-4" />
-                                            </div>
-                                        )}
-                                        {entry.proof && (
-                                            <div className="text-purple-500" title="Proof Attached">
-                                                <Image className="h-4 w-4" />
-                                            </div>
-                                        )}
+                                        {/* TODO: Add billable flag to TimeEntry if needed, assuming all project work is billable for now or based on category */}
+                                        <div className="text-emerald-500" title="Billable">
+                                            <DollarSign className="h-4 w-4" />
+                                        </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     <span className={cn(
                                         "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border",
                                         entry.status === 'APPROVED' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                                            entry.status === 'LOCKED' ? "bg-slate-100 text-slate-600 border-slate-200" :
+                                            entry.status === 'REJECTED' ? "bg-red-50 text-red-700 border-red-100" :
                                                 entry.status === 'SUBMITTED' ? "bg-amber-50 text-amber-700 border-amber-100" :
-                                                    "bg-white text-slate-700 border-slate-200"
+                                                    "bg-blue-50 text-blue-700 border-blue-100" // Running
                                     )}>
                                         {entry.status}
                                     </span>

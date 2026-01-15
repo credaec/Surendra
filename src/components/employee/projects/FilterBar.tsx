@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, List as ListIcon, Filter } from 'lucide-react';
+import { LayoutGrid, List as ListIcon } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 export type ProjectStatusFilter = 'ACTIVE' | 'PLANNED' | 'ON_HOLD' | 'COMPLETED';

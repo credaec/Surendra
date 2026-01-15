@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { mockBackend } from '../services/mockBackend';
 
 export interface AuthUser {
     id: string;
@@ -7,11 +8,12 @@ export interface AuthUser {
     role: 'ADMIN' | 'EMPLOYEE';
     avatarInitials: string;
     designation?: string;
+    department?: string;
 }
 
 interface AuthContextType {
     user: AuthUser | null;
-    login: (role: 'ADMIN' | 'EMPLOYEE', method?: 'CREDENTIALS' | 'MICROSOFT') => void;
+    login: (email: string, role: 'ADMIN' | 'EMPLOYEE') => Promise<void>;
     logout: () => void;
 }
 
@@ -28,32 +30,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    const login = (role: 'ADMIN' | 'EMPLOYEE', method: 'CREDENTIALS' | 'MICROSOFT' = 'CREDENTIALS') => {
-        let mockUser: AuthUser;
+    const login = async (email: string, role: 'ADMIN' | 'EMPLOYEE') => {
+        // Find user in mock backend
+        const users = mockBackend.getUsers();
+        const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.role === role);
 
-        if (role === 'ADMIN') {
-            mockUser = {
-                id: 'admin_1',
-                name: 'Dhiraj Vasu',
-                email: 'admin@credence.com',
-                role: 'ADMIN',
-                avatarInitials: 'DV',
-                designation: 'Co-Founder & CEO'
+        if (foundUser) {
+            const authUser: AuthUser = {
+                id: foundUser.id,
+                name: foundUser.name,
+                email: foundUser.email,
+                role: foundUser.role,
+                avatarInitials: foundUser.avatarInitials,
+                designation: foundUser.designation,
+                department: foundUser.department // Added department to AuthUser if needed, add to interface too
             };
+            setUser(authUser);
+            localStorage.setItem('credence_user', JSON.stringify(authUser));
         } else {
-            // Employee Profile
-            mockUser = {
-                id: 'emp_1',
-                name: method === 'MICROSOFT' ? 'Sarah Jenkins (MS)' : 'Sarah Jenkins',
-                email: 'sarah.j@credence.com',
-                role: 'EMPLOYEE',
-                avatarInitials: 'SJ',
-                designation: 'Senior Structural Engineer'
-            };
+            throw new Error('Invalid credentials or role');
         }
-
-        setUser(mockUser);
-        localStorage.setItem('credence_user', JSON.stringify(mockUser));
     };
 
     const logout = () => {

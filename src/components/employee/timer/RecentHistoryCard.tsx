@@ -1,13 +1,11 @@
 import React from 'react';
-import { cn } from '../../../lib/utils';
-import { Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import { Image as ImageIcon } from 'lucide-react';
 
-const RecentHistoryCard: React.FC = () => {
-    const entries = [
-        { id: 1, project: 'BCS Skylights', task: 'Engineering', duration: '1h 15m', status: 'DRAFT', proof: false },
-        { id: 2, project: 'Dr. Wade Residence', task: 'Drafting', duration: '2h 00m', status: 'SUBMITTED', proof: true },
-        { id: 3, project: 'Internal', task: 'Meeting', duration: '0h 45m', status: 'APPROVED', proof: false },
-    ];
+interface RecentHistoryCardProps {
+    entries: any[]; // Using any for brevity given TimeEntry schema variations
+}
+
+const RecentHistoryCard: React.FC<RecentHistoryCardProps> = ({ entries }) => {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -26,14 +24,16 @@ const RecentHistoryCard: React.FC = () => {
                 {entries.map(entry => (
                     <div key={entry.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
                         <div className="min-w-0 pr-4">
-                            <div className="font-medium text-sm text-slate-900 truncate">{entry.project}</div>
+                            <div className="font-medium text-sm text-slate-900 truncate">{entry.projectName}</div>
                             <div className="text-xs text-slate-500 mt-0.5 flex items-center space-x-2">
-                                <span>{entry.task}</span>
+                                <span>{entry.category}</span>
                                 {entry.proof && <ImageIcon className="h-3 w-3 text-purple-400" />}
                             </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                            <div className="font-mono text-sm font-medium text-slate-700">{entry.duration}</div>
+                            <div className="font-mono text-sm font-medium text-slate-700">
+                                {Math.floor(entry.durationMinutes / 60)}h {entry.durationMinutes % 60}m
+                            </div>
                             <div className="mt-1">{getStatusBadge(entry.status)}</div>
                         </div>
                     </div>

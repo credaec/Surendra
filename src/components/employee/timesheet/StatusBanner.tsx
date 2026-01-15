@@ -1,5 +1,4 @@
 import React from 'react';
-import { cn } from '../../../lib/utils';
 import { AlertCircle, Lock, CheckCircle, Clock } from 'lucide-react';
 
 export type TimesheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED';

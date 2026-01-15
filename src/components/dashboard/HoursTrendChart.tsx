@@ -1,17 +1,30 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const data = [
-    { name: 'Mon', total: 140, billable: 110 },
-    { name: 'Tue', total: 155, billable: 130 },
-    { name: 'Wed', total: 138, billable: 120 },
-    { name: 'Thu', total: 162, billable: 140 },
-    { name: 'Fri', total: 145, billable: 115 },
-    { name: 'Sat', total: 40, billable: 20 },
-    { name: 'Sun', total: 25, billable: 10 },
-];
+import { mockBackend } from '../../services/mockBackend';
+import type { TimeEntry } from '../../types/schema';
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns';
 
 const HoursTrendChart: React.FC = () => {
+    const data = useMemo(() => {
+        const entries: TimeEntry[] = mockBackend.getEntries(); // Get all entries
+        const now = new Date();
+        const start = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+        const end = endOfWeek(now, { weekStartsOn: 1 });
+
+        const days = eachDayOfInterval({ start, end });
+
+        return days.map(day => {
+            const dayEntries = entries.filter(e => isSameDay(parseISO(e.date || new Date().toISOString()), day));
+            const total = dayEntries.reduce((sum, e) => sum + e.durationMinutes, 0) / 60; // Minutes to hours
+            const billable = dayEntries.filter(e => e.isBillable).reduce((sum, e) => sum + e.durationMinutes, 0) / 60;
+
+            return {
+                name: format(day, 'EEE'),
+                total: Math.round(total * 10) / 10,
+                billable: Math.round(billable * 10) / 10
+            };
+        });
+    }, []);
     return (
         <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm h-96">
             <div className="flex items-center justify-between mb-6">
@@ -23,7 +36,7 @@ const HoursTrendChart: React.FC = () => {
                 </select>
             </div>
 
-            <div className="h-72 w-full">
+            <div className="h-72 w-full" style={{ minWidth: 0, minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>

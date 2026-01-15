@@ -31,33 +31,43 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, subValue, icon: Icon, i
     </div>
 );
 
-const ReportsKPICards: React.FC = () => {
+interface ReportsKPICardsProps {
+    stats: {
+        totalHours: number;
+        billableHours: number;
+        billablePercentage: number;
+        nonBillableHours: number;
+        productivity: number;
+    };
+}
+
+const ReportsKPICards: React.FC<ReportsKPICardsProps> = ({ stats }) => {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <KPICard
                 title="Total Hours"
-                value="142.5h"
-                trend="+12% vs last month"
+                value={`${stats.totalHours.toFixed(1)}h`}
+                trend="+12% vs last month" // Placeholder for trend
                 icon={Clock}
                 iconColor="text-blue-600"
             />
             <KPICard
                 title="Billable Hours"
-                value="118.0h"
-                subValue="83% of total"
+                value={`${stats.billableHours.toFixed(1)}h`}
+                subValue={`${stats.billablePercentage.toFixed(0)}% of total`}
                 icon={DollarSign}
                 iconColor="text-emerald-600"
             />
             <KPICard
                 title="Non-Billable"
-                value="24.5h"
+                value={`${stats.nonBillableHours.toFixed(1)}h`}
                 subValue="Training & Internal"
                 icon={Ban}
                 iconColor="text-amber-600"
             />
             <KPICard
                 title="Productivity"
-                value="94%"
+                value={`${stats.productivity.toFixed(0)}%`}
                 subValue="Target: 90%"
                 icon={CheckCircle2}
                 iconColor="text-purple-600"

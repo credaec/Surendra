@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../../../lib/utils';
-import { Image as ImageIcon, DollarSign, FileText, Calendar, Trash2, Edit2 } from 'lucide-react'; // Imports
+import { Image as ImageIcon, DollarSign, FileText, Calendar, Trash2, Edit2, Plus } from 'lucide-react';
 
 // Define interface for Entry
 export interface TimeEntryRow {

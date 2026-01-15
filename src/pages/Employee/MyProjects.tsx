@@ -6,98 +6,30 @@ import type { ProjectStatusFilter } from '../../components/employee/projects/Fil
 import ProjectsGrid from '../../components/employee/projects/ProjectsGrid';
 import EmptyState from '../../components/employee/projects/EmptyState';
 import type { Project } from '../../types/schema';
+import { mockBackend } from '../../services/mockBackend';
+
+import { useAuth } from '../../context/AuthContext';
 
 const MyProjectsPage: React.FC = () => {
     const navigate = useNavigate();
+    const { user } = useAuth(); // Get logged-in user
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('ACTIVE');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-    // Mock Projects Data
-    const mockProjects: Project[] = [
-        {
-            id: 'p1',
-            code: 'PRJ-001',
-            name: 'BCS Skylights',
-            clientId: 'c1',
-            clientName: 'Boston Construction Services',
-            status: 'ACTIVE',
-            type: 'HOURLY',
-            priority: 'HIGH',
-            startDate: '2025-11-01',
-            endDate: '2026-03-01',
-            estimatedHours: 120,
-            currency: 'USD',
-            billingMode: 'HOURLY_RATE',
-            rateLogic: 'CATEGORY_BASED_RATE',
-            teamMembers: [],
-            entryRules: { allowManual: true, billableDefault: true, requireApproval: true },
-            alerts: [],
-            usedHours: 45,
-            billableHours: 45
-        },
-        {
-            id: 'p2',
-            code: 'PRJ-002',
-            name: 'Dr. Wade Residence',
-            clientId: 'c2',
-            clientName: 'Dr. Emily Wade',
-            status: 'ACTIVE',
-            type: 'FIXED',
-            priority: 'MEDIUM',
-            startDate: '2026-01-05',
-            estimatedHours: 40,
-            currency: 'USD',
-            billingMode: 'FIXED_FEE',
-            rateLogic: 'GLOBAL_PROJECT_RATE',
-            teamMembers: [],
-            entryRules: { allowManual: true, billableDefault: true, requireApproval: true },
-            alerts: [],
-            usedHours: 12,
-            billableHours: 12
-        },
-        {
-            id: 'p3',
-            code: 'INT-001',
-            name: 'Internal Training',
-            clientId: 'internal',
-            clientName: 'Credence Internal',
-            status: 'PLANNED',
-            type: 'INTERNAL',
-            priority: 'LOW',
-            startDate: '2026-02-01',
-            estimatedHours: 10,
-            currency: 'USD',
-            billingMode: 'HOURLY_RATE',
-            rateLogic: 'EMPLOYEE_BASED_RATE',
-            teamMembers: [],
-            entryRules: { allowManual: true, billableDefault: false, requireApproval: false },
-            alerts: [],
-            usedHours: 0,
-            billableHours: 0
-        },
-        {
-            id: 'p4',
-            code: 'PRJ-003',
-            name: 'City Mall Expansion',
-            clientId: 'c3',
-            clientName: 'Urban Developers',
-            status: 'COMPLETED',
-            type: 'HOURLY',
-            priority: 'CRITICAL',
-            startDate: '2025-06-01',
-            endDate: '2025-12-31',
-            estimatedHours: 500,
-            currency: 'USD',
-            billingMode: 'HOURLY_RATE',
-            rateLogic: 'CATEGORY_BASED_RATE',
-            teamMembers: [],
-            entryRules: { allowManual: true, billableDefault: true, requireApproval: true },
-            alerts: [],
-            usedHours: 480,
-            billableHours: 450
+    // Fetch Projects from Backend
+    const [mockProjects, setMockProjects] = useState<Project[]>([]);
+
+    React.useEffect(() => {
+        // Filter projects where logged-in user is in the team
+        const allProjects = mockBackend.getProjects();
+        if (user) {
+            const assignedProjects = allProjects.filter(p =>
+                p.teamMembers && p.teamMembers.some(member => member.userId === user.id)
+            );
+            setMockProjects(assignedProjects);
         }
-    ];
+    }, [user]);
 
     // Filter Logic
     const filteredProjects = mockProjects.filter(project => {

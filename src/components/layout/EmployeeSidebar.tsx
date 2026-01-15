@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard,
     Timer,
@@ -10,9 +10,9 @@ import {
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import RoleSwitcher from './RoleSwitcher';
 
 const EmployeeSidebar: React.FC = () => {
-    const navigate = useNavigate();
     const { user } = useAuth();
     const { t } = useLanguage();
 
@@ -65,7 +65,7 @@ const EmployeeSidebar: React.FC = () => {
                 ))}
             </nav>
 
-
+            <RoleSwitcher currentMode="EMPLOYEE" />
         </aside>
     );
 };

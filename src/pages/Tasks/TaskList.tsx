@@ -1,32 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Check, X, Tag, DollarSign, FileText, AlertCircle, Trash2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
-
-// Core Type Definition (matching schema)
-interface TaskCategory {
-    id: string;
-    name: string;
-    isBillable: boolean;
-    defaultRate?: number;
-    isProofRequired: boolean;
-    isNotesRequired: boolean;
-    status: 'ACTIVE' | 'ARCHIVED';
-}
-
-// Mock Data - Default Categories
-const defaultCategories: TaskCategory[] = [
-    { id: '1', name: 'Engineering Design', isBillable: true, isProofRequired: false, isNotesRequired: true, status: 'ACTIVE' },
-    { id: '2', name: 'Drafting', isBillable: true, isProofRequired: true, isNotesRequired: true, status: 'ACTIVE' },
-    { id: '3', name: 'Modelling (RISA/ETABS)', isBillable: true, isProofRequired: true, isNotesRequired: true, status: 'ACTIVE' },
-    { id: '4', name: 'Review & Coordination', isBillable: true, isProofRequired: false, isNotesRequired: true, status: 'ACTIVE' },
-    { id: '5', name: 'Client Calls', isBillable: true, isProofRequired: false, isNotesRequired: true, status: 'ACTIVE' },
-    { id: '6', name: 'Internal Meeting', isBillable: false, isProofRequired: false, isNotesRequired: false, status: 'ACTIVE' },
-    { id: '7', name: 'Training', isBillable: false, isProofRequired: false, isNotesRequired: false, status: 'ACTIVE' },
-    { id: '8', name: 'Rework / Revisions', isBillable: false, defaultRate: 0, isProofRequired: true, isNotesRequired: true, status: 'ACTIVE' },
-];
+import { Plus, Search, Check, X, Tag, DollarSign, FileText, AlertCircle, Trash2 } from 'lucide-react';
+import { mockBackend } from '../../services/mockBackend';
+import type { TaskCategory } from '../../types/schema';
 
 const TaskListPage: React.FC = () => {
-    const [categories, setCategories] = useState<TaskCategory[]>(defaultCategories);
+    const [categories, setCategories] = useState<TaskCategory[]>(mockBackend.getTaskCategories());
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
 
@@ -40,22 +18,25 @@ const TaskListPage: React.FC = () => {
 
     const handleAddCategory = () => {
         if (!newCategory.name) return;
-        const category: TaskCategory = {
-            id: Math.random().toString(36).substr(2, 9),
+
+        mockBackend.addTaskCategory({
             name: newCategory.name,
             isBillable: newCategory.isBillable || false,
             isProofRequired: newCategory.isProofRequired || false,
             isNotesRequired: newCategory.isNotesRequired || false,
             defaultRate: newCategory.defaultRate,
-            status: 'ACTIVE'
-        };
-        setCategories([...categories, category]);
+            restrictedToProjects: []
+        } as any); // Type assertion needed if schema doesn't exactly match Omit defaults
+
+        // Refresh from source to be sure
+        setCategories(mockBackend.getTaskCategories());
         setShowAddModal(false);
         setNewCategory({ name: '', isBillable: true, isProofRequired: false, isNotesRequired: false });
     };
 
     const handleDelete = (id: string) => {
-        if (confirm('Are you sure you want to delete this category?')) {
+        if (confirm('Are you sure you want to delete this category? (This is a mock action)')) {
+            // Mock backend doesn't implement delete yet, but let's update local state
             setCategories(categories.filter(c => c.id !== id));
         }
     }
@@ -96,9 +77,6 @@ const TaskListPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((category) => (
                     <div key={category.id} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group relative">
-                        {/* Status Indicator */}
-                        <div className={cn("absolute top-6 right-6 h-2 w-2 rounded-full", category.status === 'ACTIVE' ? "bg-emerald-500" : "bg-slate-300")} />
-
                         <div className="flex items-start justify-between mb-4">
                             <div className="p-3 bg-slate-50 rounded-lg text-slate-600">
                                 <Tag className="h-6 w-6" />

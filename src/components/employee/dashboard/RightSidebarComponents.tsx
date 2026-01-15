@@ -1,6 +1,6 @@
 import React from 'react';
-import { AlertCircle, Play, ChevronRight, Bell } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { AlertCircle, Play, Bell } from 'lucide-react';
+
 
 export const ProofPendingCard: React.FC = () => {
     return (

@@ -2,7 +2,8 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, Plus, CheckCircle2 } from 'lucide-react';
 
 interface TimesheetHeaderProps {
-    dateRange: string;
+    dateRange?: string; // Legacy or alternative
+    weekRange?: string; // Matching Page usage
     canSubmit: boolean;
     onSubmit: () => void;
     onAddEntry: () => void;
@@ -12,6 +13,7 @@ interface TimesheetHeaderProps {
 
 const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
     dateRange,
+    weekRange,
     canSubmit,
     onSubmit,
     onAddEntry,
@@ -32,7 +34,7 @@ const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
                         <ChevronLeft className="h-4 w-4" />
                     </button>
                     <span className="px-4 py-2 text-sm font-medium text-slate-700 border-x border-slate-100 table-cell align-middle min-w-[140px] text-center">
-                        {dateRange}
+                        {weekRange || dateRange}
                     </span>
                     <button onClick={onNextWeek} className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-r-lg transition-colors">
                         <ChevronRight className="h-4 w-4" />

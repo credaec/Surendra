@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { Calendar as CalendarIcon, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { mockBackend } from '../../services/mockBackend';
 import TimerBanner from '../../components/employee/dashboard/TimerBanner';
 import KPIStats from '../../components/employee/dashboard/KPIStats';
 import TimesheetSnapshot from '../../components/employee/dashboard/TimesheetSnapshot';
@@ -7,8 +10,17 @@ import RecentEntries from '../../components/employee/dashboard/RecentEntries';
 import { ProofPendingCard, MyProjectsCard, NotificationsCard } from '../../components/employee/dashboard/RightSidebarComponents';
 
 const EmployeeDashboard: React.FC = () => {
-    // State to simulate timer active/inactive for demo
-    const [isTimerActive, setIsTimerActive] = useState(true);
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [activeTimer, setActiveTimer] = useState<any>(null); // Using any or TimeEntry
+
+    // Check for active timer
+    useEffect(() => {
+        if (user) {
+            const timer = mockBackend.getActiveTimer(user.id);
+            setActiveTimer(timer);
+        }
+    }, [user]);
 
     return (
         <div className="min-h-screen bg-surface pb-12">
@@ -28,19 +40,22 @@ const EmployeeDashboard: React.FC = () => {
                         </button>
                     </div>
 
-                    <button className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <button
+                        onClick={() => navigate('/employee/timesheet')}
+                        className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
                         + Add Time Entry
                     </button>
 
-                    {!isTimerActive ? (
+                    {!activeTimer ? (
                         <button
-                            onClick={() => setIsTimerActive(true)}
+                            onClick={() => navigate('/employee/timer')}
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
                         >
-                            Start Timer
+                            Go to Timer
                         </button>
                     ) : (
-                        <div className="text-sm font-medium text-slate-500 px-2">
+                        <div className="text-sm font-medium text-slate-500 px-2 animate-pulse">
                             Timer Running...
                         </div>
                     )}
@@ -49,9 +64,12 @@ const EmployeeDashboard: React.FC = () => {
 
             {/* 2) Running Timer Banner (Sticky) */}
             <TimerBanner
-                isActive={isTimerActive}
-                onPause={() => setIsTimerActive(false)} // Mock pause behavior
-                onStop={() => setIsTimerActive(false)}
+                isActive={!!activeTimer}
+                startTime={activeTimer?.startTime}
+                project={activeTimer?.projectName}
+                task={activeTimer?.categoryId} // Or task name if available
+                onPause={() => navigate('/employee/timer')}
+                onStop={() => navigate('/employee/timer')}
             />
 
             <div className="max-w-[1600px] mx-auto px-8 pt-8">

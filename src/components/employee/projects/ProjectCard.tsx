@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreHorizontal, Play, Calendar, User, ArrowRight } from 'lucide-react';
+import { MoreHorizontal, Play, Calendar, User } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { Project } from '../../../types/schema'; // Safely import interface
 

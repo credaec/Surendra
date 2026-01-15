@@ -1,0 +1,61 @@
+import React from 'react';
+import { Download, CheckCircle, Lock, Plus } from 'lucide-react';
+
+interface AdminTimesheetHeaderProps {
+    onExport: () => void;
+    onBulkApprove: () => void;
+    onLock: () => void;
+    onAddEntry: () => void;
+}
+
+const AdminTimesheetHeader: React.FC<AdminTimesheetHeaderProps> = ({
+    onExport,
+    onBulkApprove,
+    onLock,
+    onAddEntry
+}) => {
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Timesheets / Time Tracking</h1>
+                <p className="text-slate-500 text-sm mt-1">View & manage time logs of all employees</p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+                <button
+                    onClick={onExport}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+                >
+                    <Download className="w-4 h-4" />
+                    Export
+                </button>
+
+                <button
+                    onClick={onBulkApprove}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+                >
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    Bulk Approve
+                </button>
+
+                <button
+                    onClick={onLock}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+                >
+                    <Lock className="w-4 h-4 text-amber-600" />
+                    Lock Timesheet
+                </button>
+
+                <button
+                    onClick={onAddEntry}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                >
+                    <Plus className="w-4 h-4" />
+                    Add Time Entry
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default AdminTimesheetHeader;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Play } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+
 
 interface ProjectsHeaderProps {
     onSearch: (query: string) => void;

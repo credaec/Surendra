@@ -1,24 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Calendar, Folder, Users, DollarSign, Settings, CheckCircle2, AlertCircle, FileText, UploadCloud, ChevronRight, Flag
+    Calendar, Folder, Users, DollarSign, Settings, CheckCircle2, AlertCircle, FileText, UploadCloud, ChevronRight, Flag, Trash2, Plus
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { Project } from '../../types/schema';
+import type { Project, User } from '../../types/schema';
+import { mockBackend } from '../../services/mockBackend';
+import { useNavigate } from 'react-router-dom';
 
-// Mock Data for Dropdowns
-const clients = [
-    { id: '1', name: 'Apex Constructors' },
-    { id: '2', name: 'Urban Developers Inc.' },
-    { id: '3', name: 'Global Tech Solutions' }
-];
-
-const teamMembersMock = [
-    { id: 'u1', name: 'Alice Johnson', role: 'Senior Architect', rate: 150 },
-    { id: 'u2', name: 'Bob Smith', role: 'Structural Engineer', rate: 120 },
-    { id: 'u3', name: 'Charlie Brown', role: 'Drafter', rate: 80 }
-];
-
-// taskCategories removed using multi_replace
+// Basic mock data call for clients
+const clients = mockBackend.getClients();
 
 // Tabs Configuration
 const tabs = [
@@ -32,6 +22,13 @@ const tabs = [
 
 const CreateProjectPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('basic');
+    const [availableEmployees, setAvailableEmployees] = useState<User[]>([]);
+
+    useEffect(() => {
+        // Fetch users who are EMPLOYEEs
+        const users = mockBackend.getUsers().filter(u => u.role === 'EMPLOYEE');
+        setAvailableEmployees(users);
+    }, []);
 
     // Comprehensive Form State
     const [formData, setFormData] = useState<Partial<Project>>({
@@ -64,6 +61,8 @@ const CreateProjectPage: React.FC = () => {
         }
     });
 
+    const navigate = useNavigate();
+
     const handleNext = () => {
         const index = tabs.findIndex(t => t.id === activeTab);
         if (index < tabs.length - 1) setActiveTab(tabs[index + 1].id);
@@ -72,6 +71,74 @@ const CreateProjectPage: React.FC = () => {
     const handleBack = () => {
         const index = tabs.findIndex(t => t.id === activeTab);
         if (index > 0) setActiveTab(tabs[index - 1].id);
+    };
+
+    const handleAddTeamMember = () => {
+        setFormData(prev => ({
+            ...prev,
+            teamMembers: [
+                ...(prev.teamMembers || []),
+                {
+                    userId: '',
+                    role: 'ENGINEER',
+                    accessLevel: { canLogTime: true, canEditEntries: true, canApproveTime: false },
+                    billableRate: 0,
+                    costRate: 0
+                }
+            ]
+        }));
+    };
+
+    const updateTeamMember = (index: number, field: string, value: any) => {
+        const updatedMembers = [...(formData.teamMembers || [])];
+        updatedMembers[index] = { ...updatedMembers[index], [field]: value };
+        setFormData({ ...formData, teamMembers: updatedMembers });
+    };
+
+    const removeTeamMember = (index: number) => {
+        const updatedMembers = [...(formData.teamMembers || [])];
+        updatedMembers.splice(index, 1);
+        setFormData({ ...formData, teamMembers: updatedMembers });
+    };
+
+    const handleCreateProject = () => {
+        try {
+            // Basic validation
+            if (!formData.name || !formData.clientId) {
+                alert('Please fill in Project Name and Client.');
+                return;
+            }
+
+            // Check required fields for type safety, though interface allows optional
+            const projectToSave = {
+                ...formData,
+                // Set any missing required fields with defaults if necessary
+                status: formData.status || 'PLANNED',
+                billingMode: formData.billingMode || 'HOURLY_RATE',
+                currency: formData.currency || 'USD',
+                entryRules: formData.entryRules || {
+                    notesRequired: false,
+                    proofRequired: false,
+                    minTimeUnit: 15,
+                    allowFutureEntry: false,
+                    allowBackdatedEntry: true
+                },
+                alerts: formData.alerts || {
+                    budgetThresholdPct: 80,
+                    deadlineAlertDays: 7
+                },
+                // Ensure teamMembers is clean (remove empty userIds)
+                teamMembers: formData.teamMembers?.filter(m => m.userId) || []
+            } as Project;
+
+            const created = mockBackend.addProject(projectToSave);
+            console.log('Project Created:', created);
+            alert(`Project "${created.name}" created successfully!\n\nEmail notifications sent to assigned team members.`);
+            navigate('/admin/dashboard'); // Or project list
+        } catch (error) {
+            console.error(error);
+            alert('Failed to create project.');
+        }
     };
 
     return (
@@ -132,7 +199,9 @@ const CreateProjectPage: React.FC = () => {
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Client *</label>
-                                <select className="w-full rounded-lg border-slate-200 focus:ring-blue-500">
+                                <select className="w-full rounded-lg border-slate-200 focus:ring-blue-500"
+                                    value={formData.clientId} onChange={e => setFormData({ ...formData, clientId: e.target.value })}
+                                >
                                     <option value="">Select a client...</option>
                                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
@@ -304,7 +373,12 @@ const CreateProjectPage: React.FC = () => {
                     <div className="space-y-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-slate-900">Project Team</h3>
-                            <button className="text-sm font-medium text-blue-600 hover:underline">+ Add Team Member</button>
+                            <button
+                                onClick={handleAddTeamMember}
+                                className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
+                            >
+                                <Plus className="h-4 w-4 mr-1" /> Add Team Member
+                            </button>
                         </div>
 
                         <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -313,38 +387,63 @@ const CreateProjectPage: React.FC = () => {
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Cost Rate/Hr</th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Log Time</th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Approve</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Hourly Rate</th>
                                         <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-200">
-                                    {teamMembersMock.map(member => (
-                                        <tr key={member.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{member.name}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                                <select className="rounded border-slate-200 text-xs py-1">
-                                                    <option selected={member.role === 'Senior Architect'}>Project Manager</option>
-                                                    <option>Engineer</option>
-                                                    <option>Drafter</option>
-                                                    <option>Reviewer</option>
+                                    {formData.teamMembers?.map((member, idx) => (
+                                        <tr key={idx}>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                                <select
+                                                    className="w-full rounded border-slate-200 text-sm"
+                                                    value={member.userId}
+                                                    onChange={(e) => updateTeamMember(idx, 'userId', e.target.value)}
+                                                >
+                                                    <option value="">Select Employee...</option>
+                                                    {availableEmployees.map(emp => (
+                                                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                                    ))}
                                                 </select>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                                ${member.rate}
+                                                <select
+                                                    className="rounded border-slate-200 text-sm py-1"
+                                                    value={member.role}
+                                                    onChange={(e) => updateTeamMember(idx, 'role', e.target.value)}
+                                                >
+                                                    <option value="PROJECT_MANAGER">Project Manager</option>
+                                                    <option value="ENGINEER">Engineer</option>
+                                                    <option value="DRAFTER">Drafter</option>
+                                                    <option value="REVIEWER">Reviewer</option>
+                                                </select>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                <input type="checkbox" checked className="rounded text-blue-600 focus:ring-blue-500" />
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                                <input
+                                                    type="number"
+                                                    className="w-24 rounded border-slate-200 text-sm py-1"
+                                                    placeholder="Rate"
+                                                    value={member.billableRate}
+                                                    onChange={(e) => updateTeamMember(idx, 'billableRate', Number(e.target.value))}
+                                                />
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500" />
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600 hover:text-red-900 cursor-pointer">
-                                                Remove
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                                <button
+                                                    onClick={() => removeTeamMember(idx)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
+                                    {(!formData.teamMembers || formData.teamMembers.length === 0) && (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-8 text-center text-slate-500 text-sm">
+                                                No team members added yet. Click "+ Add Team Member" to assign users.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -456,7 +555,10 @@ const CreateProjectPage: React.FC = () => {
                             Next Step <ChevronRight className="h-4 w-4 ml-2" />
                         </button>
                     ) : (
-                        <button className="px-8 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center shadow-sm shadow-emerald-200">
+                        <button
+                            onClick={handleCreateProject}
+                            className="px-8 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center shadow-sm shadow-emerald-200"
+                        >
                             Create Project <Flag className="h-4 w-4 ml-2" />
                         </button>
                     )}

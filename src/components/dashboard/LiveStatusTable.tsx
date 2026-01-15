@@ -1,16 +1,55 @@
-import React from 'react';
-import { cn } from '../../lib/utils';
 
-// Mock Data
-const employees = [
-    { id: 1, name: 'Alice Johnson', project: 'Skyline Main', task: 'Frame Analysis', status: 'RUNNING', time: '02:14' },
-    { id: 2, name: 'Bob Smith', project: 'Riverside Mall', task: 'Client Meeting', status: 'PAUSED', time: '00:45' },
-    { id: 3, name: 'Charlie Davis', project: '-', task: '-', status: 'OFFLINE', time: '-' },
-    { id: 4, name: 'Diana Prince', project: 'Skyline Main', task: 'Drafting', status: 'RUNNING', time: '04:20' },
-    { id: 5, name: 'Ethan Hunt', project: 'Office Retrofit', task: 'Site Visit', status: 'RUNNING', time: '01:10' },
-];
+import React, { useState, useEffect } from 'react';
+import { mockBackend } from '../../services/mockBackend';
+import type { TimeEntry } from '../../types/schema';
+
+interface ActiveTimer extends TimeEntry {
+    userName: string;
+    projectName: string;
+    taskCategory: string;
+    durationSeconds: number;
+}
 
 const LiveStatusTable: React.FC = () => {
+    const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
+
+    useEffect(() => {
+        const fetchTimers = () => {
+            const entries = mockBackend.getAllActiveTimers();
+            const users = mockBackend.getUsers();
+            const projects = mockBackend.getProjects();
+
+            const enriched = entries.map(entry => {
+                const user = users.find(u => u.id === entry.userId);
+                const project = projects.find(p => p.id === entry.projectId);
+
+                return {
+                    ...entry,
+                    userName: user?.name || 'Unknown User',
+                    projectName: project?.name || 'Unknown Project',
+                    taskCategory: entry.categoryId, // Fallback to ID for now, or lookup category
+                    durationSeconds: entry.durationMinutes * 60 // Mock conversion
+                } as ActiveTimer;
+            });
+            setActiveTimers(enriched);
+        };
+
+        fetchTimers();
+
+        // Poll every 5 seconds
+        const interval = setInterval(fetchTimers, 5000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Helper to format duration HH:MM:SS
+    const formatDuration = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')} `;
+    };
+
     return (
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden h-full">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
@@ -31,38 +70,42 @@ const LiveStatusTable: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {employees.map((emp) => (
-                            <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="px-4 py-3 font-medium text-slate-900">{emp.name}</td>
-                                <td className="px-4 py-3 text-slate-500">
-                                    {emp.status !== 'OFFLINE' ? (
+                        {activeTimers.length > 0 ? (
+                            activeTimers.map((timer) => (
+                                <tr key={timer.userId} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-4 py-3 font-medium text-slate-900">{timer.userName}</td>
+                                    <td className="px-4 py-3 text-slate-500">
                                         <div>
-                                            <div className="text-slate-900 font-medium">{emp.project}</div>
-                                            <div className="text-xs text-slate-400">{emp.task}</div>
+                                            <div className="text-slate-900 font-medium">{timer.projectName}</div>
+                                            <div className="text-xs text-slate-400">{timer.taskCategory}</div>
                                         </div>
-                                    ) : <span className="text-slate-300">-</span>}
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center space-x-2">
-                                        <span className={cn("px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wide",
-                                            emp.status === 'RUNNING' ? "bg-emerald-100 text-emerald-700" :
-                                                emp.status === 'PAUSED' ? "bg-amber-100 text-amber-700" :
-                                                    "bg-slate-100 text-slate-400"
-                                        )}>
-                                            {emp.status}
-                                        </span>
-                                        {emp.status === 'RUNNING' && (
-                                            <span className="text-xs font-mono font-medium text-slate-600">{emp.time}</span>
-                                        )}
-                                    </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center space-x-2">
+                                            <span className="px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-700">
+                                                RUNNING
+                                            </span>
+                                            <span className="text-xs font-mono font-medium text-slate-600">
+                                                {formatDuration(timer.durationSeconds)}
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={3} className="px-4 py-8 text-center text-slate-400">
+                                    No active timers.
                                 </td>
                             </tr>
-                        ))}
+                        )}
+                        {/* Mock Offline Users for completeness if needed, or just show active */}
                     </tbody>
                 </table>
             </div>
         </div>
     );
 };
+
 
 export default LiveStatusTable;
