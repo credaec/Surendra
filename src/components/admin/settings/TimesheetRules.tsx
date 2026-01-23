@@ -88,18 +88,7 @@ const TimesheetRules: React.FC<TimesheetRulesProps> = ({ data, onChange }) => {
                         </button>
                     </div>
 
-                    <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                        <div>
-                            <span className="text-sm font-medium text-slate-700">Require Proof / Attachment</span>
-                            <p className="text-xs text-slate-500">Mandatory file upload for timesheets.</p>
-                        </div>
-                        <button
-                            onClick={() => handleChange('requireProof', !data.requireProof)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${data.requireProof ? 'bg-blue-600' : 'bg-slate-200'}`}
-                        >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${data.requireProof ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                    </div>
+
                 </div>
             </div>
 
@@ -119,8 +108,8 @@ const TimesheetRules: React.FC<TimesheetRulesProps> = ({ data, onChange }) => {
                             <div
                                 onClick={() => handleChange('approvalMode', 'SINGLE_LEVEL')}
                                 className={`p-4 border rounded-xl cursor-pointer transition-all ${data.approvalMode === 'SINGLE_LEVEL'
-                                        ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
-                                        : 'border-slate-200 hover:border-slate-300'
+                                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                                    : 'border-slate-200 hover:border-slate-300'
                                     }`}
                             >
                                 <div className="font-medium text-slate-900 mb-1">Single Level Approval</div>
@@ -130,8 +119,8 @@ const TimesheetRules: React.FC<TimesheetRulesProps> = ({ data, onChange }) => {
                             <div
                                 onClick={() => handleChange('approvalMode', 'MULTI_LEVEL')}
                                 className={`p-4 border rounded-xl cursor-pointer transition-all ${data.approvalMode === 'MULTI_LEVEL'
-                                        ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
-                                        : 'border-slate-200 hover:border-slate-300'
+                                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                                    : 'border-slate-200 hover:border-slate-300'
                                     }`}
                             >
                                 <div className="font-medium text-slate-900 mb-1">Multi-Level Approval (Pro)</div>

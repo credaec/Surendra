@@ -77,8 +77,13 @@ const PayrollSettings: React.FC<PayrollSettingsProps> = ({ data, onChange }) => 
 
                     <div className="py-2">
                         <div className="flex items-center">
-                            <input type="checkbox" checked readOnly className="h-4 w-4 text-slate-300 rounded border-slate-300 bg-slate-100" />
-                            <span className="ml-2 text-sm text-slate-400">Allow Rate Changes Mid-Month (System Default)</span>
+                            <input
+                                type="checkbox"
+                                checked={data.allowMidMonthRateChanges ?? true}
+                                onChange={(e) => handleChange('allowMidMonthRateChanges', e.target.checked)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 rounded border-slate-300 cursor-pointer"
+                            />
+                            <span className="ml-2 text-sm text-slate-700">Allow Rate Changes Mid-Month</span>
                         </div>
                     </div>
                 </div>

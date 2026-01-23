@@ -5,10 +5,9 @@ interface StopTimerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    isProofMissing: boolean;
 }
 
-const StopTimerModal: React.FC<StopTimerModalProps> = ({ isOpen, onClose, onConfirm, isProofMissing }) => {
+const StopTimerModal: React.FC<StopTimerModalProps> = ({ isOpen, onClose, onConfirm }) => {
     if (!isOpen) return null;
 
     return (
@@ -31,7 +30,6 @@ const StopTimerModal: React.FC<StopTimerModalProps> = ({ isOpen, onClose, onConf
                         <h3 className="text-lg font-bold text-slate-900">Stop Timer & Save Entry?</h3>
                         <p className="text-sm text-slate-500 mt-1 leading-relaxed">
                             This will stop the current timer and save your work log.
-                            {isProofMissing && <span className="block mt-2 font-medium text-red-600">⚠️ Proof is missing. You must upload it later to submit the timesheet.</span>}
                         </p>
                     </div>
                 </div>

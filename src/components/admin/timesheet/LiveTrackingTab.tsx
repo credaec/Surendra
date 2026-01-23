@@ -17,7 +17,57 @@ const LiveTrackingTab: React.FC = () => {
         // Poll for active timers
         const fetchTimers = () => {
             const timers = mockBackend.getAllActiveTimers();
-            setLiveTimers(timers as unknown as ActiveTimer[]);
+            const categories = mockBackend.getTaskCategories();
+
+            // Enrich with category name
+            const enriched = timers.map(t => {
+                const category = categories.find(c => c.id === t.categoryId);
+                return {
+                    ...t,
+                    userName: t.userName, // Already coming from getAllActiveTimers? 
+                    // Wait, getAllActiveTimers in mockBackend returns ActiveTimer mock which has userName? 
+                    // Let's check mockBackend.getAllActiveTimers return type implementation if needed.
+                    // Assuming getAllActiveTimers returns enriched user/project but not category name yet based on previous file read.
+                    // Actually previous file read of LiveStatusTable showed it calls getAllActiveTimers() and THEN manual enrichment.
+                    // But LiveTrackingTab.tsx (lines 19-20) just casts it.
+                    // Let's be safe and re-map.
+
+                    // Actually, looking at LiveTrackingTab.tsx lines 19-20: 
+                    // const timers = mockBackend.getAllActiveTimers();
+                    // setLiveTimers(timers as unknown as ActiveTimer[]);
+
+                    // distinct naming collision: ActiveTimer interface in this file vs mockBackend?
+                    // The interface in this file (lines 7-11) expects userName, projectName, taskCategory.
+
+                    // mockBackend.getAllActiveTimers() likely returns objects with userId, projectId, categoryId, etc.
+                    // and maybe 'userName' / 'projectName' if the mock function is fancy, but usually it returns basic info.
+                    // I should explicitly enrich it here like I did in LiveStatusTable.
+
+                    ...t,
+                    // If mockBackend returns userName/projectName, keep them. 
+                    // If not, I might need to fetch users/projects too.
+                    // Let's assume for now I need to enrich everything to be safe, standard pattern.
+                };
+            });
+
+            // Re-fetch all metadata to be safe
+            const allUsers = mockBackend.getUsers();
+            const allProjects = mockBackend.getProjects();
+
+            const fullyEnriched = timers.map(t => {
+                const user = allUsers.find(u => u.id === t.userId);
+                const project = allProjects.find(p => p.id === t.projectId);
+                const category = categories.find(c => c.id === t.categoryId);
+
+                return {
+                    ...t,
+                    userName: user?.name || 'Unknown User', // active timer might typically have this, but let's ensure
+                    projectName: project?.name || 'Unknown Project',
+                    taskCategory: category?.name || t.categoryId
+                };
+            });
+
+            setLiveTimers(fullyEnriched as ActiveTimer[]);
         };
 
         fetchTimers();
@@ -58,7 +108,7 @@ const LiveTrackingTab: React.FC = () => {
                                 </div>
                                 <div>
                                     <div className="text-xs text-slate-500 uppercase font-semibold">Task</div>
-                                    <div className="text-sm text-slate-700">{timer.categoryId}</div>
+                                    <div className="text-sm text-slate-700">{timer.taskCategory}</div>
                                 </div>
                             </div>
 

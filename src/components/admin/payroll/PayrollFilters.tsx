@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Briefcase, RotateCcw, Search } from 'lucide-react';
+import { mockBackend } from '../../../services/mockBackend';
+import type { Project } from '../../../types/schema';
 
 export interface PayrollFilterState {
     period: string; // e.g. "2026-01" or custom
@@ -10,6 +12,7 @@ export interface PayrollFilterState {
     approvalStatus: 'APPROVED' | 'PENDING' | 'REJECTED' | 'OVERDUE' | 'ALL';
     costMode: 'ACTUAL' | 'ESTIMATED';
     searchQuery: string;
+    department?: string; // Add department to state
 }
 
 interface PayrollFiltersProps {
@@ -18,9 +21,50 @@ interface PayrollFiltersProps {
 }
 
 const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange }) => {
+    // Local state for deferred filtering
+    const [localFilters, setLocalFilters] = useState<PayrollFilterState>(filters);
+
+    // Data options
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [departments, setDepartments] = useState<string[]>([]);
+
+    useEffect(() => {
+        // Sync local state if props change externally (e.g. initial load)
+        setLocalFilters(filters);
+    }, [filters]);
+
+    useEffect(() => {
+        // Load filter options
+        const loadedProjects = mockBackend.getProjects();
+        setProjects(loadedProjects);
+
+        const employees = mockBackend.getUsers();
+        const uniqueDepts = Array.from(new Set(employees.map(e => e.department).filter(Boolean)));
+        setDepartments(uniqueDepts as string[]);
+    }, []);
 
     const handleChange = (key: keyof PayrollFilterState, value: any) => {
-        onFilterChange({ ...filters, [key]: value });
+        setLocalFilters(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleApply = () => {
+        onFilterChange(localFilters);
+    };
+
+    const handleReset = () => {
+        const defaultFilters: PayrollFilterState = {
+            period: 'Jan 2026',
+            employeeIds: [],
+            projectIds: [],
+            clientIds: [],
+            billingType: 'ALL',
+            approvalStatus: 'APPROVED',
+            costMode: 'ACTUAL',
+            searchQuery: '',
+            department: 'all'
+        };
+        setLocalFilters(defaultFilters);
+        onFilterChange(defaultFilters);
     };
 
     return (
@@ -34,7 +78,7 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
                     </label>
                     <select
                         className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        value={filters.period}
+                        value={localFilters.period}
                         onChange={(e) => handleChange('period', e.target.value)}
                     >
                         <option value="Jan 2026">Jan 2026</option>
@@ -52,7 +96,7 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
                         type="text"
                         placeholder="Name, ID..."
                         className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        value={filters.searchQuery}
+                        value={localFilters.searchQuery}
                         onChange={(e) => handleChange('searchQuery', e.target.value)}
                     />
                 </div>
@@ -61,10 +105,15 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
                     <label className="text-xs font-medium text-slate-500 flex items-center">
                         <Users className="h-3 w-3 mr-1" /> Department
                     </label>
-                    <select className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <select
+                        className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        value={localFilters.department || 'all'}
+                        onChange={(e) => handleChange('department', e.target.value)}
+                    >
                         <option value="all">All Departments</option>
-                        <option value="engineering">Engineering</option>
-                        <option value="design">Design</option>
+                        {departments.map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
+                        ))}
                     </select>
                 </div>
 
@@ -72,9 +121,18 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
                     <label className="text-xs font-medium text-slate-500 flex items-center">
                         <Briefcase className="h-3 w-3 mr-1" /> Project
                     </label>
-                    <select className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <select
+                        className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        value={localFilters.projectIds[0] || 'all'}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            handleChange('projectIds', val === 'all' ? [] : [val]);
+                        }}
+                    >
                         <option value="all">All Projects</option>
-                        {/* Mock options */}
+                        {projects.map(proj => (
+                            <option key={proj.id} value={proj.id}>{proj.name}</option>
+                        ))}
                     </select>
                 </div>
             </div>
@@ -87,7 +145,7 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
                         <label className="text-xs font-medium text-slate-500">Billing Type</label>
                         <select
                             className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            value={filters.billingType}
+                            value={localFilters.billingType}
                             onChange={(e) => handleChange('billingType', e.target.value)}
                         >
                             <option value="ALL">All Types</option>
@@ -100,7 +158,7 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
                         <label className="text-xs font-medium text-slate-500">Approval Status</label>
                         <select
                             className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            value={filters.approvalStatus}
+                            value={localFilters.approvalStatus}
                             onChange={(e) => handleChange('approvalStatus', e.target.value)}
                         >
                             <option value="APPROVED">Approved (Default)</option>
@@ -114,7 +172,7 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
                         <label className="text-xs font-medium text-slate-500">Cost Mode</label>
                         <select
                             className="w-full text-sm border-slate-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            value={filters.costMode}
+                            value={localFilters.costMode}
                             onChange={(e) => handleChange('costMode', e.target.value)}
                         >
                             <option value="ACTUAL">Actual Cost</option>
@@ -126,11 +184,17 @@ const PayrollFilters: React.FC<PayrollFiltersProps> = ({ filters, onFilterChange
 
                 {/* Actions */}
                 <div className="flex items-center space-x-2">
-                    <button className="flex items-center px-4 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors font-medium">
+                    <button
+                        onClick={handleReset}
+                        className="flex items-center px-4 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors font-medium"
+                    >
                         <RotateCcw className="h-4 w-4 mr-2" />
                         Reset
                     </button>
-                    <button className="flex items-center px-6 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium shadow-sm">
+                    <button
+                        onClick={handleApply}
+                        className="flex items-center px-6 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium shadow-sm"
+                    >
                         Apply
                     </button>
                 </div>

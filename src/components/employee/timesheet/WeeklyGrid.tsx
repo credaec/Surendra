@@ -57,7 +57,7 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({ days, selectedDate, onSelectDat
                                     "text-xl font-bold font-mono tracking-tight",
                                     hasHours ? "text-slate-900" : "text-slate-300"
                                 )}>
-                                    {hasHours ? `${day.totalHours}h` : '-'}
+                                    {hasHours ? `${Number.isInteger(day.totalHours) ? day.totalHours : day.totalHours.toFixed(1)}h` : '-'}
                                 </span>
 
                                 {hasHours && (

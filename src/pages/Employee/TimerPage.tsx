@@ -1,18 +1,17 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Play } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext'; // Import Auth
 import { mockBackend } from '../../services/mockBackend';
-import type { Project } from '../../types/schema';
+import type { Project, TaskCategory } from '../../types/schema';
 import TimerHeader from '../../components/employee/timer/TimerHeader';
 import LiveTimerCard from '../../components/employee/timer/LiveTimerCard';
 import TimerForm from '../../components/employee/timer/TimerForm';
-import ProofUploadCard from '../../components/employee/timer/ProofUploadCard';
 import QuickStartCard from '../../components/employee/timer/QuickStartCard';
 import TodaySummaryCard from '../../components/employee/timer/TodaySummaryCard';
 import RecentHistoryCard from '../../components/employee/timer/RecentHistoryCard';
 import StopTimerModal from '../../components/employee/timer/StopTimerModal';
-import ProofPendingCard from '../../components/employee/timer/ProofPendingCard';
 
 const TimerPage: React.FC = () => {
     const location = useLocation();
@@ -24,17 +23,22 @@ const TimerPage: React.FC = () => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const timerRef = useRef<number | null>(null);
 
+    // Track start time refs for interval calculation without dependency loops
+    const startTimeRef = useRef<number>(0);
+    const accumulatedRef = useRef<number>(0);
+
     // 2. Form State
     const [projects, setProjects] = useState<Project[]>([]);
+    const [categories, setCategories] = useState<TaskCategory[]>([]); // New State
     const [selectedProject, setSelectedProject] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [notes, setNotes] = useState('');
-    const [hasProofFile, setHasProofFile] = useState(false);
 
     // Load Projects and Check for Active Timer on Mount
     useEffect(() => {
         // Load Projects
         setProjects(mockBackend.getProjects());
+        setCategories(mockBackend.getTaskCategories()); // Fetch Categories
 
         // Check for active timer for this user
         if (user) {
@@ -47,15 +51,22 @@ const TimerPage: React.FC = () => {
                 if (status === 'PAUSED') {
                     setIsRunning(false);
                     setIsPaused(true);
-                    setElapsedSeconds(totalSeconds); // Restore correctly
+                    setElapsedSeconds(totalSeconds);
+                    accumulatedRef.current = totalSeconds;
                 } else {
                     setIsRunning(true);
                     setIsPaused(false);
-                    // If running, calculate live drift from start time
-                    const start = new Date(activeTimer.startTime!).getTime();
-                    const now = Date.now();
-                    const currentRunSeconds = Math.floor((now - start) / 1000);
-                    setElapsedSeconds(totalSeconds + currentRunSeconds);
+
+                    // Set Refs for interval
+                    if (activeTimer.startTime) {
+                        startTimeRef.current = new Date(activeTimer.startTime).getTime();
+                        accumulatedRef.current = totalSeconds; // Base accumulated before current run
+
+                        // Initial sync
+                        const now = Date.now();
+                        const currentRunSeconds = Math.floor((now - startTimeRef.current) / 1000);
+                        setElapsedSeconds(totalSeconds + currentRunSeconds);
+                    }
                 }
 
                 setSelectedProject(activeTimer.projectId);
@@ -84,12 +95,21 @@ const TimerPage: React.FC = () => {
     // 3. UI State
     const [showStopModal, setShowStopModal] = useState(false);
 
-    // 4. Timer Interval Logic
+    // 4. Timer Interval Logic (Robust Delta Calculation)
     useEffect(() => {
         if (isRunning) {
+            // Clear existing if any
+            if (timerRef.current) clearInterval(timerRef.current);
+
             // @ts-ignore
             timerRef.current = setInterval(() => {
-                setElapsedSeconds(prev => prev + 1);
+                const now = Date.now();
+                // Calc difference
+                const delta = Math.floor((now - startTimeRef.current) / 1000);
+                // Total = accumulated + current session delta
+                // Ensure non-negative
+                const total = Math.max(0, accumulatedRef.current + delta);
+                setElapsedSeconds(total);
             }, 1000);
         } else if (timerRef.current) {
             clearInterval(timerRef.current);
@@ -110,14 +130,25 @@ const TimerPage: React.FC = () => {
         if (isPaused) {
             // RESUME
             // @ts-ignore
-            mockBackend.resumeTimer(user.id);
+            const timer = mockBackend.resumeTimer(user.id);
+            if (timer && timer.startTime) {
+                // Update Refs
+                startTimeRef.current = new Date(timer.startTime).getTime();
+                // accumulated is already set from pause state, but safe to refresh from backend return if needed
+                // accumulatedRef.current = timer.accumulatedSeconds... (mockBackend resume doesn't return accumulated explicitly unless we modify it, but it should be consistent)
+            }
+
             setIsPaused(false);
             setIsRunning(true);
-            // Do NOT reset elapsedSeconds here!
         } else {
             // NEW START
             // Backend Call
-            mockBackend.startTimer(user.id, user.name, selectedProject, selectedCategory);
+            const timer = mockBackend.startTimer(user.id, user.name, selectedProject, selectedCategory);
+
+            // Set Refs
+            startTimeRef.current = new Date(timer.startTime!).getTime(); // Using ! as startTimer always sets it
+            accumulatedRef.current = 0;
+
             setIsRunning(true);
             setElapsedSeconds(0);
         }
@@ -146,12 +177,8 @@ const TimerPage: React.FC = () => {
         setIsPaused(false); // Reset pause state
         setElapsedSeconds(0);
         setNotes('');
-        setHasProofFile(false);
         setShowStopModal(false);
     };
-
-    // Helper to check if category needs proof
-    const isProofRequired = selectedCategory === 'Drafting' || selectedCategory === 'Engineering'; // Mock logic
 
     // ID to Name helper
     const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || id;
@@ -181,34 +208,38 @@ const TimerPage: React.FC = () => {
                             disabled={false}
                         />
                     ) : (
-                        <TimerForm
-                            selectedProject={selectedProject}
-                            selectedCategory={selectedCategory}
-                            notes={notes}
-                            onProjectChange={setSelectedProject}
-                            onCategoryChange={setSelectedCategory}
-                            onNotesChange={setNotes}
-                            readOnly={false}
-                        />
+                        <div className="space-y-4">
+                            <TimerForm
+                                projects={projects}
+                                categories={categories}
+                                selectedProject={selectedProject}
+                                selectedCategory={selectedCategory}
+                                notes={notes}
+                                onProjectChange={setSelectedProject}
+                                onCategoryChange={setSelectedCategory}
+                                onNotesChange={setNotes}
+                                readOnly={false}
+                            />
+                            <button
+                                onClick={handleStart}
+                                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 text-lg"
+                            >
+                                <Play className="h-5 w-5 fill-current" />
+                                Start Timer
+                            </button>
+                        </div>
                     )}
-
-                    {/* Proof Upload (Conditional) */}
-                    <ProofUploadCard
-                        isRequired={isProofRequired}
-                        hasFile={hasProofFile}
-                        onUpload={() => setHasProofFile(true)}
-                        onRemove={() => setHasProofFile(false)}
-                    />
 
                     {/* Quick Start Chips */}
                     {!isRunning && (
                         <QuickStartCard
                             recents={dailyEntries.slice(0, 3).map(e => {
                                 const proj = projects.find(p => p.id === e.projectId);
+                                const cat = categories.find(c => c.id === e.categoryId);
                                 return {
                                     id: e.id,
                                     project: proj ? proj.name : 'Unknown',
-                                    category: e.categoryId,
+                                    category: cat ? cat.name : e.categoryId,
                                     projectId: e.projectId
                                 };
                             })}
@@ -229,7 +260,6 @@ const TimerPage: React.FC = () => {
                         billable={dailyEntries.filter(e => e.isBillable).reduce((acc, curr) => acc + curr.durationMinutes, 0)}
                         nonBillable={dailyEntries.filter(e => !e.isBillable).reduce((acc, curr) => acc + curr.durationMinutes, 0)}
                     />
-                    <ProofPendingCard count={mockBackend.getPendingEntries().filter(e => e.isBillable && e.durationMinutes > 240).length} />
                     <RecentHistoryCard entries={dailyEntries.slice(0, 5)} />
                 </div>
 
@@ -240,7 +270,7 @@ const TimerPage: React.FC = () => {
                 isOpen={showStopModal}
                 onClose={() => setShowStopModal(false)}
                 onConfirm={handleConfirmStop}
-                isProofMissing={isProofRequired && !hasProofFile}
+            // Removed isProofMissing prop
             />
 
         </div>

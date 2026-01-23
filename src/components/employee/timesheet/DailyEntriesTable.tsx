@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../../../lib/utils';
-import { Image as ImageIcon, DollarSign, FileText, Calendar, Trash2, Edit2, Plus } from 'lucide-react';
+import { DollarSign, FileText, Calendar, Trash2, Edit2, Plus } from 'lucide-react';
 
 // Define interface for Entry
 export interface TimeEntryRow {
@@ -12,7 +12,6 @@ export interface TimeEntryRow {
     category: string;
     notes?: string;
     isBillable: boolean;
-    hasProof: boolean;
     status: string; // 'DRAFT' | 'SUBMITTED' | etc
 }
 
@@ -94,11 +93,6 @@ const DailyEntriesTable: React.FC<DailyEntriesTableProps> = ({
                                             ) : (
                                                 <div className="flex items-center text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200" title="Non-Billable">
                                                     Non-Billable
-                                                </div>
-                                            )}
-                                            {entry.hasProof && (
-                                                <div className="text-purple-500" title="Proof Attached">
-                                                    <ImageIcon className="h-4 w-4" />
                                                 </div>
                                             )}
                                         </div>

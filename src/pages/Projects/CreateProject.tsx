@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Calendar, Folder, Users, DollarSign, Settings, CheckCircle2, AlertCircle, FileText, UploadCloud, ChevronRight, Flag, Trash2, Plus
+    Calendar, Folder, Users, DollarSign, Settings, CheckCircle2, AlertCircle, FileText, UploadCloud, ChevronRight, Flag, Trash2, Plus, ArrowLeft
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { Project, User } from '../../types/schema';
 import { mockBackend } from '../../services/mockBackend';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 // Basic mock data call for clients
 const clients = mockBackend.getClients();
@@ -61,7 +61,21 @@ const CreateProjectPage: React.FC = () => {
         }
     });
 
+    const { id } = useParams();
     const navigate = useNavigate();
+    const isEditMode = !!id;
+
+    useEffect(() => {
+        if (id) {
+            const project = mockBackend.getProjectById(id);
+            if (project) {
+                setFormData(project);
+            } else {
+                alert('Project not found');
+                navigate('/admin/projects');
+            }
+        }
+    }, [id, navigate]);
 
     const handleNext = () => {
         const index = tabs.findIndex(t => t.id === activeTab);
@@ -131,13 +145,19 @@ const CreateProjectPage: React.FC = () => {
                 teamMembers: formData.teamMembers?.filter(m => m.userId) || []
             } as Project;
 
-            const created = mockBackend.addProject(projectToSave);
-            console.log('Project Created:', created);
-            alert(`Project "${created.name}" created successfully!\n\nEmail notifications sent to assigned team members.`);
-            navigate('/admin/dashboard'); // Or project list
+            if (isEditMode) {
+                const updated = mockBackend.updateProject(projectToSave);
+                console.log('Project Updated:', updated);
+                alert(`Project "${updated.name}" updated successfully!`);
+            } else {
+                const created = mockBackend.addProject(projectToSave);
+                console.log('Project Created:', created);
+                alert(`Project "${created.name}" created successfully!\n\nEmail notifications sent to assigned team members.`);
+            }
+            navigate('/admin/projects');
         } catch (error) {
             console.error(error);
-            alert('Failed to create project.');
+            alert('Failed to save project.');
         }
     };
 
@@ -145,7 +165,13 @@ const CreateProjectPage: React.FC = () => {
         <div className="max-w-5xl mx-auto pb-12 animate-in fade-in duration-500">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900">Create New Project</h1>
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex items-center text-slate-500 hover:text-slate-800 transition-colors mb-4 text-sm font-medium"
+                >
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                </button>
+                <h1 className="text-3xl font-bold text-slate-900">{isEditMode ? 'Edit Project' : 'Create New Project'}</h1>
                 <p className="text-slate-500 mt-1">Configure project details, budget, team, and rules.</p>
             </div>
 
@@ -559,7 +585,7 @@ const CreateProjectPage: React.FC = () => {
                             onClick={handleCreateProject}
                             className="px-8 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center shadow-sm shadow-emerald-200"
                         >
-                            Create Project <Flag className="h-4 w-4 ml-2" />
+                            {isEditMode ? 'Update Project' : 'Create Project'} <Flag className="h-4 w-4 ml-2" />
                         </button>
                     )}
                 </div>

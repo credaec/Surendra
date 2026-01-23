@@ -16,9 +16,18 @@ export interface ApprovalFilterState {
 interface ApprovalFiltersProps {
     filters: ApprovalFilterState;
     onFilterChange: (newFilters: ApprovalFilterState) => void;
+    onReset?: () => void;
+    onSaveView?: () => void;
+    onApply?: () => void;
 }
 
-const ApprovalFilters: React.FC<ApprovalFiltersProps> = ({ filters, onFilterChange }) => {
+const ApprovalFilters: React.FC<ApprovalFiltersProps> = ({
+    filters,
+    onFilterChange,
+    onReset,
+    onSaveView,
+    onApply
+}) => {
 
     const handleChange = (key: keyof ApprovalFilterState, value: any) => {
         onFilterChange({ ...filters, [key]: value });
@@ -122,15 +131,24 @@ const ApprovalFilters: React.FC<ApprovalFiltersProps> = ({ filters, onFilterChan
 
                 {/* Action Buttons */}
                 <div className="flex items-center space-x-2">
-                    <button className="flex items-center px-4 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors font-medium">
+                    <button
+                        onClick={onReset}
+                        className="flex items-center px-4 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors font-medium"
+                    >
                         <RotateCcw className="h-4 w-4 mr-2" />
                         Reset
                     </button>
-                    <button className="flex items-center px-4 py-2 text-sm text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg transition-colors font-medium">
+                    <button
+                        onClick={onSaveView}
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg transition-colors font-medium"
+                    >
                         <Save className="h-4 w-4 mr-2" />
                         Save View
                     </button>
-                    <button className="flex items-center px-6 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium shadow-sm">
+                    <button
+                        onClick={onApply}
+                        className="flex items-center px-6 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium shadow-sm"
+                    >
                         Apply Filters
                     </button>
                 </div>

@@ -1,45 +1,37 @@
 import React from 'react';
-import { Eye, Edit3, Send, CreditCard, Download, Trash2, AlertCircle } from 'lucide-react';
+import { Eye, Edit3, Send, CreditCard, Download, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { Invoice } from '../../../services/mockBackend';
 
 interface InvoicesTableProps {
     data: Invoice[];
     selectedIds: string[];
-    onSelectionChange: (ids: string[]) => void;
+    onSelect: (id: string) => void;
+    onSelectAll: (ids: string[]) => void;
     onView: (id: string) => void;
     onEdit: (id: string) => void;
     onSend: (id: string) => void;
     onMarkPayment: (id: string) => void;
     onDelete: (id: string) => void;
+    onDownload: (id: string) => void;
+    isTrashMode?: boolean;
+    onRestore?: (id: string) => void;
 }
 
 const InvoicesTable: React.FC<InvoicesTableProps> = ({
     data,
     selectedIds,
-    onSelectionChange,
+    onSelect,
+    onSelectAll,
     onView,
     onEdit,
     onSend,
     onMarkPayment,
-    onDelete
+    onDelete,
+    onDownload,
+    isTrashMode = false,
+    onRestore
 }) => {
-
-    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.checked) {
-            onSelectionChange(data.map(item => item.id));
-        } else {
-            onSelectionChange([]);
-        }
-    };
-
-    const handleSelectOne = (id: string) => {
-        if (selectedIds.includes(id)) {
-            onSelectionChange(selectedIds.filter(sid => sid !== id));
-        } else {
-            onSelectionChange([...selectedIds, id]);
-        }
-    };
 
     const getStatusBadge = (status: Invoice['status']) => {
         switch (status) {
@@ -77,8 +69,8 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                                 <input
                                     type="checkbox"
                                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                    checked={selectedIds.length === data.length && data.length > 0}
-                                    onChange={handleSelectAll}
+                                    checked={data.length > 0 && selectedIds.length === data.length}
+                                    onChange={(e) => onSelectAll(e.target.checked ? data.map(i => i.id) : [])}
                                 />
                             </th>
                             <th className="px-4 py-4">Invoice No</th>
@@ -94,13 +86,13 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {data.map((item) => (
-                            <tr key={item.id} className={cn("hover:bg-slate-50 transition-colors", selectedIds.includes(item.id) && "bg-blue-50/30")}>
+                            <tr key={item.id} className={cn("hover:bg-slate-50 transition-colors", selectedIds.includes(item.id) && "bg-blue-50/30", isTrashMode && 'bg-slate-50/50 grayscale-[0.5]')}>
                                 <td className="px-4 py-4">
                                     <input
                                         type="checkbox"
                                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                         checked={selectedIds.includes(item.id)}
-                                        onChange={() => handleSelectOne(item.id)}
+                                        onChange={() => onSelect(item.id)}
                                     />
                                 </td>
                                 <td className="px-4 py-4 font-medium text-slate-900">{item.invoiceNo}</td>
@@ -116,59 +108,78 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                                         <span className="text-emerald-600">Paid</span>
                                     )}
                                 </td>
-                                <td className="px-4 py-4">{getStatusBadge(item.status)}</td>
+                                <td className="px-4 py-4">
+                                    {isTrashMode ? (
+                                        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-500">DELETED</span>
+                                    ) : (
+                                        getStatusBadge(item.status)
+                                    )}
+                                </td>
                                 <td className="px-4 py-4 text-right">
                                     <div className="flex items-center justify-end space-x-1">
-                                        <button
-                                            onClick={() => onView(item.id)}
-                                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                            title="View"
-                                        >
-                                            <Eye className="h-4 w-4" />
-                                        </button>
+                                        {isTrashMode ? (
+                                            <>
+                                                <button
+                                                    onClick={() => onRestore && onRestore(item.id)}
+                                                    className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                                                    title="Restore Invoice"
+                                                >
+                                                    <RotateCcw className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => onDelete(item.id)}
+                                                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
+                                                    title="Permanently Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => onEdit(item.id)}
+                                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                    title="View/Edit"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
 
-                                        {item.status === 'DRAFT' && (
-                                            <button
-                                                onClick={() => onEdit(item.id)}
-                                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
-                                                title="Edit"
-                                            >
-                                                <Edit3 className="h-4 w-4" />
-                                            </button>
-                                        )}
+                                                {(item.status === 'DRAFT' || item.status === 'SENT') && (
+                                                    <button
+                                                        onClick={() => onSend(item.id)}
+                                                        className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                                                        title="Send Invoice"
+                                                    >
+                                                        <Send className="h-4 w-4" />
+                                                    </button>
+                                                )}
 
-                                        {(item.status === 'DRAFT' || item.status === 'SENT') && (
-                                            <button
-                                                onClick={() => onSend(item.id)}
-                                                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                                                title="Send Invoice"
-                                            >
-                                                <Send className="h-4 w-4" />
-                                            </button>
-                                        )}
+                                                {(item.status === 'SENT' || item.status === 'PARTIAL' || item.status === 'OVERDUE') && (
+                                                    <button
+                                                        onClick={() => onMarkPayment(item.id)}
+                                                        className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded"
+                                                        title="Record Payment"
+                                                    >
+                                                        <CreditCard className="h-4 w-4" />
+                                                    </button>
+                                                )}
 
-                                        {(item.status === 'SENT' || item.status === 'PARTIAL' || item.status === 'OVERDUE') && (
-                                            <button
-                                                onClick={() => onMarkPayment(item.id)}
-                                                className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded"
-                                                title="Record Payment"
-                                            >
-                                                <CreditCard className="h-4 w-4" />
-                                            </button>
-                                        )}
+                                                <button
+                                                    onClick={() => onDownload(item.id)}
+                                                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded"
+                                                    title="Download PDF"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </button>
 
-                                        <button className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded" title="Download PDF">
-                                            <Download className="h-4 w-4" />
-                                        </button>
-
-                                        {item.status === 'DRAFT' && (
-                                            <button
-                                                onClick={() => onDelete(item.id)}
-                                                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                                <button
+                                                    onClick={() => onDelete(item.id)}
+                                                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 </td>
@@ -177,7 +188,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                         {data.length === 0 && (
                             <tr>
                                 <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
-                                    <p>No invoices found matching your filters.</p>
+                                    <p>{isTrashMode ? 'Trash is empty.' : 'No invoices found matching your filters.'}</p>
                                 </td>
                             </tr>
                         )}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { cn } from '../../lib/utils';
+import { Link } from 'react-router-dom';
 import { mockBackend } from '../../services/mockBackend';
 import type { Project } from '../../types/schema';
 
@@ -62,7 +63,7 @@ const ActiveProjectsTable: React.FC = () => {
         <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden h-full">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-slate-800">Active Projects Snapshot</h3>
-                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">View All</button>
+                <Link to="/admin/projects" className="text-sm text-blue-600 hover:text-blue-700 font-medium">View All</Link>
             </div>
 
             <div className="overflow-x-auto">

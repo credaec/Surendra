@@ -27,7 +27,7 @@ const LoginPage: React.FC = () => {
     // Determine redirect path
     useEffect(() => {
         if (user) {
-            if (user.role === 'ADMIN') navigate('/dashboard');
+            if (user.role === 'ADMIN') navigate('/admin/dashboard');
             else navigate('/employee/dashboard');
         }
     }, [user, navigate]);

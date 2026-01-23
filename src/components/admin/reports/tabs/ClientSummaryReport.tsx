@@ -1,28 +1,127 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Briefcase, DollarSign, PieChart, TrendingUp } from 'lucide-react';
+import KPICard from '../../../dashboard/KPICard';
 // import { cn } '../../../../lib/utils';
-
-const mockClientData = [
-    { id: 1, name: 'Apex Constructors', projects: 3, billableHours: 2500, billedAmt: 375000, pendingAmt: 25000, status: 'Active' },
-    { id: 2, name: 'Urban Developers', projects: 2, billableHours: 1800, billedAmt: 270000, pendingAmt: 45000, status: 'Active' },
-    { id: 3, name: 'Gov Infrastructure', projects: 5, billableHours: 4200, billedAmt: 630000, pendingAmt: 0, status: 'Active' },
-    { id: 4, name: 'Tech Corp', projects: 1, billableHours: 400, billedAmt: 60000, pendingAmt: 15000, status: 'Hold' },
-    { id: 5, name: 'Private Client', projects: 1, billableHours: 150, billedAmt: 22500, pendingAmt: 7500, status: 'Active' },
-];
-
-const chartData = mockClientData.map(c => ({
-    name: c.name,
-    amount: c.billedAmt,
-}));
+import { mockBackend } from '../../../../services/mockBackend';
 
 const ClientSummaryReport: React.FC<any> = ({ filters }) => {
+    const [searchQuery, setSearchQuery] = React.useState('');
+
+    const filteredData = React.useMemo(() => {
+        const invoices = mockBackend.getInvoices();
+        const projects = mockBackend.getProjects();
+
+        // Group by Client
+        const clientMap = new Map<string, any>();
+
+        projects.forEach(p => {
+            if (!clientMap.has(p.clientId)) {
+                clientMap.set(p.clientId, {
+                    id: p.clientId,
+                    name: p.clientName,
+                    projects: 0,
+                    billableHours: 0, // Need entries for this, skipping for MVP or simple Sum
+                    billedAmt: 0,
+                    pendingAmt: 0,
+                    status: 'Active',
+                    projectIds: []
+                });
+            }
+            const c = clientMap.get(p.clientId);
+            c.projects += 1;
+            c.projectIds.push(p.id);
+        });
+
+        // Calculate financials from Invoices
+        // (If we had entries, we'd calc billable hours, but let's focus on revenue here)
+        invoices.forEach(inv => {
+            // If client not in projects (e.g. ad-hoc invoice), add them?
+            if (!clientMap.has(inv.clientId)) {
+                clientMap.set(inv.clientId, {
+                    id: inv.clientId,
+                    name: inv.clientName,
+                    projects: 0,
+                    billableHours: 0,
+                    billedAmt: 0,
+                    pendingAmt: 0,
+                    status: 'Active',
+                    projectIds: []
+                });
+            }
+            const c = clientMap.get(inv.clientId);
+            c.billedAmt += inv.totalAmount;
+            c.pendingAmt += inv.balanceAmount;
+        });
+
+        return Array.from(clientMap.values()).filter(c => {
+            // 1. Text Search (Local)
+            const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+            // 2. Client Filter (Global)
+            const matchesClient = !filters.client || c.id === filters.client;
+
+            // 3. Project Filter (Global)
+            const matchesProject = !filters.project || c.projectIds.includes(filters.project);
+
+            // 4. Status Filter (Global) - assuming 'Active' for all found clients for now
+            const matchesStatus = !filters.status || filters.status === 'all' || c.status === filters.status;
+
+            return matchesSearch && matchesClient && matchesProject && matchesStatus;
+        });
+    }, [searchQuery, filters]);
+
+    // Calculate dynamic KPIs from filteredData
+    const stats = React.useMemo(() => {
+        const totalClients = filteredData.length;
+        const totalProjects = filteredData.reduce((acc, curr) => acc + curr.projects, 0);
+        const totalRevenue = filteredData.reduce((acc, curr) => acc + curr.billedAmt, 0);
+        const totalPending = filteredData.reduce((acc, curr) => acc + curr.pendingAmt, 0);
+
+        return { totalClients, totalProjects, totalRevenue, totalPending };
+    }, [filteredData]);
+
+    // Prepare chart data from filteredData
+    const chartData = filteredData.map(c => ({
+        name: c.name,
+        amount: c.billedAmt,
+    }));
+
     return (
         <div className="space-y-6">
 
-            {/* Top Section: Revenue Chart */}
+            {/* Top Section: Dynamic KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <KPICard
+                    title="Active Clients"
+                    value={stats.totalClients.toString()}
+                    subValue="Filtered View"
+                    icon={Briefcase}
+                />
+                <KPICard
+                    title="Total Projects"
+                    value={stats.totalProjects.toString()}
+                    subValue="Across Clients"
+                    icon={PieChart}
+                />
+                <KPICard
+                    title="Total Revenue"
+                    value={`$${(stats.totalRevenue / 1000).toFixed(1)}k`}
+                    subValue="Billed Amount"
+                    icon={DollarSign}
+                    trendUp={true}
+                />
+                <KPICard
+                    title="Pending Payments"
+                    value={`$${(stats.totalPending / 1000).toFixed(1)}k`}
+                    subValue="Outstanding"
+                    icon={TrendingUp} // Using TrendingUp as a placeholder for financial status
+                />
+            </div>
+
+            {/* Middle Section: Revenue Chart */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4">Revenue by Client</h3>
                 <div className="h-72 w-full" style={{ minWidth: 0, minHeight: 0 }}>
@@ -57,6 +156,8 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
                             type="text"
                             placeholder="Search clients..."
                             className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
                 </div>
@@ -75,39 +176,47 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {mockClientData.map((client) => (
-                                <tr
-                                    key={client.id}
-                                    onClick={() => filters.onViewDetail && filters.onViewDetail('client', client.id, client.name)}
-                                    className="hover:bg-slate-50 transition-colors group cursor-pointer"
-                                >
-                                    <td className="px-6 py-4 font-medium text-slate-900 flex items-center">
-                                        <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-xs font-bold">
-                                            {client.name.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        {client.name}
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                                            {client.projects}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right text-slate-600 font-mono">{client.billableHours}h</td>
-                                    <td className="px-6 py-4 text-right text-emerald-600 font-mono font-medium">${client.billedAmt.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right text-amber-600 font-mono font-medium">${client.pendingAmt.toLocaleString()}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${client.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                                            }`}>
-                                            {client.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button className="text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
-                                            <ArrowRight className="h-4 w-4" />
-                                        </button>
+                            {filteredData.length > 0 ? (
+                                filteredData.map((client) => (
+                                    <tr
+                                        key={client.id}
+                                        onClick={() => filters.onViewDetail && filters.onViewDetail('client', client.id, client.name)}
+                                        className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                                    >
+                                        <td className="px-6 py-4 font-medium text-slate-900 flex items-center">
+                                            <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-xs font-bold">
+                                                {client.name.substring(0, 2).toUpperCase()}
+                                            </div>
+                                            {client.name}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                                                {client.projects}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-slate-600 font-mono">{client.billableHours}h</td>
+                                        <td className="px-6 py-4 text-right text-emerald-600 font-mono font-medium">${client.billedAmt.toLocaleString()}</td>
+                                        <td className="px-6 py-4 text-right text-amber-600 font-mono font-medium">${client.pendingAmt.toLocaleString()}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${client.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                {client.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button className="text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
+                                                <ArrowRight className="h-4 w-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                                        No clients found matching "{searchQuery}"
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>

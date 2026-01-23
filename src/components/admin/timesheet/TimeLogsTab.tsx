@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Paperclip, MessageSquare, AlertCircle } from 'lucide-react';
+import { Clock, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { mockBackend } from '../../../services/mockBackend';
 import { format, parseISO } from 'date-fns';
+
+import TimeEntryEditModal from './TimeEntryEditModal';
 
 interface TimeLogsTabProps {
     filterEmployeeId: string;
@@ -17,8 +19,10 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
     filterStatus
 }) => {
     const [logs, setLogs] = useState<any[]>([]); // Using any for UI friendly enriched object
+    const [selectedEntry, setSelectedEntry] = useState<any | null>(null); // Ideally import TimeEntry type
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    useEffect(() => {
+    const loadData = () => {
         let entries = mockBackend.getEntries();
         const users = mockBackend.getUsers();
         const projects = mockBackend.getProjects();
@@ -49,16 +53,38 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
                 billable: entry.isBillable,
                 proof: !!entry.proofUrl,
                 status: entry.status,
-                notes: entry.description || ''
+                notes: entry.description || '',
+                originalEntry: entry // Keep reference to original for easy editing
             };
         });
 
-        enrichedLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date descending (mock logic) - wait, a.date is formatted string 'MMM dd', so sorting might be weird. Ideally sort by original date.
-        // But for mock display it's fine or I should use original date in object for sorting.
-        // Let's keep existing logic or clean it. Existing logic used `new Date(b.date)` against formatted string? 'MMM dd' defaults to current year, so it "works".
+        // specific sort logic if needed
+        enrichedLogs.sort((a, b) => new Date(b.originalEntry.date).getTime() - new Date(a.originalEntry.date).getTime());
 
         setLogs(enrichedLogs);
+    };
+
+    useEffect(() => {
+        loadData();
     }, [filterEmployeeId, filterProjectId, filterClientId, filterStatus]);
+
+    const handleEdit = (entry: any) => {
+        // We stored originalEntry in the enriched object
+        setSelectedEntry(entry.originalEntry);
+        setIsEditModalOpen(true);
+    };
+
+    const handleDelete = (id: string) => {
+        if (window.confirm('Are you sure you want to delete this time log?')) {
+            mockBackend.deleteEntry(id);
+            loadData(); // Refresh
+        }
+    };
+
+    const handleSave = () => {
+        loadData(); // Refresh list after edit
+        setIsEditModalOpen(false);
+    };
 
     return (
         <div className="overflow-x-auto">
@@ -70,7 +96,7 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
                         <th className="px-6 py-4">Project / Task</th>
                         <th className="px-6 py-4">Duration</th>
                         <th className="px-6 py-4">Notes</th>
-                        <th className="px-6 py-4">Proof</th>
+                        {/* <th className="px-6 py-4">Proof</th> Removed */}
                         <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
@@ -92,19 +118,7 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
                                         <span className="truncate max-w-[150px]">{log.notes || '-'}</span>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4">
-                                    {log.proof ? (
-                                        <span className="inline-flex items-center text-emerald-600 text-xs font-medium bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                                            <Paperclip className="w-3 h-3 mr-1" /> Attached
-                                        </span>
-                                    ) : log.billable ? (
-                                        <span className="inline-flex items-center text-rose-600 text-xs font-medium bg-rose-50 px-2 py-1 rounded-full border border-rose-100">
-                                            <AlertCircle className="w-3 h-3 mr-1" /> Missing
-                                        </span>
-                                    ) : (
-                                        <span className="text-slate-400 text-xs">-</span>
-                                    )}
-                                </td>
+                                {/* Proof column removed */}
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
                                         log.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-800' :
@@ -115,13 +129,28 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    {log.status === 'DRAFT' && <button className="text-blue-600 hover:text-blue-800 font-medium text-xs">Edit</button>}
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={() => handleEdit(log)}
+                                            className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                                            title="Edit"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(log.id)}
+                                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))
                     ) : (
                         <tr>
-                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                            <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                                 <Clock className="w-12 h-12 mx-auto mb-3 opacity-20" />
                                 <p>No time logs found for this period.</p>
                             </td>
@@ -129,6 +158,16 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
                     )}
                 </tbody>
             </table>
+
+            {/* Edit Modal */}
+            {selectedEntry && (
+                <TimeEntryEditModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    entry={selectedEntry}
+                    onSave={handleSave}
+                />
+            )}
         </div>
     );
 };

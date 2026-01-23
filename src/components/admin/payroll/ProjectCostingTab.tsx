@@ -16,14 +16,57 @@ interface ProjectCostingTabProps {
     data?: ProjectCosting[];
 }
 
+import { mockBackend } from '../../../services/mockBackend';
+
 const ProjectCostingTab: React.FC<ProjectCostingTabProps> = ({ data = [] }) => {
 
-    // Mock data
-    const displayData: ProjectCosting[] = data.length > 0 ? data : [
-        { id: 'p1', projectName: 'BCS Skylights', clientName: 'Boston Construction Services', budgetHours: 500, actualHours: 120, billableHours: 110, employeeCost: 6000, estBilling: 16500 },
-        { id: 'p2', projectName: 'Dr. Wade Residence', clientName: 'Dr. Emily Wade', budgetHours: 200, actualHours: 45, billableHours: 40, employeeCost: 2025, estBilling: 6000 },
-        { id: 'p3', projectName: 'Urban Apartment Complex', clientName: 'Urban Developers', budgetHours: 1000, actualHours: 300, billableHours: 280, employeeCost: 15000, estBilling: 42000 },
-    ];
+    // Dynamic Data Calculation
+    const displayData: ProjectCosting[] = React.useMemo(() => {
+        if (data.length > 0) return data; // Use props if provided
+
+        const projects = mockBackend.getProjects();
+        const entries = mockBackend.getEntries();
+        const users = mockBackend.getUsers();
+
+        return projects.map(p => {
+            const projEntries = entries.filter(e => e.projectId === p.id);
+
+            let actualHours = 0;
+            let billableHours = 0;
+            let employeeCost = 0;
+            let estBilling = 0;
+
+            projEntries.forEach(e => {
+                const h = e.durationMinutes / 60;
+                actualHours += h;
+                if (e.isBillable) billableHours += h;
+
+                // Cost: User Rate * Hours
+                const user = users.find(u => u.id === e.userId);
+                const costRate = user?.hourlyCostRate || 40; // Default Cost
+                employeeCost += h * costRate;
+
+                // Billing: Project Rate or ...
+                // Simple logic: Project Global Rate * Hours (if billable?) or specific logic
+                // Assuming Global Rate for all billable hours for MVP
+                const billRate = p.globalRate || 100;
+                if (e.isBillable) {
+                    estBilling += h * billRate;
+                }
+            });
+
+            return {
+                id: p.id,
+                projectName: p.name,
+                clientName: p.clientName,
+                budgetHours: p.estimatedHours || 0,
+                actualHours: Math.round(actualHours),
+                billableHours: Math.round(billableHours),
+                employeeCost: Math.round(employeeCost),
+                estBilling: Math.round(estBilling)
+            };
+        }).filter(p => p.actualHours > 0 || p.budgetHours > 0); // Only show active/budgeted
+    }, [data]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {

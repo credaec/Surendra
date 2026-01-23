@@ -13,6 +13,12 @@ interface ReportsLayoutProps {
     onTabChange: (tab: ReportTabId) => void;
     filters: any;
     onFilterChange: (filters: any) => void;
+    onRefresh?: () => void;
+    onPrint?: () => void;
+    onSaveFilter?: () => void;
+    onExport?: () => void;
+    onApplyFilters?: () => void;
+    onResetFilters?: () => void;
 }
 
 const ReportsLayout: React.FC<ReportsLayoutProps> = ({
@@ -20,7 +26,13 @@ const ReportsLayout: React.FC<ReportsLayoutProps> = ({
     activeTab,
     onTabChange,
     filters,
-    onFilterChange
+    onFilterChange,
+    onRefresh,
+    onPrint,
+    onSaveFilter,
+    onExport,
+    onApplyFilters,
+    onResetFilters
 }) => {
 
     const tabs: { id: ReportTabId; label: string; icon: any }[] = [
@@ -54,17 +66,31 @@ const ReportsLayout: React.FC<ReportsLayoutProps> = ({
 
                         {/* Top Actions */}
                         <div className="flex items-center space-x-2">
-                            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip" title="Refresh Data">
+                            <button
+                                onClick={onRefresh}
+                                className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip"
+                                title="Refresh Data"
+                            >
                                 <RefreshCw className="h-4 w-4" />
                             </button>
-                            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip" title="Print Report">
+                            <button
+                                onClick={onPrint}
+                                className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip"
+                                title="Print Report"
+                            >
                                 <Printer className="h-4 w-4" />
                             </button>
-                            <button className="flex items-center px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm">
+                            <button
+                                onClick={onSaveFilter}
+                                className="flex items-center px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                            >
                                 <Save className="h-4 w-4 mr-2 text-slate-400" />
                                 Save Filter
                             </button>
-                            <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
+                            <button
+                                onClick={onExport}
+                                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
+                            >
                                 <Download className="h-4 w-4 mr-2" />
                                 Export
                             </button>
@@ -99,13 +125,22 @@ const ReportsLayout: React.FC<ReportsLayoutProps> = ({
             {/* 2. Global Filter Panel */}
             <div className="border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-[137px] z-10 shadow-sm">
                 <div className="max-w-[1920px] mx-auto px-6 py-4">
-                    <ReportsFilterPanel filters={filters} onFilterChange={onFilterChange} />
+                    <ReportsFilterPanel
+                        filters={filters}
+                        onFilterChange={onFilterChange}
+                        onApply={onApplyFilters}
+                        onReset={onResetFilters}
+                        activeTab={activeTab}
+                    />
                 </div>
             </div>
 
             {/* 3. Main Content Area */}
             <div className="max-w-[1920px] mx-auto px-6 py-8">
-                <ReportsKPIGrid reportType={activeTab} />
+                {/* Only show global KPI grid for tabs that rely on it */}
+                {['productivity', 'projects', 'categories'].includes(activeTab) && (
+                    <ReportsKPIGrid reportType={activeTab} filters={filters} />
+                )}
                 {children}
             </div>
         </div>

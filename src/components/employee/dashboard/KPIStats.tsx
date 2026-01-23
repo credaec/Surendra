@@ -25,6 +25,15 @@ const KPIStats: React.FC = () => {
     const weekHours = Math.floor(weekSeconds / 3600);
     const weekMins = Math.floor((weekSeconds % 3600) / 60);
 
+    // Billable Percentage (Week)
+    const weekBillableSeconds = weekEntries
+        .filter(e => e.isBillable)
+        .reduce((acc, e) => acc + (e.durationMinutes * 60 || 0), 0);
+
+    const billablePct = weekSeconds > 0
+        ? Math.round((weekBillableSeconds / weekSeconds) * 100)
+        : 0;
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
@@ -56,7 +65,7 @@ const KPIStats: React.FC = () => {
             <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Billable %</p>
-                    <div className="text-2xl font-bold text-slate-900">--%</div>
+                    <div className="text-2xl font-bold text-slate-900">{billablePct}%</div>
                     <p className="text-xs text-slate-400 mt-1">Billable vs Total</p>
                 </div>
                 <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
@@ -73,27 +82,27 @@ const KPIStats: React.FC = () => {
 
                 <div className="flex items-center justify-between mt-2">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${(() => {
-                            // 1. Determine Status Logic
-                            // Check if an approval request exists for this user for this week
-                            const approvals = mockBackend.getApprovals();
-                            // Logic matches week range string format in backend (e.g., 'Jan 08 - Jan 14, 2026')
-                            // Ideally we construct this string or check entries status. 
-                            // For MVP simplicity: check if ANY pending approval exists, else 'Draft'
-                            const userApproval = approvals.find(a =>
-                                a.employeeId === user?.id &&
-                                (a.status === 'PENDING' || a.status === 'SUBMITTED')
-                            );
+                        // 1. Determine Status Logic
+                        // Check if an approval request exists for this user for this week
+                        const approvals = mockBackend.getApprovals();
+                        // Logic matches week range string format in backend (e.g., 'Jan 08 - Jan 14, 2026')
+                        // Ideally we construct this string or check entries status. 
+                        // For MVP simplicity: check if ANY pending approval exists, else 'Draft'
+                        const userApproval = approvals.find(a =>
+                            a.employeeId === user?.id &&
+                            (a.status === 'PENDING' || a.status === 'SUBMITTED')
+                        );
 
-                            const status = userApproval ? userApproval.status : 'Draft';
+                        const status = userApproval ? userApproval.status : 'Draft';
 
-                            switch (status) {
-                                case 'APPROVED': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-                                case 'PENDING':
-                                case 'SUBMITTED': return 'bg-amber-50 text-amber-700 border-amber-100';
-                                case 'REJECTED': return 'bg-rose-50 text-rose-700 border-rose-100';
-                                default: return 'bg-purple-50 text-purple-700 border-purple-100'; // Draft
-                            }
-                        })()
+                        switch (status) {
+                            case 'APPROVED': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                            case 'PENDING':
+                            case 'SUBMITTED': return 'bg-amber-50 text-amber-700 border-amber-100';
+                            case 'REJECTED': return 'bg-rose-50 text-rose-700 border-rose-100';
+                            default: return 'bg-purple-50 text-purple-700 border-purple-100'; // Draft
+                        }
+                    })()
                         }`}>
                         {(() => {
                             const approvals = mockBackend.getApprovals();

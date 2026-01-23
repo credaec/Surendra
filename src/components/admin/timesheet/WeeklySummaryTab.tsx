@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { MoreHorizontal, FileText, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { mockBackend } from '../../../services/mockBackend';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
 
 interface WeeklySummaryTabProps {
     onViewDetail: (employeeId: string) => void;
+    onApprove: (employeeId: string) => void;
+    onReject: (employeeId: string) => void;
+    onMenuAction: (employeeId: string, action: string) => void;
     filterEmployeeId: string;
     filterProjectId: string;
     filterClientId: string;
@@ -12,6 +16,9 @@ interface WeeklySummaryTabProps {
 
 const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
     onViewDetail,
+    onApprove,
+    onReject,
+    onMenuAction,
     filterEmployeeId,
     filterProjectId,
     filterClientId,
@@ -43,6 +50,12 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
     // const end = endOfWeek(new Date(), { weekStartsOn: 1 });
     // const entries = allEntries.filter(e => isWithinInterval(parseISO(e.date), { start, end }));
 
+    // Dynamic Date Calculation (filtering "This Week" by default for the view)
+    // In a real scenario, we use 'dateRange' filter state passed from parent
+    const startCurrent = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const endCurrent = endOfWeek(new Date(), { weekStartsOn: 1 });
+    const weekDisplay = `${format(startCurrent, 'MMM dd')} - ${format(endCurrent, 'MMM dd')}`;
+
     const weeklySummaries = employees.map((emp) => {
         const userEntries = allEntries.filter(e => e.userId === emp.id);
 
@@ -59,19 +72,47 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
             else if (userEntries.every(e => e.status === 'LOCKED')) status = 'LOCKED';
         }
 
+        // Try to find a relevant approval request for this week to get "Approved By" or "Submitted Date"
+        // In a real app, we'd look this up by weekId/userId
+        const approvals = mockBackend.getApprovals();
+        const approvalReq = approvals.find(a => a.employeeId === emp.id && a.status === status as any); // Loose match on status
+
+        // Dynamic "Submitted Date" - failing real data, use the date of the latest entry
+        let submittedDate = '-';
+        if (status === 'SUBMITTED' || status === 'APPROVED') {
+            if (approvalReq?.submittedOn) {
+                submittedDate = approvalReq.submittedOn;
+            } else if (userEntries.length > 0) {
+                // Sort entries desc
+                const sorted = [...userEntries].sort((a, b) => b.date.localeCompare(a.date));
+                submittedDate = sorted[0].date;
+            }
+        }
+
+        // Dynamic "Approved By"
+        let approvedById = '-';
+        if (status === 'APPROVED') {
+            approvedById = approvalReq?.approvedBy || 'Admin'; // Fallback to generic Admin if ID missing
+            // If we have an ID, we could look up the name, but for now 'Admin' or the ID is better than hardcoded 'Dhiraj'
+            if (approvalReq?.approvedBy) {
+                const approver = mockBackend.getUsers().find(u => u.id === approvalReq.approvedBy);
+                if (approver) approvedById = approver.name;
+            }
+        }
+
         return {
             id: emp.id,
             employeeName: emp.name,
             avatarInitials: emp.avatarInitials,
             department: emp.department,
-            weekRange: 'Jan 13 - Jan 19', // Dynamic in future
+            weekRange: weekDisplay,
             totalHours: totalMinutes / 60,
             billableHours: billableMinutes / 60,
             nonBillableHours: nonBillableMinutes / 60,
-            proofMissingCount: 0, // Logic for proof missing could be added here
+
             status: status,
-            submittedDate: '2026-01-19',
-            approvedBy: status === 'APPROVED' ? 'Dhiraj Vasu' : '-',
+            submittedDate: submittedDate,
+            approvedBy: approvedById,
         };
     });
 
@@ -136,7 +177,7 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
                         <th className="px-6 py-4">Total Hours</th>
                         <th className="px-6 py-4">Billable</th>
                         <th className="px-6 py-4">Non-Billable</th>
-                        <th className="px-6 py-4">Proof Missing</th>
+
                         <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
@@ -166,15 +207,7 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
                             <td className="px-6 py-4 font-mono font-medium text-slate-900">{item.totalHours.toFixed(2)}h</td>
                             <td className="px-6 py-4 font-mono text-slate-600">{item.billableHours.toFixed(2)}h</td>
                             <td className="px-6 py-4 font-mono text-slate-500">{item.nonBillableHours.toFixed(2)}h</td>
-                            <td className="px-6 py-4">
-                                {item.proofMissingCount > 0 ? (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
-                                        {item.proofMissingCount} Missing
-                                    </span>
-                                ) : (
-                                    <span className="text-slate-400 text-xs">All Good</span>
-                                )}
-                            </td>
+
                             <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
                             <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -185,13 +218,25 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
                                     >
                                         <FileText className="w-4 h-4" />
                                     </button>
-                                    <button className="p-1.5 text-slate-500 hover:text-emerald-600 rounded bg-white hover:bg-slate-100 border border-slate-200" title="Approve">
+                                    <button
+                                        onClick={() => onApprove(item.id)}
+                                        className="p-1.5 text-slate-500 hover:text-emerald-600 rounded bg-white hover:bg-slate-100 border border-slate-200"
+                                        title="Approve"
+                                    >
                                         <CheckCircle className="w-4 h-4" />
                                     </button>
-                                    <button className="p-1.5 text-slate-500 hover:text-rose-600 rounded bg-white hover:bg-slate-100 border border-slate-200" title="Reject">
+                                    <button
+                                        onClick={() => onReject(item.id)}
+                                        className="p-1.5 text-slate-500 hover:text-rose-600 rounded bg-white hover:bg-slate-100 border border-slate-200"
+                                        title="Reject"
+                                    >
                                         <XCircle className="w-4 h-4" />
                                     </button>
-                                    <button className="p-1.5 text-slate-500 hover:text-slate-800 rounded bg-white hover:bg-slate-100 border border-slate-200">
+                                    <button
+                                        onClick={() => onMenuAction(item.id, 'more')}
+                                        className="p-1.5 text-slate-500 hover:text-slate-800 rounded bg-white hover:bg-slate-100 border border-slate-200"
+                                        title="More Actions"
+                                    >
                                         <MoreHorizontal className="w-4 h-4" />
                                     </button>
                                 </div>

@@ -11,9 +11,19 @@ interface PayrollHeaderProps {
     onGenerate: () => void;
     onLock: () => void;
     isLocked: boolean;
+    onRefresh: () => void;
+    onExport: () => void;
+    onSettings: () => void;
 }
 
-const PayrollHeader: React.FC<PayrollHeaderProps> = ({ onGenerate, onLock, isLocked }) => {
+const PayrollHeader: React.FC<PayrollHeaderProps> = ({
+    onGenerate,
+    onLock,
+    isLocked,
+    onRefresh,
+    onExport,
+    onSettings
+}) => {
     return (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
@@ -28,11 +38,17 @@ const PayrollHeader: React.FC<PayrollHeaderProps> = ({ onGenerate, onLock, isLoc
             </div>
 
             <div className="flex items-center space-x-3">
-                <button className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <button
+                    onClick={onRefresh}
+                    className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                >
                     <RefreshCcw className="h-4 w-4 mr-2" />
                     Refresh
                 </button>
-                <button className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <button
+                    onClick={onExport}
+                    className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                >
                     <Download className="h-4 w-4 mr-2" />
                     Export
                 </button>
@@ -63,7 +79,10 @@ const PayrollHeader: React.FC<PayrollHeaderProps> = ({ onGenerate, onLock, isLoc
                     </button>
                 )}
 
-                <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                <button
+                    onClick={onSettings}
+                    className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
                     <Settings className="h-5 w-5" />
                 </button>
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, MoreHorizontal, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../lib/utils';
 import { useAuth } from '../../../context/AuthContext';
 import { mockBackend } from '../../../services/mockBackend';
@@ -14,12 +15,14 @@ interface RecentActivityEntry extends TimeEntry {
 
 const RecentEntries: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [entries, setEntries] = useState<RecentActivityEntry[]>([]);
 
     useEffect(() => {
         if (user) {
             const allEntries = mockBackend.getEntries(user.id);
             const projects = mockBackend.getProjects();
+            const categories = mockBackend.getTaskCategories();
 
             // Sort: Newest first
             allEntries.sort((a, b) => {
@@ -31,10 +34,11 @@ const RecentEntries: React.FC = () => {
             // Enrich entries
             const enriched = allEntries.slice(0, 5).map(e => {
                 const project = projects.find(p => p.id === e.projectId);
+                const category = categories.find(c => c.id === e.categoryId);
                 return {
                     ...e,
                     projectName: project?.name || 'Unknown Project',
-                    taskCategory: e.categoryId, // Fallback to ID as category name for now
+                    taskCategory: category?.name || e.categoryId, // Display Name or fallback to ID
                     durationSeconds: e.durationMinutes * 60,
                     notes: e.description
                 };
@@ -46,7 +50,8 @@ const RecentEntries: React.FC = () => {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'APPROVED': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-            case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-100'; // Added PENDING
+            case 'SUBMITTED':
+            case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-100';
             case 'REJECTED': return 'bg-rose-50 text-rose-700 border-rose-100';
             case 'LOCKED': return 'bg-slate-100 text-slate-600 border-slate-200';
             default: return 'bg-white text-slate-600 border-slate-200';
@@ -141,7 +146,10 @@ const RecentEntries: React.FC = () => {
             </div>
 
             <div className="p-3 border-t border-slate-100 text-center">
-                <button className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                <button
+                    onClick={() => navigate('/employee/timesheet')}
+                    className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                >
                     View All Entries
                 </button>
             </div>

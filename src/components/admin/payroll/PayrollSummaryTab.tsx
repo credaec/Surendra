@@ -8,14 +8,21 @@ interface PayrollSummaryTabProps {
     selectedIds: string[];
     onSelectionChange: (ids: string[]) => void;
     onViewQuery: (id: string) => void;
+    onEdit: (record: PayrollRecord) => void;
+    onStatusChange: (id: string, status: 'PAID' | 'HOLD' | 'APPROVED') => void;
+    onDownloadSlip: (id: string) => void;
 }
 
 const PayrollSummaryTab: React.FC<PayrollSummaryTabProps> = ({
     data,
     selectedIds,
     onSelectionChange,
-    onViewQuery
+    onViewQuery,
+    onEdit,
+    onStatusChange,
+    onDownloadSlip
 }) => {
+    // ... existing code ...
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
@@ -143,19 +150,29 @@ const PayrollSummaryTab: React.FC<PayrollSummaryTabProps> = ({
                                         {/* Actions for drafted/approved items */}
                                         {item.status !== 'PAID' && (
                                             <>
-                                                <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded" title="Edit Adjustments">
+                                                <button
+                                                    onClick={() => onEdit(item)}
+                                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                                                    title="Edit Adjustments"
+                                                >
                                                     <Edit3 className="h-4 w-4" />
                                                 </button>
                                                 <div className="relative group">
                                                     <button className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded">
                                                         <MoreVertical className="h-4 w-4" />
                                                     </button>
-                                                    {/* Quick Actions Dropdown (Mock-up) */}
+                                                    {/* Quick Actions Dropdown */}
                                                     <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-slate-100 shadow-lg rounded-lg hidden group-hover:block z-10 p-1">
-                                                        <button className="w-full text-left px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 rounded flex items-center">
+                                                        <button
+                                                            onClick={() => onStatusChange(item.id, 'PAID')}
+                                                            className="w-full text-left px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 rounded flex items-center"
+                                                        >
                                                             <CheckCircle className="h-3 w-3 mr-2" /> Mark Paid
                                                         </button>
-                                                        <button className="w-full text-left px-3 py-1.5 text-xs text-amber-600 hover:bg-amber-50 rounded flex items-center">
+                                                        <button
+                                                            onClick={() => onStatusChange(item.id, 'HOLD')}
+                                                            className="w-full text-left px-3 py-1.5 text-xs text-amber-600 hover:bg-amber-50 rounded flex items-center"
+                                                        >
                                                             <PauseCircle className="h-3 w-3 mr-2" /> Hold
                                                         </button>
                                                     </div>
@@ -163,7 +180,11 @@ const PayrollSummaryTab: React.FC<PayrollSummaryTabProps> = ({
                                             </>
                                         )}
                                         {item.status === 'PAID' && (
-                                            <button className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded" title="Download Slip">
+                                            <button
+                                                onClick={() => onDownloadSlip(item.id)}
+                                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded"
+                                                title="Download Slip"
+                                            >
                                                 <Download className="h-4 w-4" />
                                             </button>
                                         )}

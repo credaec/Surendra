@@ -5,13 +5,30 @@ import { Calendar, Filter, Search, X } from 'lucide-react';
 interface ReportsFilterPanelProps {
     filters: any;
     onFilterChange: (filters: any) => void;
+    onApply?: () => void;
+    onReset?: () => void;
+    activeTab?: string;
 }
 
-const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({ filters, onFilterChange }) => {
+const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({
+    filters,
+    onFilterChange,
+    onApply,
+    onReset,
+    activeTab
+}) => {
 
     // Helper to update a single filter
     const updateFilter = (key: string, value: any) => {
         onFilterChange({ ...filters, [key]: value });
+    };
+
+    const toggleQuickFilter = (label: string) => {
+        const current = filters.quickFilters || [];
+        const updated = current.includes(label)
+            ? current.filter((i: string) => i !== label)
+            : [...current, label];
+        updateFilter('quickFilters', updated);
     };
 
     return (
@@ -42,10 +59,17 @@ const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({ filters, onFilt
                     {/* Client Filter */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <select className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer">
+                        <select
+                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer"
+                            value={filters.client || ''}
+                            onChange={(e) => updateFilter('client', e.target.value)}
+                        >
                             <option value="">All Clients</option>
                             <option value="1">Apex Constructors</option>
                             <option value="2">Urban Developers</option>
+                            <option value="3">Gov Infrastructure</option>
+                            <option value="4">Tech Corp</option>
+                            <option value="5">Private Client</option>
                         </select>
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                             <Filter className="h-3 w-3 text-slate-300" />
@@ -55,9 +79,17 @@ const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({ filters, onFilt
                     {/* Project Filter */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <select className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer">
+                        <select
+                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer"
+                            value={filters.project || ''}
+                            onChange={(e) => updateFilter('project', e.target.value)}
+                        >
                             <option value="">All Projects</option>
                             <option value="1">Skyline Tower</option>
+                            <option value="2">City Bridge</option>
+                            <option value="3">Metro Station</option>
+                            <option value="4">Villa Renovation</option>
+                            <option value="5">Tech Park</option>
                         </select>
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                             <Filter className="h-3 w-3 text-slate-300" />
@@ -67,9 +99,17 @@ const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({ filters, onFilt
                     {/* Employee Filter */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <select className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer">
+                        <select
+                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer"
+                            value={filters.employee || ''}
+                            onChange={(e) => updateFilter('employee', e.target.value)}
+                        >
                             <option value="">All Employees</option>
                             <option value="1">Alice Johnson</option>
+                            <option value="2">Bob Smith</option>
+                            <option value="3">Charlie Brown</option>
+                            <option value="4">Diana Prince</option>
+                            <option value="5">Ethan Hunt</option>
                         </select>
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                             <Filter className="h-3 w-3 text-slate-300" />
@@ -80,10 +120,16 @@ const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({ filters, onFilt
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                    <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-200 transition-colors whitespace-nowrap">
+                    <button
+                        onClick={onApply}
+                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-200 transition-colors whitespace-nowrap"
+                    >
                         Apply Filters
                     </button>
-                    <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 shadow-sm transition-colors whitespace-nowrap flex items-center">
+                    <button
+                        onClick={onReset}
+                        className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 shadow-sm transition-colors whitespace-nowrap flex items-center"
+                    >
                         <X className="h-4 w-4 mr-2" />
                         Reset
                     </button>
@@ -96,7 +142,12 @@ const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({ filters, onFilt
 
                 {['Billable', 'Non-Billable', 'Overtime'].map(label => (
                     <label key={label} className="inline-flex items-center px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:border-slate-300 cursor-pointer select-none transition-colors">
-                        <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 mr-2 h-4 w-4" />
+                        <input
+                            type="checkbox"
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 mr-2 h-4 w-4"
+                            checked={(filters.quickFilters || []).includes(label)}
+                            onChange={() => toggleQuickFilter(label)}
+                        />
                         {label}
                     </label>
                 ))}
@@ -104,11 +155,33 @@ const ReportsFilterPanel: React.FC<ReportsFilterPanelProps> = ({ filters, onFilt
                 <div className="h-6 w-px bg-slate-200 mx-2" />
 
                 <span className="text-slate-500 font-medium mr-1">Status:</span>
-                <select className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 cursor-pointer">
+                <select
+                    className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 cursor-pointer"
+                    value={filters.status}
+                    onChange={(e) => updateFilter('status', e.target.value)}
+                >
                     <option value="all">All Statuses</option>
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                    <option value="rejected">Rejected</option>
+                    {activeTab === 'projects' ? (
+                        <>
+                            <option value="On Track">On Track</option>
+                            <option value="At Risk">At Risk</option>
+                            <option value="Over Budget">Over Budget</option>
+                            <option value="Completed">Completed</option>
+                        </>
+                    ) : (activeTab === 'clients' || activeTab === 'categories') ? (
+                        <>
+                            <option value="Active">Active</option>
+                            <option value="Hold">Hold</option>
+                            <option value="Inactive">Inactive</option>
+                        </>
+                    ) : (
+                        <>
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="overdue">Overdue</option>
+                        </>
+                    )}
                 </select>
             </div>
         </div>

@@ -18,16 +18,18 @@ const LiveStatusTable: React.FC = () => {
             const entries = mockBackend.getAllActiveTimers();
             const users = mockBackend.getUsers();
             const projects = mockBackend.getProjects();
+            const categories = mockBackend.getTaskCategories();
 
             const enriched = entries.map(entry => {
                 const user = users.find(u => u.id === entry.userId);
                 const project = projects.find(p => p.id === entry.projectId);
+                const category = categories.find(c => c.id === entry.categoryId);
 
                 return {
                     ...entry,
                     userName: user?.name || 'Unknown User',
                     projectName: project?.name || 'Unknown Project',
-                    taskCategory: entry.categoryId, // Fallback to ID for now, or lookup category
+                    taskCategory: category?.name || entry.categoryId,
                     durationSeconds: entry.durationMinutes * 60 // Mock conversion
                 } as ActiveTimer;
             });

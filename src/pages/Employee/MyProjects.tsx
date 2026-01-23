@@ -21,13 +21,56 @@ const MyProjectsPage: React.FC = () => {
     const [mockProjects, setMockProjects] = useState<Project[]>([]);
 
     React.useEffect(() => {
-        // Filter projects where logged-in user is in the team
-        const allProjects = mockBackend.getProjects();
         if (user) {
-            const assignedProjects = allProjects.filter(p =>
+            // 1. Get real assigned tasks
+            const assignments = mockBackend.getUserAssignments(user.id);
+            const allCategories = mockBackend.getTaskCategories();
+
+            // Convert assignments to "Project" compatible structure for display
+            // This is a UI adaptation since we are mixing Projects and Task Categories in one view
+            const assignedTaskProjects: Project[] = assignments.map(asn => {
+                const category = allCategories.find(c => c.id === asn.categoryId);
+                return {
+                    id: asn.id, // Assignment ID
+                    code: 'TASK',
+                    name: category ? category.name : 'Unknown Task',
+                    clientId: 'internal',
+                    clientName: 'Task Assignment',
+                    description: 'Directly assigned task category',
+                    status: 'ACTIVE',
+                    type: 'INTERNAL',
+                    priority: 'MEDIUM',
+                    startDate: asn.assignedAt,
+                    teamMembers: [{ userId: user.id, role: user.role, joinedAt: asn.assignedAt }],
+                    budgetAmount: 0,
+                    consumedBudget: 0,
+                    estimatedHours: 0,
+                    totalTrackedMinutes: 0,
+                    currency: 'USD',
+                    billingMode: 'HOURLY',
+                    rateLogic: 'DEFAULT',
+                    entryRules: {
+                        isBillableDefault: false,
+                        requiresProof: false,
+                        allowOvertime: false
+                    }
+                } as unknown as Project;
+            });
+
+            // 2. Get standard projects
+            const allProjects = mockBackend.getProjects();
+            const standardProjects = allProjects.filter(p =>
                 p.teamMembers && p.teamMembers.some(member => member.userId === user.id)
             );
-            setMockProjects(assignedProjects);
+
+            // 3. Combine with Fallback for Consistency
+            let combined = [...assignedTaskProjects, ...standardProjects];
+
+            // 4. Fallback if empty to match Dashboard Widget (Demo Consistency)
+            // REMOVED STATIC FALLBACK per audit
+            // The empty state component will handle zero projects.
+
+            setMockProjects(combined);
         }
     }, [user]);
 
@@ -46,8 +89,7 @@ const MyProjectsPage: React.FC = () => {
     };
 
     const handleViewDetails = (projectId: string) => {
-        console.log("View Project Details", projectId);
-        // navigate(`/employee/projects/${projectId}`);
+        navigate(`/employee/projects/${projectId}`);
     };
 
     // Error Boundary (Inline)

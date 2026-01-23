@@ -1,4 +1,5 @@
-import type { Project, Client, Task, TaskCategory, TimeEntry, AvailabilityEvent } from '../types/schema';
+import type { Project, Client, Task, TaskCategory, TimeEntry, AvailabilityEvent, ClientContact } from '../types/schema';
+import { auditService } from './auditService';
 
 // --- Types ---
 // Project imported from schema
@@ -7,6 +8,15 @@ export interface UserStatus {
     userId: string;
     isOnline: boolean;
     lastActive: string; // ISO string
+}
+
+export interface ClientDocument {
+    id: string;
+    clientId: string;
+    name: string;
+    size: string;
+    uploadDate: string;
+    type: string;
 }
 
 export interface User {
@@ -125,6 +135,14 @@ export interface PayrollRun {
     generatedAt: string;
     generatedBy: string;
     isLocked: boolean;
+}
+
+export interface UserAssignment {
+    id: string;
+    userId: string;
+    categoryId: string;
+    assignedAt: string;
+    assignedBy: string;
 }
 
 
@@ -386,14 +404,14 @@ const MOCK_TASKS: Task[] = [
 ];
 
 const MOCK_TASK_CATEGORIES: TaskCategory[] = [
-    { id: '1', name: 'Engineering Design', isBillable: true, isProofRequired: false, isNotesRequired: true, restrictedToProjects: [] },
-    { id: '2', name: 'Drafting', isBillable: true, isProofRequired: true, isNotesRequired: true, restrictedToProjects: [] },
-    { id: '3', name: 'Modelling (RISA/ETABS)', isBillable: true, isProofRequired: true, isNotesRequired: true, restrictedToProjects: [] },
-    { id: '4', name: 'Review & Coordination', isBillable: true, isProofRequired: false, isNotesRequired: true, restrictedToProjects: [] },
-    { id: '5', name: 'Client Calls', isBillable: true, isProofRequired: false, isNotesRequired: true, restrictedToProjects: [] },
-    { id: '6', name: 'Internal Meeting', isBillable: false, isProofRequired: false, isNotesRequired: false, restrictedToProjects: [] },
-    { id: '7', name: 'Training', isBillable: false, isProofRequired: false, isNotesRequired: false, restrictedToProjects: [] },
-    { id: '8', name: 'Rework / Revisions', isBillable: false, defaultRate: 0, isProofRequired: true, isNotesRequired: true, restrictedToProjects: [] },
+    { id: '1', name: 'Engineering Design', isBillable: true, isProofRequired: false, isNotesRequired: true, restrictedToProjects: [], status: 'ACTIVE' },
+    { id: '2', name: 'Drafting', isBillable: true, isProofRequired: true, isNotesRequired: true, restrictedToProjects: [], status: 'ACTIVE' },
+    { id: '3', name: 'Modelling (RISA/ETABS)', isBillable: true, isProofRequired: true, isNotesRequired: true, restrictedToProjects: [], status: 'ACTIVE' },
+    { id: '4', name: 'Review & Coordination', isBillable: true, isProofRequired: false, isNotesRequired: true, restrictedToProjects: [], status: 'ACTIVE' },
+    { id: '5', name: 'Client Calls', isBillable: true, isProofRequired: false, isNotesRequired: true, restrictedToProjects: [], status: 'ACTIVE' },
+    { id: '6', name: 'Internal Meeting', isBillable: false, isProofRequired: false, isNotesRequired: false, restrictedToProjects: [], status: 'ACTIVE' },
+    { id: '7', name: 'Training', isBillable: false, isProofRequired: false, isNotesRequired: false, restrictedToProjects: [], status: 'ACTIVE' },
+    { id: '8', name: 'Rework / Revisions', isBillable: false, defaultRate: 0, isProofRequired: true, isNotesRequired: true, restrictedToProjects: [], status: 'ACTIVE' },
 ];
 const MOCK_USERS: User[] = [
     {
@@ -581,7 +599,87 @@ const MOCK_USERS: User[] = [
 // --- Service Implementation ---
 export const mockBackend = {
     // 0. Users
-    // 0. Users (Moved to User Management section below)
+    getUsers: (): User[] => {
+        const stored = localStorage.getItem(STORAGE_KEYS.USERS);
+        if (stored) return JSON.parse(stored);
+
+        // Initial load
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS));
+        return [...MOCK_USERS];
+    },
+
+    addUser: (user: Omit<User, 'id' | 'avatarInitials'>): User => {
+        const users = mockBackend.getUsers();
+        const newUser: User = {
+            ...user,
+            id: `CRED${String(users.length + 1).padStart(3, '0')}/${new Date().getMonth() + 1}-${new Date().getFullYear().toString().slice(-2)}`,
+            avatarInitials: user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+            status: 'ACTIVE'
+        };
+        users.push(newUser);
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+
+        auditService.logAction('USERS', 'CREATE', 'INFO', `Added new user: ${newUser.name}`, { type: 'User', id: newUser.id, name: newUser.name });
+
+        return newUser;
+    },
+
+    updateUser: (user: User): User => {
+        const users = mockBackend.getUsers();
+        const index = users.findIndex(u => u.id === user.id);
+        if (index !== -1) {
+            users[index] = user;
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+            auditService.logAction('USERS', 'UPDATE', 'INFO', `Updated user profile: ${user.name}`, { type: 'User', id: user.id, name: user.name });
+            return user;
+        }
+        return user;
+    },
+
+    deleteUser: (userId: string) => {
+        const users = mockBackend.getUsers();
+        const updatedUsers = users.filter(u => u.id !== userId);
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
+        auditService.logAction('USERS', 'DELETE', 'WARNING', `Deleted user: ${userId}`, { type: 'User', id: userId, name: 'User' });
+    },
+
+    // --- Client Documents ---
+    getClientDocuments: (clientId: string): ClientDocument[] => {
+        const stored = localStorage.getItem('credence_client_docs_v1');
+        let docs: ClientDocument[] = stored ? JSON.parse(stored) : [];
+        if (!stored) {
+            // Init mock data
+            docs = [
+                { id: 'd1', clientId: 'c1', name: 'Contract_Agreement_2025.pdf', size: '2.4 MB', uploadDate: '2025-01-10', type: 'PDF' },
+                { id: 'd2', clientId: 'c1', name: 'NDA_Signed.pdf', size: '1.2 MB', uploadDate: '2025-01-12', type: 'PDF' },
+                { id: 'd3', clientId: 'c2', name: 'Service_Terms.pdf', size: '0.8 MB', uploadDate: '2025-02-01', type: 'PDF' },
+            ];
+            localStorage.setItem('credence_client_docs_v1', JSON.stringify(docs));
+        }
+        return docs.filter(d => d.clientId === clientId);
+    },
+
+    addClientDocument: (doc: Omit<ClientDocument, 'id'>): ClientDocument => {
+        const stored = localStorage.getItem('credence_client_docs_v1');
+        const docs: ClientDocument[] = stored ? JSON.parse(stored) : [];
+        const newDoc = { ...doc, id: Math.random().toString(36).substr(2, 9) };
+        docs.push(newDoc);
+        localStorage.setItem('credence_client_docs_v1', JSON.stringify(docs));
+        return newDoc;
+    },
+
+    deleteClientDocument: (id: string) => {
+        const stored = localStorage.getItem('credence_client_docs_v1');
+        if (stored) {
+            const docs: ClientDocument[] = JSON.parse(stored);
+            const updated = docs.filter(d => d.id !== id);
+            localStorage.setItem('credence_client_docs_v1', JSON.stringify(updated));
+        }
+    },
+
+
+
+    // 1. Projects
 
 
     // 1. Projects
@@ -604,6 +702,8 @@ export const mockBackend = {
         projects.push(newProject);
         localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
 
+        auditService.logAction('PROJECTS', 'CREATE', 'INFO', `Created project: ${newProject.name}`, { type: 'Project', id: newProject.id, name: newProject.name });
+
         // NOTIFICATION LOGIC: Notify assigned members
         if (newProject.teamMembers && newProject.teamMembers.length > 0) {
             newProject.teamMembers.forEach(member => {
@@ -617,6 +717,17 @@ export const mockBackend = {
             });
         }
         return newProject;
+    },
+
+    updateProject: (project: Project): Project => {
+        const projects = mockBackend.getProjects();
+        const index = projects.findIndex(p => p.id === project.id);
+        if (index !== -1) {
+            projects[index] = project;
+            localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+            return project;
+        }
+        throw new Error('Project not found');
     },
 
     getProjectById: (id: string): Project | undefined => {
@@ -780,7 +891,8 @@ export const mockBackend = {
         const newClient: Client = {
             ...client,
             id: `c_${Date.now()}`,
-            totalProjects: 0
+            totalProjects: 0,
+            contacts: client.contacts || []
         };
         clients.push(newClient);
         localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
@@ -795,6 +907,36 @@ export const mockBackend = {
         clients[index] = { ...clients[index], ...updates };
         localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
         return clients[index];
+    },
+
+    addClientContact: (clientId: string, contact: Omit<ClientContact, 'id'>) => {
+        const clients = mockBackend.getClients();
+        const index = clients.findIndex(c => c.id === clientId);
+        if (index > -1) {
+            const newContact: ClientContact = {
+                ...contact,
+                id: `cont_${Date.now()}`
+            };
+            const currentContacts = clients[index].contacts || [];
+            clients[index].contacts = [...currentContacts, newContact];
+            localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+            return newContact;
+        }
+    },
+
+    deleteClientContact: (clientId: string, contactId: string) => {
+        const clients = mockBackend.getClients();
+        const index = clients.findIndex(c => c.id === clientId);
+        if (index > -1 && clients[index].contacts) {
+            clients[index].contacts = clients[index].contacts?.filter(c => c.id !== contactId);
+            localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+        }
+    },
+
+    deleteClient: (id: string) => {
+        const clients = mockBackend.getClients();
+        const updated = clients.filter(c => c.id !== id);
+        localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(updated));
     },
 
     // 1.b Tasks (New)
@@ -822,25 +964,129 @@ export const mockBackend = {
         const stored = localStorage.getItem('credence_task_categories_v1');
         if (stored) return JSON.parse(stored);
 
-        localStorage.setItem('credence_task_categories_v1', JSON.stringify(MOCK_TASK_CATEGORIES));
-        return MOCK_TASK_CATEGORIES;
+        // Add default status if missing
+        const defaults = MOCK_TASK_CATEGORIES.map(c => ({ ...c, status: c.status || 'ACTIVE' }));
+        localStorage.setItem('credence_task_categories_v1', JSON.stringify(defaults));
+        return defaults as TaskCategory[];
     },
 
     addTaskCategory: (category: Omit<TaskCategory, 'id'>): TaskCategory => {
         const categories = mockBackend.getTaskCategories();
         const newCategory: TaskCategory = {
             ...category,
-            id: `cat_${Date.now()}`
+            id: `cat_${Date.now()}`,
+            status: category.status || 'ACTIVE'
         };
         categories.push(newCategory);
         localStorage.setItem('credence_task_categories_v1', JSON.stringify(categories));
+
+        auditService.logAction('SETTINGS', 'CREATE', 'INFO', `Created task category: ${newCategory.name}`, { type: 'TaskCategory', id: newCategory.id, name: newCategory.name });
+
         return newCategory;
+    },
+
+    updateTaskCategory: (category: TaskCategory): TaskCategory => {
+        const categories = mockBackend.getTaskCategories();
+        const index = categories.findIndex(c => c.id === category.id);
+        if (index !== -1) {
+            categories[index] = category;
+            localStorage.setItem('credence_task_categories_v1', JSON.stringify(categories));
+
+            auditService.logAction('SETTINGS', 'UPDATE', 'INFO', `Updated task category: ${category.name}`, { type: 'TaskCategory', id: category.id, name: category.name });
+        }
+        return category;
+    },
+
+    deleteTaskCategory: (id: string) => {
+        const categories = mockBackend.getTaskCategories();
+        const filtered = categories.filter(c => c.id !== id);
+        localStorage.setItem('credence_task_categories_v1', JSON.stringify(filtered));
+
+        auditService.logAction('SETTINGS', 'DELETE', 'WARNING', `Deleted task category: ${id}`, { type: 'TaskCategory', id: id, name: 'Category' });
+    },
+
+    // 1.d User Assignments (New)
+    assignCategoryToUser: (categoryId: string, userId: string) => {
+        const stored = localStorage.getItem('credence_user_assignments_v1');
+        const assignments: UserAssignment[] = stored ? JSON.parse(stored) : [];
+
+        // Check if already assigned
+        const exists = assignments.find(a => a.userId === userId && a.categoryId === categoryId);
+        if (exists) return exists;
+
+        const newAssignment: UserAssignment = {
+            id: `asn_${Date.now()}`,
+            userId,
+            categoryId,
+            assignedAt: new Date().toISOString(),
+            assignedBy: 'Admin' // Mock
+        };
+
+        assignments.push(newAssignment);
+        localStorage.setItem('credence_user_assignments_v1', JSON.stringify(assignments));
+        return newAssignment;
+    },
+
+    getUserAssignments: (userId: string): UserAssignment[] => {
+        const stored = localStorage.getItem('credence_user_assignments_v1');
+        const assignments: UserAssignment[] = stored ? JSON.parse(stored) : [];
+        return assignments.filter(a => a.userId === userId);
     },
 
     // 2. Time Entries (History)
     getEntries: (userId?: string): TimeEntry[] => {
         const stored = localStorage.getItem(STORAGE_KEYS.ENTRIES);
-        const entries: TimeEntry[] = stored ? JSON.parse(stored) : [];
+        let entries: TimeEntry[] = [];
+
+        if (stored) {
+            entries = JSON.parse(stored);
+        } else {
+            // Default Demo Data
+            const defaultEntries: TimeEntry[] = [
+                {
+                    id: 'te_1',
+                    userId: 'CRED007/05-24', // Rajnandini Lad
+                    projectId: 'p1',
+                    categoryId: 'Engineering',
+                    startTime: '2026-01-13T09:00:00Z',
+                    durationMinutes: 510, // 8.5h
+                    status: 'SUBMITTED',
+                    date: '2026-01-13',
+                    isBillable: true,
+                    notes: 'Performed load calculations for the main variance.',
+                    description: 'Structural Analysis'
+                },
+                {
+                    id: 'te_2',
+                    userId: 'CRED007/05-24',
+                    projectId: 'p1',
+                    categoryId: 'Drafting',
+                    startTime: '2026-01-14T09:00:00Z',
+                    durationMinutes: 540, // 9h
+                    status: 'SUBMITTED',
+                    date: '2026-01-14',
+                    isBillable: true,
+                    notes: 'Drafting initial layout.',
+                    description: 'Drafting'
+                },
+                {
+                    id: 'te_3',
+                    userId: 'CRED007/05-24',
+                    projectId: 'p1',
+                    categoryId: 'Meeting',
+                    startTime: '2026-01-15T10:00:00Z',
+                    durationMinutes: 60, // 1h
+                    status: 'SUBMITTED',
+                    date: '2026-01-15',
+                    isBillable: true,
+                    notes: 'Client coordination.',
+                    description: 'Meeting'
+                }
+            ];
+            entries = defaultEntries;
+            localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(entries));
+        }
+
         if (userId) {
             return entries.filter(e => e.userId === userId);
         }
@@ -873,6 +1119,17 @@ export const mockBackend = {
             return true;
         }
         return false;
+    },
+
+    updateEntry: (entry: TimeEntry): TimeEntry | null => {
+        const entries = mockBackend.getEntries();
+        const index = entries.findIndex(e => e.id === entry.id);
+        if (index !== -1) {
+            entries[index] = { ...entries[index], ...entry };
+            localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(entries));
+            return entries[index];
+        }
+        return null;
     },
 
     deleteEntry: (entryId: string) => {
@@ -1021,31 +1278,7 @@ export const mockBackend = {
         return activeTimers;
     },
 
-    // 5. User Management
-    getUsers: (): User[] => {
-        const stored = localStorage.getItem(STORAGE_KEYS.USERS);
-        if (stored) return JSON.parse(stored);
-
-        // Initialize with default mock users if empty
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(MOCK_USERS));
-        return MOCK_USERS;
-    },
-
-    addUser: (user: Omit<User, 'id' | 'status' | 'avatarInitials'>): User => {
-        const users = mockBackend.getUsers();
-        const initials = user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
-
-        const newUser: User = {
-            ...user,
-            id: `emp_${Date.now()}`, // Simple ID generation
-            status: 'ACTIVE',
-            avatarInitials: initials,
-        };
-
-        users.push(newUser);
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-        return newUser;
-    },
+    // 5. User Management (Extended)
 
     updateUserRole: (userId: string, role: 'ADMIN' | 'EMPLOYEE') => {
         const users = mockBackend.getUsers();
@@ -1057,6 +1290,8 @@ export const mockBackend = {
         }
         return false;
     },
+
+
 
     // 6. Approval Workflow (New)
     getApprovals: (): ApprovalRequest[] => {
@@ -1167,9 +1402,35 @@ export const mockBackend = {
             approvals[index].status = status;
             approvals[index].lastUpdated = new Date().toISOString();
             localStorage.setItem('credence_approvals_v1', JSON.stringify(approvals));
+
+            auditService.logAction('TIMESHEET', status === 'APPROVED' ? 'APPROVE' : status === 'REJECTED' ? 'REJECT' : 'UPDATE', 'INFO', `Marked timesheet as ${status}: ${approvals[index].employeeName}`, { type: 'Timesheet', id: id, name: approvals[index].weekRange });
+
             return approvals[index];
         }
         return null;
+    },
+
+    submitTimesheet: (request: Omit<ApprovalRequest, 'id' | 'status' | 'submittedOn'>): ApprovalRequest => {
+        const approvals = mockBackend.getApprovals();
+
+        // Remove existing pending/submitted requests for same user and week to avoid dupes (Mock Logic)
+        const cleanApprovals = approvals.filter(a =>
+            !(a.employeeId === request.employeeId && a.weekRange === request.weekRange)
+        );
+
+        const newRequest: ApprovalRequest = {
+            ...request,
+            id: `apr_${Date.now()}`,
+            status: 'SUBMITTED',
+            submittedOn: new Date().toISOString().split('T')[0]
+        };
+
+        cleanApprovals.unshift(newRequest);
+        localStorage.setItem('credence_approvals_v1', JSON.stringify(cleanApprovals));
+
+        auditService.logAction('TIMESHEET', 'SUBMIT', 'INFO', `Submitted timesheet: ${newRequest.employeeName}`, { type: 'Timesheet', id: newRequest.id, name: newRequest.weekRange });
+
+        return newRequest;
     },
 
 
@@ -1201,10 +1462,11 @@ export const mockBackend = {
         };
         invoices.unshift(newInvoice);
         localStorage.setItem('credence_invoices_v1', JSON.stringify(invoices));
+
+        auditService.logAction('BILLING', 'CREATE', 'INFO', `Created invoice: ${newInvoice.id}`, { type: 'Invoice', id: newInvoice.id, name: `Invoice ${newInvoice.id}` });
+
         return newInvoice;
     },
-
-
 
     recordPayment: (invoiceId: string, payment: Omit<PaymentRecord, 'id'>) => {
         const invoices = mockBackend.getInvoices();
@@ -1228,6 +1490,9 @@ export const mockBackend = {
             }
 
             localStorage.setItem('credence_invoices_v1', JSON.stringify(invoices));
+
+            auditService.logAction('BILLING', 'UPDATE', 'INFO', `Recorded payment of $${payment.amount} for invoice ${invoiceId}`, { type: 'Invoice', id: invoiceId, name: `Invoice ${invoiceId}` });
+
             return invoice;
         }
         return null;
@@ -1241,7 +1506,12 @@ export const mockBackend = {
 
     getPayrollRecords: (runId: string): PayrollRecord[] => {
         // In real app, fetch from DB where runId matches
-        // For mock, just return static list if runId is match, else empty or generate dynamic
+        const stored = localStorage.getItem('credence_payroll_records_v1');
+        if (stored) {
+            const all: PayrollRecord[] = JSON.parse(stored);
+            return all.filter(r => r.payrollRunId === runId || runId === 'current');
+        }
+        // Fallback to static mock if nothing stored yet
         return MOCK_PAYROLL_RECORDS.filter(r => r.payrollRunId === runId || runId === 'current');
     },
 
@@ -1250,27 +1520,129 @@ export const mockBackend = {
     },
 
     calculatePayroll: (period: string, _options: any): PayrollRun => {
-        // Mock calculation logic
-        // 1. Fetch all approved time entries for the period
-        // 2. Map to employees and apply rates
-        // 3. Generate records
         const runId = `run_${period.replace(/\s/g, '_').toLowerCase()}`;
+
+        // 1. Fetch time entries for period (Mock: assuming all entries belong to period for MVP or filter slightly)
+        // In real app: filter by start/end date derived from 'period' string
+        const allEntries = mockBackend.getEntries();
+        const users = mockBackend.getUsers().filter(u => u.role === 'EMPLOYEE');
+
+        let totalPayable = 0;
+        let totalApprovedHours = 0;
+
+        // 2. Clear old run records if re-generating (or just overwrite in memory since simple list)
+        // For localStorage mock, we should filter out old ones first to avoid dups? 
+        // Or Mock just mocks. Let's create new records.
+
+        const newRecords: PayrollRecord[] = users.map(user => {
+            const userEntries = allEntries.filter(e => e.userId === user.id);
+            // In real app, filter by Period here.
+
+            let hours = 0;
+            let billable = 0;
+            let nonBillable = 0;
+
+            userEntries.forEach(e => {
+                const h = e.durationMinutes / 60;
+                hours += h;
+                if (e.isBillable) billable += h;
+                else nonBillable += h;
+            });
+
+            // Mock Rates
+            const hourlyRate = user.hourlyCostRate || 40; // Default $40/hr if not set
+            const basePay = hours * hourlyRate;
+            const overtimeAmount = 0; // Simplified
+            const additions = 0;
+            const deductions = 0;
+            const total = basePay + overtimeAmount + additions - deductions;
+
+            totalPayable += total;
+            totalApprovedHours += hours;
+
+            return {
+                id: `pr_${runId}_${user.id}`,
+                payrollRunId: runId,
+                employeeId: user.id,
+                employeeName: user.name,
+                designation: user.designation || 'Employee',
+                department: user.department || 'Engineering',
+                joinDate: user.joiningDate || '2025-01-01', // Mock if missing
+                totalHours: parseFloat(hours.toFixed(1)),
+                approvedHours: parseFloat(hours.toFixed(1)), // Assuming all fetched are approved for MVP
+                billableHours: parseFloat(billable.toFixed(1)),
+                nonBillableHours: parseFloat(nonBillable.toFixed(1)),
+                rateType: 'HOURLY',
+                hourlyRate: hourlyRate,
+                basePay: parseFloat(basePay.toFixed(2)),
+                overtimeHours: 0,
+                overtimeAmount: 0,
+                bonus: 0,
+                additions: additions,
+                deductions: deductions,
+                totalPayable: parseFloat(total.toFixed(2)),
+                status: 'PENDING',
+                paymentDate: '-'
+            };
+        });
+
         const newRun: PayrollRun = {
             id: runId,
             period: period,
             status: 'DRAFT',
-            totalEmployees: 2,
-            totalPayable: 293600, // Sum of mock records
-            totalApprovedHours: 300,
+            totalEmployees: users.length,
+            totalPayable: parseFloat(totalPayable.toFixed(2)),
+            totalApprovedHours: parseFloat(totalApprovedHours.toFixed(1)),
             generatedAt: new Date().toISOString(),
             generatedBy: 'Admin',
             isLocked: false
         };
+
+        // Persist Run
+        const currentRuns = mockBackend.getPayrollRuns();
+        const existingIdx = currentRuns.findIndex(r => r.id === runId);
+        if (existingIdx !== -1) {
+            currentRuns[existingIdx] = newRun;
+        } else {
+            currentRuns.push(newRun);
+        }
+        localStorage.setItem('credence_payroll_runs_v1', JSON.stringify(currentRuns));
+
+        // Persist Records
+        // Merge with existing MOCK_PAYROLL_RECORDS usage? 
+        // For MVP, we need a way to `getPayrollRecords` to return these new dynamic ones.
+        // Let's store dynamic records in localStorage too.
+
+        let allRecords: PayrollRecord[] = [];
+        const storedRecs = localStorage.getItem('credence_payroll_records_v1');
+        if (storedRecs) {
+            allRecords = JSON.parse(storedRecs);
+            // Remove old for this run
+            allRecords = allRecords.filter(r => r.payrollRunId !== runId);
+        } else {
+            // Init with static MOCKS if first time to preserve demo data? 
+            // Or just MOCK_PAYROLL_RECORDS are static constant in file, cannot overwrite constant.
+            // We need to change getPayrollRecords to look at localStorage first.
+            allRecords = [];
+        }
+        allRecords = [...allRecords, ...newRecords];
+        localStorage.setItem('credence_payroll_records_v1', JSON.stringify(allRecords));
+
         return newRun;
     },
 
     lockPayroll: (_runId: string) => {
         // Find run and set status = LOCKED
+        // Mock Implementation: just log it
+        const currentRuns = mockBackend.getPayrollRuns();
+        const run = currentRuns.find(r => r.id === _runId);
+        if (run) {
+            run.status = 'LOCKED';
+            run.isLocked = true;
+            localStorage.setItem('credence_payroll_runs_v1', JSON.stringify(currentRuns));
+
+            auditService.logAction('PAYROLL', 'LOCK', 'CRITICAL', `Locked payroll run: ${run.period}`, { type: 'PayrollRun', id: run.id, name: run.period });
+        }
         return true;
     },
 
@@ -1291,12 +1663,31 @@ export const mockBackend = {
         const updated = [...current, newEvent];
         localStorage.setItem('credence_availability_v1', JSON.stringify(updated));
 
+        auditService.logAction('SETTINGS', 'CREATE', 'INFO', `Added availability event: ${newEvent.title}`, { type: 'AvailabilityEvent', id: newEvent.id, name: newEvent.title });
+
         return newEvent;
+    },
+
+    updateAvailabilityEvent: (event: AvailabilityEvent): AvailabilityEvent => {
+        const current = mockBackend.getAvailabilityEvents();
+        const index = current.findIndex(e => e.id === event.id);
+
+        if (index !== -1) {
+            current[index] = { ...current[index], ...event };
+            localStorage.setItem('credence_availability_v1', JSON.stringify(current));
+
+            auditService.logAction('SETTINGS', 'UPDATE', 'INFO', `Updated availability event: ${event.title}`, { type: 'AvailabilityEvent', id: event.id, name: event.title });
+
+            return current[index];
+        }
+        return event; // Fallback
     },
 
     deleteAvailabilityEvent: (id: string) => {
         const current = mockBackend.getAvailabilityEvents();
         const updated = current.filter(e => e.id !== id);
         localStorage.setItem('credence_availability_v1', JSON.stringify(updated));
+
+        auditService.logAction('SETTINGS', 'DELETE', 'WARNING', `Deleted availability event: ${id}`, { type: 'AvailabilityEvent', id: id, name: 'Event' });
     }
 };

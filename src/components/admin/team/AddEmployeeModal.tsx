@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Briefcase, Shield } from 'lucide-react';
-import { mockBackend } from '../../../services/mockBackend';
+import { mockBackend, type User as UserType } from '../../../services/mockBackend';
 
 interface AddEmployeeModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    userToEdit?: UserType | null;
 }
 
-const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, onSuccess, userToEdit }) => {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -17,29 +18,52 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
         role: 'EMPLOYEE' as 'ADMIN' | 'EMPLOYEE'
     });
 
+    useEffect(() => {
+        if (isOpen) {
+            if (userToEdit) {
+                const nameParts = userToEdit.name.split(' ');
+                setFormData({
+                    firstName: nameParts[0] || '',
+                    lastName: nameParts.slice(1).join(' ') || '',
+                    email: userToEdit.email,
+                    designation: userToEdit.designation,
+                    role: userToEdit.role as 'ADMIN' | 'EMPLOYEE'
+                });
+            } else {
+                setFormData({
+                    firstName: '',
+                    lastName: '',
+                    email: '',
+                    designation: '',
+                    role: 'EMPLOYEE'
+                });
+            }
+        }
+    }, [isOpen, userToEdit]);
+
     if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        mockBackend.addUser({
+        const userData = {
             name: `${formData.firstName} ${formData.lastName}`,
             email: formData.email,
             designation: formData.designation,
             role: formData.role
-        } as any);
+        };
+
+        if (userToEdit) {
+            mockBackend.updateUser(userToEdit.id, userData);
+        } else {
+            mockBackend.addUser(userData as any);
+        }
 
         onSuccess();
         onClose();
-        // Reset form
-        setFormData({
-            firstName: '',
-            lastName: '',
-            email: '',
-            designation: '',
-            role: 'EMPLOYEE'
-        });
     };
+
+    const isEditMode = !!userToEdit;
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -48,8 +72,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-100">
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Add New Team Member</h2>
-                        <p className="text-sm text-slate-500">Create account and assign role</p>
+                        <h2 className="text-lg font-semibold text-slate-900">{isEditMode ? 'Edit Team Member' : 'Add New Team Member'}</h2>
+                        <p className="text-sm text-slate-500">{isEditMode ? 'Update employee details and role' : 'Create account and assign role'}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -179,7 +203,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                             type="submit"
                             className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
                         >
-                            Create Account
+                            {isEditMode ? 'Save Changes' : 'Create Account'}
                         </button>
                     </div>
 

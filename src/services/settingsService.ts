@@ -30,12 +30,14 @@ export interface BillingConfig {
     defaultTaxPercentage: number;
     invoiceNotesTemplate: string;
     blockInvoicingForPending: boolean;
+    billableApprovedOnly: boolean;
 }
 
 export interface PayrollConfig {
     defaultRateType: 'HOURLY' | 'MONTHLY';
     payrollCycle: 'MONTHLY' | 'BI_WEEKLY';
     lockPayrollAfterGeneration: boolean;
+    allowMidMonthRateChanges: boolean;
 }
 
 export interface SecurityConfig {
@@ -44,6 +46,21 @@ export interface SecurityConfig {
     forceLogoutAfterDays: number;
     twoFactorEnabled: boolean;
     allowAdminRoleSwitch: boolean;
+}
+
+export interface EmailConfig {
+    service: 'Outlook' | 'Custom';
+    authType: 'OAUTH2' | 'STANDARD';
+    fromEmail: string;
+    fromName: string;
+    host: string;
+    port: number;
+    secure: boolean;
+    username: string;
+    password?: string; // Standard Auth
+    clientId?: string; // OAuth2
+    clientSecret?: string; // OAuth2
+    refreshToken?: string; // OAuth2
 }
 
 export interface AppSettings {
@@ -57,6 +74,22 @@ export interface AppSettings {
         inAppAlerts: boolean;
         remindPendingApprovals: boolean;
     };
+    client: ClientConfig;
+    project: ProjectConfig;
+    email: EmailConfig; // New
+}
+
+// ... (ClientConfig and ProjectConfig interfaces remain unchanged)
+export interface ClientConfig {
+    requireEmailPhone: boolean;
+    enableCategories: boolean;
+}
+
+export interface ProjectConfig {
+    defaultStatus: 'Active' | 'Planning' | 'On Hold';
+    defaultBudgetType: 'Total Project Hours' | 'Total Project Fees' | 'No Budget';
+    allowMultipleAssignments: boolean;
+    requireProjectManager: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -86,12 +119,14 @@ const DEFAULT_SETTINGS: AppSettings = {
         defaultPaymentTerms: 'NET30',
         defaultTaxPercentage: 0,
         invoiceNotesTemplate: 'Thank you for your business.',
-        blockInvoicingForPending: true
+        blockInvoicingForPending: true,
+        billableApprovedOnly: true
     },
     payroll: {
         defaultRateType: 'HOURLY',
         payrollCycle: 'MONTHLY',
-        lockPayrollAfterGeneration: true
+        lockPayrollAfterGeneration: true,
+        allowMidMonthRateChanges: true
     },
     security: {
         minPasswordLength: 8,
@@ -104,10 +139,33 @@ const DEFAULT_SETTINGS: AppSettings = {
         emailAlerts: true,
         inAppAlerts: true,
         remindPendingApprovals: true
+    },
+    client: {
+        requireEmailPhone: true,
+        enableCategories: false
+    },
+    project: {
+        defaultStatus: 'Active',
+        defaultBudgetType: 'Total Project Hours',
+        allowMultipleAssignments: true,
+        requireProjectManager: false
+    },
+    email: {
+        service: 'Custom',
+        authType: 'STANDARD',
+        fromEmail: 'noreply@credencetracker.com',
+        fromName: 'Credence Notifications',
+        host: 'smtp.example.com',
+        port: 587,
+        secure: true,
+        username: 'apikey',
+        password: ''
     }
 };
 
 const STORAGE_KEY = 'credence_app_settings_v1';
+
+import { auditService } from './auditService';
 
 export const settingsService = {
     getSettings: (): AppSettings => {
@@ -122,6 +180,10 @@ export const settingsService = {
         const current = settingsService.getSettings();
         const updated = { ...current, ...newSettings };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+        // Audit Log
+        auditService.logAction('SETTINGS', 'UPDATE', 'INFO', 'Updated global settings', { type: 'System', id: 'SETTINGS', name: 'App Settings' });
+
         return updated;
     },
 
@@ -130,6 +192,10 @@ export const settingsService = {
         const updatedSection = { ...current[section], ...data };
         const updated = { ...current, [section]: updatedSection };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+        // Audit Log
+        auditService.logAction('SETTINGS', 'UPDATE', 'INFO', `Updated ${section} settings`, { type: 'System', id: `SETTINGS-${section.toUpperCase()}`, name: `${section} Settings` });
+
         return updated;
     }
 };

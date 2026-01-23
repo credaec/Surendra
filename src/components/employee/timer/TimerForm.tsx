@@ -1,20 +1,9 @@
 import React from 'react';
 import type { Project, TaskCategory } from '../../../types/schema';
 
-// Mock Data (reused for now)
-const projectsMock: Partial<Project>[] = [
-    { id: 'p1', name: 'BCS Skylights', code: 'PRJ-001' },
-    { id: 'p2', name: 'Dr. Wade Residence', code: 'PRJ-002' },
-    { id: 'p3', name: 'Internal Training', code: 'INT-001' }
-];
-
-const categoriesMock: TaskCategory[] = [
-    { id: 'c1', name: 'Engineering', isBillable: true, isNotesRequired: true, isProofRequired: false },
-    { id: 'c2', name: 'Drafting', isBillable: true, isNotesRequired: false, isProofRequired: true },
-    { id: 'c3', name: 'Meeting', isBillable: true, isNotesRequired: true, isProofRequired: false },
-];
-
 interface TimerFormProps {
+    projects: Project[];
+    categories: TaskCategory[];
     selectedProject: string;
     selectedCategory: string;
     notes: string;
@@ -25,6 +14,8 @@ interface TimerFormProps {
 }
 
 const TimerForm: React.FC<TimerFormProps> = ({
+    projects,
+    categories,
     selectedProject,
     selectedCategory,
     notes,
@@ -34,7 +25,7 @@ const TimerForm: React.FC<TimerFormProps> = ({
     readOnly
 }) => {
     // Find selected category to check rules
-    const categoryDetails = categoriesMock.find(c => c.id === selectedCategory);
+    const categoryDetails = categories.find(c => c.id === selectedCategory);
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -54,7 +45,7 @@ const TimerForm: React.FC<TimerFormProps> = ({
                             className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                         >
                             <option value="">Select Project...</option>
-                            {projectsMock.map(p => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
+                            {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
                         </select>
                     </div>
                     <div>
@@ -68,7 +59,7 @@ const TimerForm: React.FC<TimerFormProps> = ({
                             className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                         >
                             <option value="">Select Category...</option>
-                            {categoriesMock.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                 </div>

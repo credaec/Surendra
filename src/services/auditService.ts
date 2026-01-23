@@ -67,101 +67,110 @@ export interface AuditStats {
 
 // --- Mock Data Generator ---
 
-const LOGS: AuditLog[] = [
+const STORAGE_KEY = 'credence_audit_logs_v1';
+
+// Initial seed if empty
+const INITIAL_LOGS: AuditLog[] = [
     {
-        id: 'LOG-2024-001',
-        timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 mins ago
-        module: 'SETTINGS',
-        action: 'UPDATE',
-        severity: 'CRITICAL',
-        performedBy: { id: 'ADM001', name: 'Dhiraj Vasu', role: 'Super Admin', email: 'dhiraj@credence.com' },
-        target: { type: 'Company Profile', id: 'COMP-01', name: 'Credence Tracker' },
-        summary: 'Updated company currency and working days',
-        changes: [
-            { field: 'currency', oldValue: 'USD', newValue: 'INR' },
-            { field: 'workingDays', oldValue: 'Mon-Fri', newValue: 'Mon-Sat' }
-        ],
-        metadata: { ipAddress: '192.168.1.5', device: 'MacBook Pro', browser: 'Chrome 120.0' }
-    },
-    {
-        id: 'LOG-2024-002',
-        timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-        module: 'TIMESHEET',
-        action: 'APPROVE',
-        severity: 'INFO',
-        performedBy: { id: 'ADM001', name: 'Dhiraj Vasu', role: 'Super Admin', email: 'dhiraj@credence.com' },
-        target: { type: 'Timesheet', id: 'TS-3849', name: 'Week 3 Jan - Rahul' },
-        summary: 'Approved timesheet for Rahul Sharma (15-21 Jan)',
-        metadata: { ipAddress: '192.168.1.5', device: 'MacBook Pro', browser: 'Chrome 120.0' }
-    },
-    {
-        id: 'LOG-2024-003',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-        module: 'SECURITY',
-        action: 'FAILED_LOGIN',
-        severity: 'WARNING',
-        performedBy: { id: 'UNKNOWN', name: 'Unknown User', role: 'N/A', email: 'hacker@bad.com' },
-        target: { type: 'System', id: 'SYS-AUTH', name: 'Login Portal' },
-        summary: 'Failed login attempt detected from suspicious IP',
-        metadata: { ipAddress: '45.22.19.112', device: 'Unknown', browser: 'Firefox' }
-    },
-    {
-        id: 'LOG-2024-004',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-        module: 'PAYROLL',
-        action: 'LOCK',
-        severity: 'CRITICAL',
-        performedBy: { id: 'ADM001', name: 'Dhiraj Vasu', role: 'Super Admin', email: 'dhiraj@credence.com' },
-        target: { type: 'Payroll Run', id: 'PR-JAN-2026', name: 'January 2026 Payroll' },
-        summary: 'Locked payroll for January 2026 processing',
-        metadata: { ipAddress: '192.168.1.5', device: 'MacBook Pro', browser: 'Chrome 120.0' }
-    },
-    {
-        id: 'LOG-2024-005',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-        module: 'BILLING',
+        id: 'LOG-INIT',
+        timestamp: new Date().toISOString(),
+        module: 'SYSTEM',
         action: 'CREATE',
         severity: 'INFO',
-        performedBy: { id: 'PM002', name: 'John Project', role: 'Project Manager', email: 'john@credence.com' },
-        target: { type: 'Invoice', id: 'INV-1022', name: 'Inv for Client Acme Corp' },
-        summary: 'Created draft invoice for Acme Corp Project',
-        changes: [
-            { field: 'amount', oldValue: null, newValue: '$4,500.00' },
-            { field: 'status', oldValue: null, newValue: 'DRAFT' }
-        ],
-        metadata: { ipAddress: '10.0.0.42', device: 'Windows PC', browser: 'Edge' }
-    },
-    // Adding more bulk logs...
-    ...Array.from({ length: 15 }).map((_, i) => ({
-        id: `LOG-OLD-${i}`,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * (i + 2)).toISOString(),
-        module: i % 3 === 0 ? 'TIMESHEET' as const : i % 3 === 1 ? 'PROJECTS' as const : 'USERS' as const,
-        action: i % 3 === 0 ? 'SUBMIT' as const : 'UPDATE' as const,
-        severity: 'INFO' as const,
-        performedBy: { id: 'EMP005', name: 'Sarah Devi', role: 'Employee', email: 'sarah@credence.com' },
-        target: { type: 'Task', id: `TSK-${1000 + i}`, name: `Debugging Task ${i}` },
-        summary: `Updated task status to In Progress`,
-        metadata: { ipAddress: '10.0.0.55', device: 'Mobile', browser: 'Safari' }
-    }))
+        performedBy: { id: 'SYS', name: 'System', role: 'System', email: 'system@credence.com' },
+        target: { type: 'System', id: 'INIT', name: 'Audit Log' },
+        summary: 'Audit logging system initialized',
+        metadata: { ipAddress: '127.0.0.1', device: 'Server', browser: 'N/A' }
+    }
 ];
 
 export const auditService = {
-    getLogs: (_filters?: any): AuditLog[] => {
-        // Just return all for now, filter logic handled in UI for mock simplicity
-        return LOGS;
+    getLogs: (filters?: any): AuditLog[] => {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        let logs: AuditLog[] = stored ? JSON.parse(stored) : INITIAL_LOGS;
+
+        if (filters) {
+            // Basic mock filtering
+            if (filters.module) logs = logs.filter(l => l.module === filters.module);
+            if (filters.action) logs = logs.filter(l => l.action === filters.action);
+            if (filters.user) {
+                const q = filters.user.toLowerCase();
+                logs = logs.filter(l => l.performedBy.name.toLowerCase().includes(q) || l.performedBy.email.toLowerCase().includes(q));
+            }
+            if (filters.search) {
+                const q = filters.search.toLowerCase();
+                logs = logs.filter(l =>
+                    l.summary.toLowerCase().includes(q) ||
+                    l.target.name.toLowerCase().includes(q) ||
+                    l.id.toLowerCase().includes(q)
+                );
+            }
+            if (filters.dateRange === 'LAST_7_DAYS') {
+                const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                logs = logs.filter(l => new Date(l.timestamp) >= cutoff);
+            }
+            // ... other date ranges
+        }
+
+        // Sort DESC
+        return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     },
 
     getStats: (): AuditStats => {
+        const logs = auditService.getLogs();
         return {
-            totalActivities: LOGS.length,
-            criticalActions: LOGS.filter(l => l.severity === 'CRITICAL').length,
-            failedAttempts: LOGS.filter(l => l.action === 'FAILED_LOGIN').length,
-            approvals: LOGS.filter(l => l.action === 'APPROVE').length,
-            settingsChanges: LOGS.filter(l => l.module === 'SETTINGS' || l.module === 'SECURITY').length
+            totalActivities: logs.length,
+            criticalActions: logs.filter(l => l.severity === 'CRITICAL').length,
+            failedAttempts: logs.filter(l => l.action === 'FAILED_LOGIN').length,
+            approvals: logs.filter(l => l.action === 'APPROVE').length,
+            settingsChanges: logs.filter(l => l.module === 'SETTINGS' || l.module === 'SECURITY').length
         };
     },
 
     getLogDetails: (id: string): AuditLog | undefined => {
-        return LOGS.find(l => l.id === id);
+        return auditService.getLogs().find(l => l.id === id);
+    },
+
+    logAction: (
+        module: AuditModule,
+        action: AuditAction,
+        severity: AuditSeverity,
+        summary: string,
+        target: { type: string; id: string; name: string },
+        details?: string,
+        changes?: AuditChange[],
+        user?: { id: string; name: string; role: string; email: string }
+    ) => {
+        const logs = auditService.getLogs();
+
+        // Default to Admin if no user provided (simulating current session user)
+        const performedBy = user || {
+            id: 'ADM001',
+            name: 'Dhiraj Vasu',
+            role: 'Super Admin',
+            email: 'dhiraj@credence.com'
+        };
+
+        const newLog: AuditLog = {
+            id: `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            timestamp: new Date().toISOString(),
+            module,
+            action,
+            severity,
+            performedBy,
+            target,
+            summary,
+            details,
+            changes,
+            metadata: {
+                ipAddress: '192.168.1.10', // Mock
+                device: 'Browser',
+                browser: 'Chrome 120.0'
+            }
+        };
+
+        logs.unshift(newLog);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+        return newLog;
     }
 };

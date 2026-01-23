@@ -1,24 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import type { AvailabilityEvent } from '../../../types/schema';
 
 interface AddHolidayModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (data: any) => void;
+    eventToEdit?: AvailabilityEvent | null;
 }
 
-const AddHolidayModal: React.FC<AddHolidayModalProps> = ({ isOpen, onClose, onSave }) => {
+const AddHolidayModal: React.FC<AddHolidayModalProps> = ({ isOpen, onClose, onSave, eventToEdit }) => {
     const [name, setName] = useState('');
     const [date, setDate] = useState('');
     const [type, setType] = useState('NATIONAL');
     const [repeat, setRepeat] = useState(false);
     const [notes, setNotes] = useState('');
 
+    useEffect(() => {
+        if (isOpen && eventToEdit) {
+            setName(eventToEdit.title);
+            setDate(eventToEdit.startDate);
+            setType(eventToEdit.subType || 'NATIONAL');
+            setNotes(eventToEdit.notes || '');
+            // Repeat logic would need a legitimate field in schema, skipping for now as it's not in schema
+        } else if (isOpen && !eventToEdit) {
+            // Reset for new entry
+            setName('');
+            setDate('');
+            setType('NATIONAL');
+            setNotes('');
+            setRepeat(false);
+        }
+    }, [isOpen, eventToEdit]);
+
     if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({
+            id: eventToEdit?.id, // Pass ID if editing
             title: name,
             startDate: date,
             endDate: date,
@@ -26,10 +46,6 @@ const AddHolidayModal: React.FC<AddHolidayModalProps> = ({ isOpen, onClose, onSa
             subType: type,
             notes: notes
         });
-        // Reset and close
-        setName('');
-        setDate('');
-        setNotes('');
         onClose();
     };
 
@@ -37,7 +53,7 @@ const AddHolidayModal: React.FC<AddHolidayModalProps> = ({ isOpen, onClose, onSa
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
                 <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50/50">
-                    <h3 className="font-semibold text-slate-900">Add New Holiday</h3>
+                    <h3 className="font-semibold text-slate-900">{eventToEdit ? 'Edit Holiday' : 'Add New Holiday'}</h3>
                     <button onClick={onClose} className="p-1 hover:bg-slate-200/50 rounded-lg transition-colors">
                         <X className="h-5 w-5 text-slate-500" />
                     </button>
@@ -114,7 +130,7 @@ const AddHolidayModal: React.FC<AddHolidayModalProps> = ({ isOpen, onClose, onSa
                             type="submit"
                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                         >
-                            Save Holiday
+                            {eventToEdit ? 'Update Holiday' : 'Save Holiday'}
                         </button>
                     </div>
                 </form>

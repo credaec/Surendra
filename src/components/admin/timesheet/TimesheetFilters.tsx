@@ -30,7 +30,6 @@ const TimesheetFilters: React.FC<TimesheetFiltersProps> = ({
     onStatusChange
 }) => {
     const [clients, setClients] = useState<Client[]>([]);
-    const [proofMissingCount, setProofMissingCount] = useState(0);
 
     // Mock data for dropdowns
     const employees = mockBackend.getUsers().filter(u => u.role === 'EMPLOYEE');
@@ -38,11 +37,6 @@ const TimesheetFilters: React.FC<TimesheetFiltersProps> = ({
 
     useEffect(() => {
         setClients(mockBackend.getClients());
-
-        // Calculate proof missing count dynamically
-        const entries = mockBackend.getEntries();
-        const missing = entries.filter(e => e.isBillable && !e.proofUrl).length;
-        setProofMissingCount(missing);
     }, []);
 
     const handleClearAll = () => {
@@ -156,22 +150,7 @@ const TimesheetFilters: React.FC<TimesheetFiltersProps> = ({
                     Approval Pending
                 </button>
 
-                <div className="h-4 w-px bg-slate-200 mx-2"></div>
 
-                {/* Proof Chips */}
-                <button className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200">
-                    Proof Required
-                </button>
-                <button className="px-3 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors flex items-center gap-1">
-                    Proof Missing
-                    {proofMissingCount > 0 && (
-                        <span className="bg-rose-200 text-rose-800 text-[10px] w-4 h-4 rounded-full inline-flex items-center justify-center">
-                            {proofMissingCount}
-                        </span>
-                    )}
-                </button>
-
-                <div className="h-4 w-px bg-slate-200 mx-2"></div>
 
                 <div className="ml-auto">
                     <button

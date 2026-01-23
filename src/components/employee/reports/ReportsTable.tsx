@@ -14,9 +14,10 @@ interface ReportsTableProps {
     entries: ExtendedTimeEntry[];
     searchQuery: string;
     onSearchChange: (query: string) => void;
+    onView: (entry: ExtendedTimeEntry) => void;
 }
 
-const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSearchChange }) => {
+const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSearchChange, onView }) => {
     // Filter by search query (Project or Task Category)
     const filteredEntries = entries.filter(e =>
         e.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -94,7 +95,10 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    <button className="text-slate-400 hover:text-blue-600 p-1">
+                                    <button
+                                        onClick={() => onView(entry)}
+                                        className="text-slate-400 hover:text-blue-600 p-1"
+                                    >
                                         <Eye className="h-4 w-4" />
                                     </button>
                                 </td>

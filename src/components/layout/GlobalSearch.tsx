@@ -22,13 +22,12 @@ const GlobalSearch: React.FC = () => {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Static Pages Map
     const staticPages: SearchResult[] = [
-        { id: 'page_dashboard', type: 'PAGE', title: t('Dashboard', 'Dashboard'), path: '/dashboard', icon: <FileText className="h-4 w-4" /> },
+        { id: 'page_dashboard', type: 'PAGE', title: t('Dashboard', 'Dashboard'), path: '/admin/dashboard', icon: <FileText className="h-4 w-4" /> },
         { id: 'page_timer', type: 'PAGE', title: t('Time Tracker', 'Time Tracker'), path: '/employee/timer', icon: <FileText className="h-4 w-4" /> },
-        { id: 'page_projects', type: 'PAGE', title: t('Projects', 'Projects'), path: '/projects', icon: <Briefcase className="h-4 w-4" /> },
-        { id: 'page_team', type: 'PAGE', title: t('Team Management', 'Team Management'), path: '/team', icon: <UserIcon className="h-4 w-4" /> },
-        { id: 'page_approvals', type: 'PAGE', title: t('Approvals', 'Approvals'), path: '/approvals', icon: <FileText className="h-4 w-4" /> },
+        { id: 'page_projects', type: 'PAGE', title: t('Projects', 'Projects'), path: '/admin/projects', icon: <Briefcase className="h-4 w-4" /> },
+        { id: 'page_team', type: 'PAGE', title: t('Team Management', 'Team Management'), path: '/admin/team', icon: <UserIcon className="h-4 w-4" /> },
+        { id: 'page_approvals', type: 'PAGE', title: t('Approvals', 'Approvals'), path: '/admin/approvals', icon: <FileText className="h-4 w-4" /> },
     ];
 
     useEffect(() => {

@@ -47,7 +47,7 @@ const ReportsKPICards: React.FC<ReportsKPICardsProps> = ({ stats }) => {
             <KPICard
                 title="Total Hours"
                 value={`${stats.totalHours.toFixed(1)}h`}
-                trend="+12% vs last month" // Placeholder for trend
+                // trend="+12% vs last month" // Removed static trend
                 icon={Clock}
                 iconColor="text-blue-600"
             />

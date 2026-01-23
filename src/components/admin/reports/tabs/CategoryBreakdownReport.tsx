@@ -1,22 +1,62 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend
 } from 'recharts';
+import { mockBackend } from '../../../../services/mockBackend';
 
 // import { cn } from '../../../../lib/utils';
 
-const mockCategoryData = [
-    { id: 1, name: 'Engineering Design', totalHours: 450, billable: 450, nonBillable: 0, color: '#3b82f6' },
-    { id: 2, name: 'Drafting & Modeling', totalHours: 320, billable: 320, nonBillable: 0, color: '#60a5fa' },
-    { id: 3, name: 'Project Management', totalHours: 150, billable: 100, nonBillable: 50, color: '#f59e0b' },
-    { id: 4, name: 'Client Meetings', totalHours: 85, billable: 85, nonBillable: 0, color: '#10b981' },
-    { id: 5, name: 'Internal Review', totalHours: 60, billable: 10, nonBillable: 50, color: '#94a3b8' },
-    { id: 6, name: 'Rework / Corrections', totalHours: 45, billable: 0, nonBillable: 45, color: '#ef4444' },
-];
+const COLORS = ['#3b82f6', '#60a5fa', '#f59e0b', '#10b981', '#94a3b8', '#ef4444', '#8b5cf6', '#ec4899'];
 
-const totalHours = mockCategoryData.reduce((acc, curr) => acc + curr.totalHours, 0);
+const CategoryBreakdownReport: React.FC<any> = ({ filters }) => {
+    const filteredData = React.useMemo(() => {
+        const entries = mockBackend.getEntries();
+        // Aggregate by Category
+        // Note: entry.categoryId is the key field.
 
-const CategoryBreakdownReport: React.FC<any> = () => {
+        const catMap = new Map<string, any>();
+
+        entries.forEach(e => {
+            const catName = e.categoryId || 'Uncategorized';
+            if (!catMap.has(catName)) {
+                catMap.set(catName, {
+                    id: catName, // Unique key
+                    name: catName,
+                    totalHours: 0,
+                    billable: 0,
+                    nonBillable: 0,
+                    color: COLORS[catMap.size % COLORS.length],
+                    status: 'Active',
+                    projectIds: [],
+                    clientIds: [] // Skipping complex client lookup for speed
+                });
+            }
+            const c = catMap.get(catName);
+            const h = e.durationMinutes / 60;
+            c.totalHours += h;
+            if (e.isBillable) c.billable += h;
+            else c.nonBillable += h;
+
+            if (e.projectId && !c.projectIds.includes(e.projectId)) {
+                c.projectIds.push(e.projectId);
+            }
+        });
+
+        const data = Array.from(catMap.values());
+
+        return data.filter(cat => {
+            // 2. Project Filter
+            const matchesProject = !filters.project || (cat.projectIds && cat.projectIds.includes(filters.project));
+            // 3. Status Filter (Active/Hold) - Ignored or assumed Active
+            const matchesStatus = !filters.status || filters.status === 'all' || cat.status === filters.status;
+
+            return matchesProject && matchesStatus;
+        });
+    }, [filters]);
+
+    const totalHours = React.useMemo(() => {
+        return filteredData.reduce((acc, curr) => acc + curr.totalHours, 0);
+    }, [filteredData]);
     return (
         <div className="space-y-6">
 
@@ -30,7 +70,7 @@ const CategoryBreakdownReport: React.FC<any> = () => {
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
-                                    data={mockCategoryData}
+                                    data={filteredData}
                                     dataKey="totalHours"
                                     nameKey="name"
                                     cx="50%"
@@ -39,7 +79,7 @@ const CategoryBreakdownReport: React.FC<any> = () => {
                                     outerRadius={100}
                                     paddingAngle={2}
                                 >
-                                    {mockCategoryData.map((entry, index) => (
+                                    {filteredData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
                                 </Pie>
@@ -55,7 +95,7 @@ const CategoryBreakdownReport: React.FC<any> = () => {
                     <h3 className="text-lg font-semibold text-slate-800 mb-4">Hours by Category</h3>
                     <div className="h-72 w-full" style={{ minWidth: 0, minHeight: 0 }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={mockCategoryData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                            <BarChart data={filteredData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#64748b' }} />
@@ -64,7 +104,7 @@ const CategoryBreakdownReport: React.FC<any> = () => {
                                     contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                                 />
                                 <Bar dataKey="totalHours" radius={[0, 4, 4, 0]} barSize={20} name="Total Hours">
-                                    {mockCategoryData.map((entry, index) => (
+                                    {filteredData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
                                 </Bar>
@@ -94,7 +134,7 @@ const CategoryBreakdownReport: React.FC<any> = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {mockCategoryData.map((cat) => {
+                            {filteredData.map((cat) => {
                                 const contribution = Math.round((cat.totalHours / totalHours) * 100);
                                 return (
                                     <tr key={cat.id} className="hover:bg-slate-50 transition-colors">

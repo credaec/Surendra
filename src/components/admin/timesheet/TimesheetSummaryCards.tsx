@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Clock, CheckCircle2, AlertCircle, PieChart, Briefcase } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, CheckCircle2, PieChart, Briefcase } from 'lucide-react';
 import { mockBackend } from '../../../services/mockBackend';
 import { startOfWeek, endOfWeek, isWithinInterval, subWeeks, parseISO } from 'date-fns';
 
 const TimesheetSummaryCards: React.FC = () => {
+    const navigate = useNavigate();
     const [stats, setStats] = useState({
         totalHours: 0,
         billableHours: 0,
         nonBillableHours: 0,
         billablePercentage: 0,
         pendingApproval: 0,
-        proofMissing: 0,
         weekOverWeekTrend: 0
     });
 
@@ -31,7 +32,6 @@ const TimesheetSummaryCards: React.FC = () => {
             let lastTotalMinutes = 0;
             let currentBillableMinutes = 0;
             let currentPending = 0;
-            let currentProofMissing = 0;
 
             allEntries.forEach(entry => {
                 const entryDate = parseISO(entry.date);
@@ -43,11 +43,6 @@ const TimesheetSummaryCards: React.FC = () => {
 
                     if (entry.status === 'SUBMITTED') {
                         currentPending++;
-                    }
-
-                    // Check for proof missing (Billable but no proof URL)
-                    if (entry.isBillable && !entry.proofUrl) {
-                        currentProofMissing++;
                     }
                 }
 
@@ -73,7 +68,6 @@ const TimesheetSummaryCards: React.FC = () => {
                 nonBillableHours,
                 billablePercentage: percentage,
                 pendingApproval: currentPending,
-                proofMissing: currentProofMissing,
                 weekOverWeekTrend: trend
             });
         };
@@ -132,7 +126,10 @@ const TimesheetSummaryCards: React.FC = () => {
             </div>
 
             {/* Pending Approvals */}
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-300 transition-all">
+            <div
+                onClick={() => navigate('/admin/approvals')}
+                className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-300 transition-all cursor-pointer"
+            >
                 <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                     <CheckCircle2 className="w-12 h-12 text-amber-500" />
                 </div>
@@ -141,15 +138,7 @@ const TimesheetSummaryCards: React.FC = () => {
                 <p className="text-xs text-slate-400 mt-2">Requires PM/Admin review</p>
             </div>
 
-            {/* Proof Missing */}
-            <div className="bg-white p-4 rounded-xl border border-rose-200 shadow-sm relative overflow-hidden bg-rose-50/30 group hover:border-rose-300 transition-all">
-                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <AlertCircle className="w-12 h-12 text-rose-500" />
-                </div>
-                <p className="text-rose-600 text-xs font-semibold uppercase tracking-wider mb-1">Proof Missing</p>
-                <h3 className="text-2xl font-bold text-rose-600">{stats.proofMissing} <span className="text-sm font-normal text-rose-400/80">Entries</span></h3>
-                <p className="text-xs text-rose-500 mt-2 font-medium">Action required</p>
-            </div>
+
 
         </div>
     );

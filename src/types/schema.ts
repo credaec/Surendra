@@ -18,6 +18,16 @@ export interface User {
     hourlyCostRate?: number; // Admin only, internal cost
 }
 
+
+export interface ClientContact {
+    id: string;
+    name: string;
+    role: string;
+    email: string;
+    phone?: string;
+    isPrimary?: boolean;
+}
+
 export interface Client {
     id: string;
     name: string;
@@ -27,9 +37,10 @@ export interface Client {
     currency: 'USD' | 'INR'; // Default currency
     status: 'ACTIVE' | 'INACTIVE';
     totalProjects: number;
+    contacts?: ClientContact[];
 }
 
-export type ProjectStatus = 'PLANNED' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
+export type ProjectStatus = 'PLANNED' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
 export type ProjectType = 'HOURLY' | 'FIXED' | 'RETAINER' | 'INTERNAL';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -114,6 +125,7 @@ export interface TaskCategory {
     isProofRequired: boolean;
     isNotesRequired: boolean;
     restrictedToProjects?: string[]; // IDs of projects this is allowed for. If empty, allowed for all.
+    status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface Task {
@@ -142,6 +154,7 @@ export interface TimeEntry {
     durationMinutes: number;
 
     description?: string;
+    notes?: string;
     isBillable: boolean;
     status: TimeEntryStatus;
 

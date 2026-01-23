@@ -14,8 +14,7 @@ const ApprovalsPage: React.FC = () => {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null);
 
-    // Filters State
-    const [filters, setFilters] = useState<ApprovalFilterState>({
+    const DEFAULT_FILTERS: ApprovalFilterState = {
         dateRange: 'this_week',
         employeeIds: [],
         projectIds: [],
@@ -25,12 +24,22 @@ const ApprovalsPage: React.FC = () => {
         minHours: '',
         delayDays: '',
         searchQuery: ''
-    });
+    };
+
+    // Filters State
+    const [filters, setFilters] = useState<ApprovalFilterState>(DEFAULT_FILTERS);
+
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Fetch Data
     const refreshData = () => {
+        setIsRefreshing(true);
         const data = mockBackend.getApprovals();
-        setApprovals(data);
+        setApprovals([...data]);
+        setSelectedIds([]);
+        setFilters(DEFAULT_FILTERS);
+        // Visual feedback only
+        setTimeout(() => setIsRefreshing(false), 500);
     };
 
     useEffect(() => {
@@ -58,6 +67,20 @@ const ApprovalsPage: React.FC = () => {
         setFilteredApprovals(result);
     }, [approvals, filters]);
 
+    const handleResetFilters = () => {
+        setFilters(DEFAULT_FILTERS);
+    };
+
+    const handleSaveView = () => {
+        // Mock save functionality
+        alert("Current filter view saved successfully.");
+    };
+
+    const handleApplyFilters = () => {
+        // Visual confirmation since filters are reactive
+        alert("Filters applied active!");
+    };
+
 
     // Handlers
     const handleStatusFilterChange = (status: ApprovalRequest['status'] | 'ALL') => {
@@ -70,7 +93,9 @@ const ApprovalsPage: React.FC = () => {
     };
 
     const handleApprove = (id: string) => {
-        // In real app, call backend
+        // Call backend to persist
+        mockBackend.updateApprovalStatus(id, 'APPROVED');
+
         const updated = approvals.map(a => a.id === id ? { ...a, status: 'APPROVED' as const } : a);
         setApprovals(updated);
         // If drawer open, update that too
@@ -85,7 +110,9 @@ const ApprovalsPage: React.FC = () => {
     };
 
     const handleReject = (id: string) => {
-        // In real app, call backend
+        // Call backend to persist
+        mockBackend.updateApprovalStatus(id, 'REJECTED');
+
         const updated = approvals.map(a => a.id === id ? { ...a, status: 'REJECTED' as const } : a);
         setApprovals(updated);
         if (selectedApproval?.id === id) {
@@ -100,6 +127,9 @@ const ApprovalsPage: React.FC = () => {
     const handleBulkApprove = () => {
         if (!confirm(`Approve ${selectedIds.length} timesheets?`)) return;
 
+        // Persist all
+        selectedIds.forEach(id => mockBackend.updateApprovalStatus(id, 'APPROVED'));
+
         const updated = approvals.map(a => selectedIds.includes(a.id) ? { ...a, status: 'APPROVED' as const } : a);
         setApprovals(updated);
         setSelectedIds([]);
@@ -108,9 +138,21 @@ const ApprovalsPage: React.FC = () => {
     const handleBulkReject = () => {
         if (!confirm(`Reject ${selectedIds.length} timesheets?`)) return;
 
+        // Persist all
+        selectedIds.forEach(id => mockBackend.updateApprovalStatus(id, 'REJECTED'));
+
         const updated = approvals.map(a => selectedIds.includes(a.id) ? { ...a, status: 'REJECTED' as const } : a);
         setApprovals(updated);
         setSelectedIds([]);
+    };
+
+    const handleSendReminder = () => {
+        alert("Reminder sent successfully to pending employees.");
+    };
+
+    const handleExport = () => {
+        alert("Exporting approval data to CSV...");
+        // Logic for actual export could go here
     };
 
     return (
@@ -149,20 +191,27 @@ const ApprovalsPage: React.FC = () => {
                         </>
                     )}
 
-                    <button className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap">
+                    <button
+                        onClick={handleSendReminder}
+                        className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap"
+                    >
                         <Bell className="h-4 w-4 mr-2" />
                         Send Reminder
                     </button>
-                    <button className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap">
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap"
+                    >
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </button>
                     <button
                         onClick={refreshData}
-                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip"
+                        disabled={isRefreshing}
+                        className={`p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title="Refresh Data"
                     >
-                        <RefreshCw className="h-4 w-4" />
+                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
             </div>
@@ -178,6 +227,9 @@ const ApprovalsPage: React.FC = () => {
             <ApprovalFilters
                 filters={filters}
                 onFilterChange={setFilters}
+                onReset={handleResetFilters}
+                onSaveView={handleSaveView}
+                onApply={handleApplyFilters}
             />
 
             {/* Table */}

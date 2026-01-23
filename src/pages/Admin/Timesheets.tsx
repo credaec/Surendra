@@ -28,6 +28,28 @@ const AdminTimesheetsPage: React.FC = () => {
         setSelectedEmployeeId(employeeId);
     };
 
+    const handleRowApprove = (employeeId: string) => {
+        if (confirm('Approve all pending entries for this employee?')) {
+            const entries = mockBackend.getEntries().filter(e => e.userId === employeeId && e.status === 'SUBMITTED');
+            entries.forEach(e => mockBackend.updateEntryStatus(e.id, 'APPROVED'));
+            setRefreshKey(prev => prev + 1);
+        }
+    };
+
+    const handleRowReject = (employeeId: string) => {
+        if (confirm('Reject pending entries for this employee?')) {
+            const entries = mockBackend.getEntries().filter(e => e.userId === employeeId && e.status === 'SUBMITTED');
+            entries.forEach(e => mockBackend.updateEntryStatus(e.id, 'REJECTED'));
+            setRefreshKey(prev => prev + 1);
+        }
+    };
+
+    const handleRowMenuAction = (employeeId: string, action: string) => {
+        if (action === 'more') {
+            alert(`More options for employee ${employeeId} coming soon!`);
+        }
+    };
+
     const handleBackToSummary = () => {
         setSelectedEmployeeId(null);
     };
@@ -135,6 +157,9 @@ const AdminTimesheetsPage: React.FC = () => {
                             <WeeklySummaryTab
                                 key={`weekly-${refreshKey}`}
                                 onViewDetail={handleViewDetail}
+                                onApprove={handleRowApprove}
+                                onReject={handleRowReject}
+                                onMenuAction={handleRowMenuAction}
                                 filterEmployeeId={filterEmployeeId}
                                 filterProjectId={filterProjectId}
                                 filterClientId={filterClientId}

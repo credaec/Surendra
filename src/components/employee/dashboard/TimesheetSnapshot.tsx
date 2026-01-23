@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../lib/utils';
 import { useAuth } from '../../../context/AuthContext';
 import { mockBackend } from '../../../services/mockBackend';
@@ -6,6 +7,7 @@ import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, parseISO,
 
 const TimesheetSnapshot: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
 
     // Dynamic Data Calculation
     const { weekData, totalHours, weekRangeStr } = useMemo(() => {
@@ -61,7 +63,7 @@ const TimesheetSnapshot: React.FC = () => {
                     <p className="text-xs text-slate-500 mt-1">{weekRangeStr}</p>
                 </div>
                 <button
-                    onClick={() => window.location.href = '/employee/timesheet'}
+                    onClick={() => navigate('/employee/timesheet')}
                     className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 shadow-sm shadow-blue-200 transition-all"
                 >
                     Submit Timesheet

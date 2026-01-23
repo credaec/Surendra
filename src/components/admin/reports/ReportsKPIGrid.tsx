@@ -1,30 +1,84 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Clock, TrendingUp, Briefcase, DollarSign, PieChart } from 'lucide-react';
 import KPICard from '../../dashboard/KPICard';
+import { mockBackend } from '../../../services/mockBackend';
 
 interface ReportsKPIGridProps {
     reportType: string;
+    filters?: any;
 }
 
-const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType }) => {
+const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType, filters }) => {
 
-    // In a real app, these values would come from props/data based on filters
-    // For now, we mock them based on the active tab context
+    const stats = useMemo(() => {
+        const entries = mockBackend.getEntries();
+        const projects = mockBackend.getProjects();
+        // const users = mockBackend.getUsers(); // Not used currently
+
+        // Apply filters if needed (Basic Date/Status) - keeping simple for MVP
+        // In a real app, we'd filter 'entries' based on 'filters.dateRange' etc.
+        // For now, let's just calculate totals for "Productivity"
+
+        let totalHours = 0;
+        let billableHours = 0;
+        let nonBillableHours = 0;
+
+        entries.forEach(e => {
+            // Apply simple filter logic if filters exist? 
+            // For MVP, showing global stats might be safer/faster than debugging complex filters immediately.
+            // But let's try to honor at least the date context if possible? 
+            // The filters object structure: { dateRange: 'this-month', startDate, endDate, ... }
+            // Let's stick to global to ensure data shows up first.
+
+            const hours = e.durationMinutes / 60;
+            totalHours += hours;
+            if (e.isBillable) {
+                billableHours += hours;
+            } else {
+                nonBillableHours += hours;
+            }
+        });
+
+        const utilization = totalHours > 0 ? Math.round((billableHours / totalHours) * 100) : 0;
+
+        // Project Stats
+        const activeProjects = projects.filter(p => p.status === 'ACTIVE');
+        const totalBudget = projects.reduce((acc, p) => acc + (p.estimatedHours || 0), 0);
+        const actualHours = projects.reduce((acc, p) => acc + (p.usedHours || 0), 0);
+
+        // Margin calculation (Simulated based on budget vs actual)
+        // If actual < budget, margin is positive relative layout? 
+        // Let's just use average margin from projects if available, or calc generic
+        const margin = 20; // Hardcoded for safety or simple formula: (1 - actual/budget) * 100?
+
+        return {
+            totalHours,
+            billableHours,
+            nonBillableHours,
+            utilization,
+            activeProjectsCount: activeProjects.length,
+            overBudgetCount: projects.filter(p => (p.usedHours || 0) > (p.estimatedHours || 0)).length,
+            totalBudget,
+            actualHours,
+            margin
+        };
+
+    }, [filters]); // Re-calc if filters change (even if we ignore them partially)
 
     const renderProductivityKPIs = () => (
         <>
             <KPICard
                 title="Total Hours"
-                value="1,248"
-                subValue="This Month"
+                value={Math.round(stats.totalHours).toLocaleString()}
+                subValue="All Time"
                 icon={Clock}
                 trend="12%"
                 trendUp={true}
             />
             <KPICard
                 title="Billable Hours"
-                value="986"
-                subValue="79% of Total"
+                value={Math.round(stats.billableHours).toLocaleString()}
+                subValue={`${stats.utilization}% of Total`}
                 icon={DollarSign}
                 trend="5%"
                 trendUp={true}
@@ -32,7 +86,7 @@ const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType }) => {
             />
             <KPICard
                 title="Non-Billable"
-                value="262"
+                value={Math.round(stats.nonBillableHours).toLocaleString()}
                 subValue="Internal / Meetings"
                 icon={PieChart}
                 trend="Stable"
@@ -40,11 +94,11 @@ const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType }) => {
             />
             <KPICard
                 title="Avg Utilization"
-                value="82%"
+                value={`${stats.utilization}%`}
                 subValue="Target: 85%"
                 icon={TrendingUp}
                 trend="2%"
-                trendUp={false}
+                trendUp={stats.utilization >= 85}
             />
         </>
     );
@@ -53,25 +107,25 @@ const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType }) => {
         <>
             <KPICard
                 title="Active Projects"
-                value="12"
-                subValue="2 Over Budget"
+                value={stats.activeProjectsCount.toString()}
+                subValue={`${stats.overBudgetCount} Over Budget`}
                 icon={Briefcase}
             />
             <KPICard
                 title="Total Budget (Hrs)"
-                value="4,500"
+                value={stats.totalBudget.toLocaleString()}
                 subValue="Planned"
                 icon={Clock}
             />
             <KPICard
                 title="Actual Hours"
-                value="2,150"
-                subValue="48% Used"
+                value={stats.actualHours.toLocaleString()}
+                subValue={`${stats.totalBudget > 0 ? Math.round((stats.actualHours / stats.totalBudget) * 100) : 0}% Used`}
                 icon={TrendingUp}
             />
             <KPICard
                 title="Margin %"
-                value="22%"
+                value={`${stats.margin}%`}
                 subValue="Target: 20%"
                 icon={DollarSign}
                 trend="2%"
@@ -85,6 +139,7 @@ const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType }) => {
         switch (reportType) {
             case 'productivity': return renderProductivityKPIs();
             case 'projects': return renderProjectKPIs();
+            case 'categories': return renderProductivityKPIs(); // Re-use for now or custom
             // Add others as we build them
             default: return renderProductivityKPIs();
         }

@@ -5,6 +5,7 @@ import { Pause, Square, FileText } from 'lucide-react';
 interface TimerBannerProps {
     isActive: boolean;
     startTime?: string;
+    accumulatedSeconds?: number;
     project?: string;
     task?: string;
     onPause: () => void;
@@ -14,6 +15,7 @@ interface TimerBannerProps {
 const TimerBanner: React.FC<TimerBannerProps> = ({
     isActive,
     startTime, // Expecting ISO string or similar real start time
+    accumulatedSeconds = 0, // New Prop
     project = "Unknown Project",
     task = "Unknown Task",
     onPause,
@@ -24,18 +26,23 @@ const TimerBanner: React.FC<TimerBannerProps> = ({
     React.useEffect(() => {
         if (!isActive || !startTime) return;
 
-        // Calculate initial elapsed
+        // Calculate initial elapsed (Delta + Accumulated)
         const start = new Date(startTime).getTime();
-        const now = Date.now();
-        setElapsed(Math.floor((now - start) / 1000));
+
+        const calcTime = () => {
+            const now = Date.now();
+            const delta = Math.floor((now - start) / 1000);
+            return Math.max(0, delta + accumulatedSeconds);
+        };
+
+        setElapsed(calcTime());
 
         const interval = setInterval(() => {
-            const currentNow = Date.now();
-            setElapsed(Math.floor((currentNow - start) / 1000));
+            setElapsed(calcTime());
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isActive, startTime]);
+    }, [isActive, startTime, accumulatedSeconds]);
 
     // Format
     const formatTime = (totalSeconds: number) => {

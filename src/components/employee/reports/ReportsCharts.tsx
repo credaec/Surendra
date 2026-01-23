@@ -7,11 +7,11 @@ import {
 interface ReportsChartsProps {
     trendData: { name: string; hours: number }[];
     pieData: { name: string; value: number; color: string }[];
+    trendView: 'day' | 'week';
+    onTrendViewChange: (view: 'day' | 'week') => void;
 }
 
-const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData }) => {
-    const [trendView, setTrendView] = useState<'day' | 'week'>('day');
-
+const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData, trendView, onTrendViewChange }) => {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
@@ -21,13 +21,13 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData }) => 
                     <h3 className="font-semibold text-slate-900">Hours Trend</h3>
                     <div className="flex bg-slate-100 rounded-lg p-0.5">
                         <button
-                            onClick={() => setTrendView('day')}
+                            onClick={() => onTrendViewChange('day')}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${trendView === 'day' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             Day
                         </button>
                         <button
-                            onClick={() => setTrendView('week')}
+                            onClick={() => onTrendViewChange('week')}
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${trendView === 'week' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             Week

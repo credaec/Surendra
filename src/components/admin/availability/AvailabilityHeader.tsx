@@ -4,11 +4,15 @@ import { Download, RefreshCcw, CalendarPlus, UserMinus } from 'lucide-react';
 interface AvailabilityHeaderProps {
     onAddHoliday: () => void;
     onMarkLeave: () => void;
+    onRefresh: () => void;
+    onExport: () => void;
 }
 
 const AvailabilityHeader: React.FC<AvailabilityHeaderProps> = ({
     onAddHoliday,
-    onMarkLeave
+    onMarkLeave,
+    onRefresh,
+    onExport
 }) => {
     return (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -22,11 +26,17 @@ const AvailabilityHeader: React.FC<AvailabilityHeaderProps> = ({
             </div>
 
             <div className="flex items-center space-x-3">
-                <button className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <button
+                    onClick={onRefresh}
+                    className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                >
                     <RefreshCcw className="h-4 w-4 mr-2" />
                     Refresh
                 </button>
-                <button className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <button
+                    onClick={onExport}
+                    className="flex items-center px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                >
                     <Download className="h-4 w-4 mr-2" />
                     Export
                 </button>

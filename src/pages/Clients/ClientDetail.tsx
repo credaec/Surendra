@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Building2, Mail, Phone, Globe, MoreHorizontal, FileText, Briefcase, Receipt, Users, FolderOpen, Save, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, Mail, Phone, Globe, MoreHorizontal, FileText, Briefcase, Receipt, Users, FolderOpen, Save, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { mockBackend } from '../../services/mockBackend';
-import type { Client } from '../../types/schema';
+import type { Client, ClientContact } from '../../types/schema';
 
 const ClientDetail: React.FC = () => {
     const { id } = useParams();
@@ -11,26 +11,78 @@ const ClientDetail: React.FC = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [client, setClient] = useState<Client | null>(null);
     const [isEditing, setIsEditing] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [formData, setFormData] = useState<Partial<Client>>({});
 
-    useEffect(() => {
-        if (id) {
-            // Find client by ID
-            const clients = mockBackend.getClients();
-            const found = clients.find(c => c.id === id);
-            if (found) {
-                setClient(found);
-                setFormData(found);
-            } else {
-                // Fallback or redirect if not found
-                // For now, load first or mock if id not matching (demo robustness)
-                if (clients.length > 0) {
-                    setClient(clients[0]);
-                    setFormData(clients[0]);
-                }
-            }
+    // Derived State for KPIs
+    const [stats, setStats] = useState({
+        totalProjects: 0,
+        totalBillable: 0,
+        hoursLogged: 0,
+        pendingInvoices: 0,
+        totalInvoiced: 0,
+        totalPaid: 0,
+        totalOutstanding: 0
+    });
+
+    // Contact Modal State
+    const [showContactModal, setShowContactModal] = useState(false);
+    const [newContact, setNewContact] = useState<Partial<ClientContact>>({
+        name: '',
+        role: '',
+        email: '',
+        phone: ''
+    });
+
+    const refreshData = () => {
+        if (!id) return;
+        const clients = mockBackend.getClients();
+        const found = clients.find(c => c.id === id);
+        if (found) {
+            setClient(found);
+            setFormData(found);
+
+            // Calculate KPIs
+            const projects = mockBackend.getProjects().filter(p => p.clientId === id);
+            const invoices = mockBackend.getInvoices().filter(i => i.clientId === id);
+            // Approximate hours from projects (mock calculation as time entries are not directly linked to client in this simplified view, usually linked to project)
+            // Ideally we iterate projects -> entries.
+            // For now, let's just count projects and invoices real data.
+
+            const totalBillable = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+            const totalPaid = invoices.filter(i => i.status === 'PAID').reduce((sum, inv) => sum + inv.totalAmount, 0);
+            const totalOutstanding = invoices.filter(i => i.status !== 'PAID').reduce((sum, inv) => sum + inv.balanceAmount, 0);
+            const pendingCount = invoices.filter(i => i.status === 'SENT' || i.status === 'PARTIAL' || i.status === 'OVERDUE').length;
+
+            const hoursLogged = projects.reduce((total, project) => {
+                const projectEntries = mockBackend.getEntries().filter(e => e.projectId === project.id);
+                const projectHours = projectEntries.reduce((sum, e) => sum + (e.durationMinutes / 60), 0);
+                return total + projectHours;
+            }, 0);
+
+            setStats({
+                totalProjects: projects.length,
+                totalBillable,
+                hoursLogged: Math.round(hoursLogged * 10) / 10,
+                pendingInvoices: pendingCount,
+                totalInvoiced: totalBillable,
+                totalPaid,
+                totalOutstanding
+            });
         }
+    };
+
+    useEffect(() => {
+        refreshData();
     }, [id]);
+
+    const handleDelete = () => {
+        if (!client) return;
+        if (confirm(`Are you sure you want to delete ${client.name}? This action cannot be undone.`)) {
+            mockBackend.deleteClient(client.id);
+            navigate('/admin/clients');
+        }
+    };
 
     const handleSave = () => {
         if (client && client.id) {
@@ -39,6 +91,28 @@ const ClientDetail: React.FC = () => {
                 setClient(updated);
                 setIsEditing(false);
             }
+        }
+    };
+
+    const handleAddContact = () => {
+        if (!client || !newContact.name || !newContact.email) return;
+        mockBackend.addClientContact(client.id, {
+            name: newContact.name,
+            role: newContact.role || 'Contact',
+            email: newContact.email,
+            phone: newContact.phone,
+            isPrimary: false
+        });
+        setShowContactModal(false);
+        setNewContact({ name: '', role: '', email: '', phone: '' });
+        refreshData();
+    };
+
+    const handleDeleteContact = (contactId: string) => {
+        if (!client) return;
+        if (confirm("Remove this contact?")) {
+            mockBackend.deleteClientContact(client.id, contactId);
+            refreshData();
         }
     };
 
@@ -109,7 +183,28 @@ const ClientDetail: React.FC = () => {
                             Edit Client
                         </button>
                     )}
-                    <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"><MoreHorizontal className="h-5 w-5 text-slate-500" /></button>
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        >
+                            <MoreHorizontal className="h-5 w-5 text-slate-500" />
+                        </button>
+
+                        {isMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)} />
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-20 animate-in fade-in zoom-in-95 duration-200">
+                                    <button
+                                        onClick={handleDelete}
+                                        className="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 flex items-center"
+                                    >
+                                        Delete Client
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -146,19 +241,19 @@ const ClientDetail: React.FC = () => {
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                                 <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Total Projects</div>
-                                <div className="text-2xl font-bold text-slate-900">{client.totalProjects}</div>
+                                <div className="text-2xl font-bold text-slate-900">{stats.totalProjects}</div>
                             </div>
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                                 <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Total Billable</div>
-                                <div className="text-2xl font-bold text-slate-900">$124k</div>
+                                <div className="text-2xl font-bold text-slate-900">${stats.totalBillable.toLocaleString()}</div>
                             </div>
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                                 <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Hours Logged</div>
-                                <div className="text-2xl font-bold text-slate-900">1,240h</div>
+                                <div className="text-2xl font-bold text-slate-900">{stats.hoursLogged}h</div>
                             </div>
                             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                                 <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Pending Invoices</div>
-                                <div className="text-2xl font-bold text-amber-600">2</div>
+                                <div className="text-2xl font-bold text-amber-600">{stats.pendingInvoices}</div>
                             </div>
                         </div>
 
@@ -194,31 +289,6 @@ const ClientDetail: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Top Employees Worked (Mock for now) */}
-                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-                            <h3 className="text-lg font-semibold mb-4 text-slate-800">Top Employees</h3>
-                            <div className="space-y-4">
-                                {[
-                                    { name: 'Alice Johnson', role: 'Senior Architect', hours: 420, avatar: 'AJ' },
-                                    { name: 'Bob Smith', role: 'Structural Engineer', hours: 310, avatar: 'BS' },
-                                    { name: 'Charlie Brown', role: 'Drafter', hours: 180, avatar: 'CB' },
-                                ].map((emp, i) => (
-                                    <div key={i} className="flex items-center justify-between">
-                                        <div className="flex items-center">
-                                            <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold mr-3">
-                                                {emp.avatar}
-                                            </div>
-                                            <div>
-                                                <div className="text-sm font-medium text-slate-900">{emp.name}</div>
-                                                <div className="text-xs text-slate-500">{emp.role}</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-sm font-medium text-slate-700">{emp.hours}h</div>
-                                    </div>
-                                ))}
                             </div>
                         </div>
                     </div>
@@ -266,12 +336,334 @@ const ClientDetail: React.FC = () => {
             )}
 
             {activeTab === 'projects' && (
-                <div className="text-center py-12 text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    <Briefcase className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                    <h3 className="text-lg font-medium text-slate-900">Projects List</h3>
-                    <p>Projects table will be rendered here.</p>
+                <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-100 bg-slate-50/50">
+                                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Project Name</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Code</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Priority</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Key Date</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {mockBackend.getProjects().filter(p => p.clientId === client.id).map((project) => (
+                                    <tr key={project.id} className="hover:bg-slate-50 transition-colors group">
+                                        <td className="py-3 px-4">
+                                            <div className="font-medium text-slate-900">{project.name}</div>
+                                            <div className="text-xs text-slate-400">{project.type}</div>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm text-slate-500 font-mono">{project.code}</td>
+                                        <td className="py-3 px-4">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-xs font-medium border",
+                                                project.status === 'ACTIVE' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                                    project.status === 'COMPLETED' ? "bg-blue-50 text-blue-700 border-blue-100" :
+                                                        "bg-slate-100 text-slate-600 border-slate-200"
+                                            )}>
+                                                {project.status}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className={cn(
+                                                "text-xs font-bold px-2 py-0.5 rounded",
+                                                project.priority === 'HIGH' || project.priority === 'CRITICAL' ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500"
+                                            )}>
+                                                {project.priority}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm text-slate-500">
+                                            {project.startDate}
+                                        </td>
+                                        <td className="py-3 px-4 text-right">
+                                            <button
+                                                // navigate to project edit/view if available, for now just log
+                                                onClick={() => navigate(`/admin/tasks`)} // Assuming Tasks page or Project list page
+                                                className="opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-all"
+                                            >
+                                                <ArrowRight className="h-4 w-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {mockBackend.getProjects().filter(p => p.clientId === client.id).length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="py-12 text-center text-slate-400">
+                                            <div className="flex flex-col items-center">
+                                                <Briefcase className="h-8 w-8 mb-2 opacity-50" />
+                                                <p>No projects found for this client.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
+
+            {activeTab === 'contacts' && (
+                <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {client.contacts?.map((contact) => (
+                            <div key={contact.id} className="group relative flex flex-col p-6 rounded-xl border border-slate-100 hover:shadow-md transition-shadow bg-slate-50/50">
+                                <button
+                                    onClick={() => handleDeleteContact(contact.id)}
+                                    className="absolute top-3 right-3 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+
+                                <div className="flex items-center space-x-4 mb-4">
+                                    <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+                                        {contact.name.substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-slate-900">{contact.name}</h4>
+                                        <p className="text-sm text-slate-500">{contact.role}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 mt-auto">
+                                    <div className="flex items-center text-sm text-slate-600">
+                                        <Mail className="h-4 w-4 mr-2 text-slate-400" />
+                                        {contact.email}
+                                    </div>
+                                    {contact.phone && (
+                                        <div className="flex items-center text-sm text-slate-600">
+                                            <Phone className="h-4 w-4 mr-2 text-slate-400" />
+                                            {contact.phone}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        <button
+                            onClick={() => setShowContactModal(true)}
+                            className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer group"
+                        >
+                            <div className="h-12 w-12 rounded-full bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500 flex items-center justify-center mb-3 transition-colors">
+                                <Users className="h-6 w-6" />
+                            </div>
+                            <span className="font-medium text-slate-600 group-hover:text-blue-600">Add New Contact</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'billing' && (
+                <div className="space-y-6">
+                    {/* Billing Summary Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Total Invoiced</div>
+                            <div className="text-2xl font-bold text-slate-900">${stats.totalInvoiced.toLocaleString()}</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Paid</div>
+                            <div className="text-2xl font-bold text-emerald-600">${stats.totalPaid.toLocaleString()}</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Outstanding</div>
+                            <div className="text-2xl font-bold text-amber-600">${stats.totalOutstanding.toLocaleString()}</div>
+                        </div>
+                    </div>
+
+                    {/* Invoices List */}
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <h3 className="font-semibold text-slate-900">Recent Invoices</h3>
+                            <button className="text-sm text-blue-600 hover:underline font-medium">Create Invoice</button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-100">
+                                        <th className="py-3 px-6 text-xs font-semibold text-slate-500 uppercase">Invoice #</th>
+                                        <th className="py-3 px-6 text-xs font-semibold text-slate-500 uppercase">Date</th>
+                                        <th className="py-3 px-6 text-xs font-semibold text-slate-500 uppercase">Amount</th>
+                                        <th className="py-3 px-6 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                                        <th className="py-3 px-6 text-xs font-semibold text-slate-500 uppercase text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {mockBackend.getInvoices().filter(inv => inv.clientId === client.id).length > 0 ? (
+                                        mockBackend.getInvoices().filter(inv => inv.clientId === client.id).map(invoice => (
+                                            <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="py-3 px-6 font-medium text-slate-900">{invoice.invoiceNo}</td>
+                                                <td className="py-3 px-6 text-sm text-slate-500">{invoice.date}</td>
+                                                <td className="py-3 px-6 font-medium text-slate-900">${invoice.totalAmount.toLocaleString()}</td>
+                                                <td className="py-3 px-6">
+                                                    <span className={cn(
+                                                        "px-2 py-0.5 rounded-full text-xs font-medium border",
+                                                        invoice.status === 'PAID' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                                            invoice.status === 'OVERDUE' ? "bg-rose-50 text-rose-700 border-rose-100" :
+                                                                "bg-amber-50 text-amber-700 border-amber-100"
+                                                    )}>
+                                                        {invoice.status}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-6 text-right">
+                                                    <button className="text-slate-400 hover:text-blue-600">Download</button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="py-8 text-center text-slate-400">No invoices found.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'documents' && (
+                <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {mockBackend.getClientDocuments(client.id).map((doc) => (
+                            <div key={doc.id} className="group relative border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all bg-white hover:border-blue-200">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                        <FileText className="h-6 w-6" />
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Delete this document?')) {
+                                                mockBackend.deleteClientDocument(doc.id);
+                                                refreshData(); // Triggers re-render
+                                            }
+                                        }}
+                                        className="text-slate-300 hover:text-rose-500 transition-colors"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </div>
+                                <h4 className="font-semibold text-slate-900 truncate mb-1">{doc.name}</h4>
+                                <p className="text-xs text-slate-500">{doc.size} • Uploaded {doc.uploadDate}</p>
+                            </div>
+                        ))}
+                        <button
+                            onClick={() => {
+                                const name = prompt("Enter document name (Mock Upload):", "New_Contract.pdf");
+                                if (name) {
+                                    mockBackend.addClientDocument({
+                                        clientId: client.id,
+                                        name: name,
+                                        size: '1.5 MB',
+                                        uploadDate: new Date().toISOString().split('T')[0],
+                                        type: 'PDF'
+                                    });
+                                    refreshData();
+                                }
+                            }}
+                            className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer text-slate-400 hover:text-blue-600 hover:border-blue-300"
+                        >
+                            <div className="mb-2">
+                                <div className="mx-auto w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                                    <FolderOpen className="h-5 w-5" />
+                                </div>
+                            </div>
+                            <span className="text-sm font-medium">Upload Document</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+
+            {/* Contact Modal */}
+            {
+                showContactModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold text-slate-900">Add New Contact</h2>
+                                <button
+                                    onClick={() => setShowContactModal(false)}
+                                    className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100 transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Name <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="e.g. Jane Doe"
+                                        value={newContact.name}
+                                        onChange={e => setNewContact({ ...newContact, name: e.target.value })}
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Role
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="e.g. Project Manager"
+                                        value={newContact.role}
+                                        onChange={e => setNewContact({ ...newContact, role: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Email <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="email"
+                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="jane@example.com"
+                                        value={newContact.email}
+                                        onChange={e => setNewContact({ ...newContact, email: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Phone
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="+1 (555) 000-0000"
+                                        value={newContact.phone}
+                                        onChange={e => setNewContact({ ...newContact, phone: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-8 flex justify-end space-x-3">
+                                <button
+                                    onClick={() => setShowContactModal(false)}
+                                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleAddContact}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm"
+                                >
+                                    Add Contact
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div>
     );
 };

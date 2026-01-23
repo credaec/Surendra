@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Shield, User as UserIcon, Briefcase } from 'lucide-react';
-
 import { mockBackend, type User } from '../../../services/mockBackend';
+import { settingsService } from '../../../services/settingsService';
+import AddEditUserModal from './AddEditUserModal';
+import { useToast } from '../../../context/ToastContext';
 
 const UserManagement: React.FC = () => {
+    const { showToast } = useToast();
     // Fetch initial users from backend
     const [users, setUsers] = useState<User[]>(mockBackend.getUsers());
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+
+    // Role Permission State
+    const [allowAdminSwitch, setAllowAdminSwitch] = useState(settingsService.getSettings().security.allowAdminRoleSwitch);
 
     const getRoleBadge = (role: string) => {
         switch (role) {
@@ -18,19 +26,42 @@ const UserManagement: React.FC = () => {
         }
     };
 
-
     const handleAddUser = () => {
-        // In a real app, this would open a modal form.
-        // For this demo, we adding a mock user to prove backend connection.
-        const newUser = mockBackend.addUser({
-            name: `New User ${Math.floor(Math.random() * 1000)}`,
-            email: `user${Date.now()}@credaec.in`,
-            role: 'EMPLOYEE',
-            department: 'ENGINEERING',
-            designation: 'TRAINEE'
-        });
-        setUsers([...users, newUser]);
-        alert('New user added to persistent storage!');
+        setEditingUser(null);
+        setIsModalOpen(true);
+    };
+
+    const handleEditUser = (user: User) => {
+        setEditingUser(user);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteUser = (userId: string) => {
+        if (confirm('Are you sure you want to delete this user?')) {
+            mockBackend.deleteUser(userId);
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            showToast('User deleted successfully', 'info');
+        }
+    };
+
+    const handleSaveUser = (userData: any) => {
+        if (userData.id) {
+            const updated = mockBackend.updateUser(userData);
+            setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+            showToast('User updated successfully', 'success');
+        } else {
+            const newUser = mockBackend.addUser(userData);
+            setUsers(prev => [...prev, newUser]);
+            showToast('User added successfully', 'success');
+        }
+        setIsModalOpen(false);
+    };
+
+    const handleToggleAdminSwitch = () => {
+        const newValue = !allowAdminSwitch;
+        setAllowAdminSwitch(newValue);
+        settingsService.updateSection('security', { allowAdminRoleSwitch: newValue });
+        showToast(`Admin Switch ${newValue ? 'Enabled' : 'Disabled'}`, 'success');
     };
 
     return (
@@ -82,10 +113,16 @@ const UserManagement: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end space-x-2">
-                                        <button className="p-1 text-slate-400 hover:text-blue-600 rounded">
+                                        <button
+                                            onClick={() => handleEditUser(user)}
+                                            className="p-1 text-slate-400 hover:text-blue-600 rounded"
+                                        >
                                             <Edit2 className="h-4 w-4" />
                                         </button>
-                                        <button className="p-1 text-slate-400 hover:text-rose-600 rounded">
+                                        <button
+                                            onClick={() => handleDeleteUser(user.id)}
+                                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                                        >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
@@ -96,7 +133,7 @@ const UserManagement: React.FC = () => {
                 </table>
             </div>
 
-            {/* Role Permissions Matrix (Visual Only for now) */}
+            {/* Role Permissions Matrix */}
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Role Permissions</h3>
                 <div className="space-y-3">
@@ -105,13 +142,22 @@ const UserManagement: React.FC = () => {
                             <span className="font-medium text-slate-900">Allow Admin to Switch to Employee View</span>
                             <p className="text-xs text-slate-500">Admins can toggle between Admin Portal and Employee Dashboard.</p>
                         </div>
-                        {/* This would be bound to security settings, checking visual only here */}
-                        <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600 cursor-pointer">
-                            <span className="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-6" />
-                        </div>
+                        <button
+                            onClick={handleToggleAdminSwitch}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${allowAdminSwitch ? 'bg-blue-600' : 'bg-slate-200'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${allowAdminSwitch ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
                     </div>
                 </div>
             </div>
+
+            <AddEditUserModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSave={handleSaveUser}
+                userToEdit={editingUser}
+            />
 
         </div>
     );

@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReportsHeader from '../../components/employee/reports/ReportsHeader';
 import ReportsFilterBar from '../../components/employee/reports/ReportsFilterBar';
 import ReportsKPICards from '../../components/employee/reports/ReportsKPICards';
 import ReportsCharts from '../../components/employee/reports/ReportsCharts';
 import ReportsBreakdown from '../../components/employee/reports/ReportsBreakdown';
-import ProofComplianceCard from '../../components/employee/reports/ProofComplianceCard';
 import ReportsTable from '../../components/employee/reports/ReportsTable';
 import { mockBackend } from '../../services/mockBackend';
 import type { TimeEntry, Project } from '../../types/schema';
 import { useAuth } from '../../context/AuthContext';
-import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { useToast } from '../../context/ToastContext';
+import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, startOfDay, endOfDay, startOfWeek, addDays } from 'date-fns';
 
 const MyReportsPage: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
 
     // Filter State
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -23,6 +25,7 @@ const MyReportsPage: React.FC = () => {
     const [selectedStatus, setSelectedStatus] = useState('ALL');
     const [selectedBillable, setSelectedBillable] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [trendView, setTrendView] = useState<'day' | 'week'>('day');
 
     // Data State
     const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
@@ -61,9 +64,8 @@ const MyReportsPage: React.FC = () => {
             // Status
             if (selectedStatus !== 'ALL' && entry.status !== selectedStatus) return false;
 
-            // Billable (Lookup project to get client)
-            const project = projects.find(p => p.id === entry.projectId);
-            const isBillable = project ? project.clientName !== 'Credence Internal' : true; // Default to billable if not found
+            // Billable (Use entry flag as source of truth)
+            const isBillable = entry.isBillable;
 
             if (selectedBillable === 'BILLABLE' && !isBillable) return false;
             if (selectedBillable === 'NON_BILLABLE' && isBillable) return false;
@@ -81,10 +83,7 @@ const MyReportsPage: React.FC = () => {
         filteredEntries.forEach(e => {
             totalSeconds += e.durationMinutes * 60;
 
-            const project = projects.find(p => p.id === e.projectId);
-            const isBillable = project ? project.clientName !== 'Credence Internal' : true;
-
-            if (isBillable) billableSeconds += e.durationMinutes * 60;
+            if (e.isBillable) billableSeconds += e.durationMinutes * 60;
             else nonBillableSeconds += e.durationMinutes * 60;
         });
 
@@ -98,7 +97,7 @@ const MyReportsPage: React.FC = () => {
             billableHours,
             nonBillableHours,
             billablePercentage,
-            productivity: 94 // Mock for now
+            productivity: Math.round(billablePercentage) // Dynamic based on billable ratio
         };
     }, [filteredEntries, projects]);
 
@@ -117,19 +116,32 @@ const MyReportsPage: React.FC = () => {
 
     // Chart Data Preparation
     const trendData = useMemo(() => {
-        // Simple grouping by day for the selected range
-        // For MVP, just show last 7 entries or map entries to days
         const dataMap = new Map<string, number>();
-        filteredEntries.forEach(e => {
-            const day = format(parseISO(e.date), 'EEE'); // Mon, Tue...
-            dataMap.set(day, (dataMap.get(day) || 0) + ((e.durationMinutes * 60) / 3600));
+        const sorted = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
+
+        sorted.forEach(e => {
+            let key = e.date;
+            if (trendView === 'week') {
+                key = format(startOfWeek(parseISO(e.date), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            }
+            dataMap.set(key, (dataMap.get(key) || 0) + (e.durationMinutes / 60));
         });
 
-        // Ensure specific order if needed, or just return entries
-        const result = Array.from(dataMap.entries()).map(([name, hours]) => ({ name, hours }));
+        const result = Array.from(dataMap.entries()).map(([key, hours]) => {
+            let name = key;
+            if (trendView === 'day') {
+                name = format(parseISO(key), 'MMM d');
+            } else {
+                const start = parseISO(key);
+                const end = addDays(start, 6);
+                name = `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
+            }
+            return { name, hours };
+        });
+
         if (result.length === 0) return [{ name: 'No Data', hours: 0 }];
         return result;
-    }, [filteredEntries]);
+    }, [filteredEntries, trendView]);
 
     const pieData = useMemo(() => [
         { name: 'Billable', value: stats.billableHours, color: '#10b981' },
@@ -141,6 +153,56 @@ const MyReportsPage: React.FC = () => {
         setStartDate(start);
         setEndDate(end);
         setDateRangeLabel(`${format(parseISO(start), 'MMM d')} - ${format(parseISO(end), 'MMM d, yyyy')}`);
+    };
+
+    const { showToast } = useToast();
+
+    const handleExport = (type: 'PDF' | 'EXCEL' | 'CSV') => {
+        if (type === 'PDF') {
+            showToast('Preparing PDF for print...', 'info');
+            setTimeout(() => window.print(), 500);
+            return;
+        }
+
+        // CSV / Excel Logic
+        const headers = ['Date', 'Project', 'Task Category', 'Duration (Hours)', 'Details', 'Billable', 'Status'];
+        const rows = filteredEntries.map(e => {
+            const project = projects.find(p => p.id === e.projectId);
+            const hours = (e.durationMinutes / 60).toFixed(2);
+            return [
+                e.date,
+                project?.name || 'Unknown',
+                e.categoryId,
+                hours,
+                `"${(e.description || '').replace(/"/g, '""')}"`, // Escape quotes
+                e.isBillable ? 'Yes' : 'No',
+                e.status
+            ];
+        });
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+
+        const timestamp = format(new Date(), 'yyyy-MM-dd');
+        const ext = type === 'EXCEL' ? 'xls' : 'csv'; // Simple workaround: .xls often opens CSV content correctly in Excel
+        link.setAttribute('download', `My_Reports_${timestamp}.${ext}`);
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast(`${type} export started!`, 'success');
+    };
+
+    const handleView = (entry: any) => {
+        navigate('/employee/timesheet', { state: { date: entry.date } });
     };
 
     // Error Boundary (Inline) - Keeping existing
@@ -173,7 +235,7 @@ const MyReportsPage: React.FC = () => {
             {loading && <div className="p-4 text-center">Loading reports...</div>}
 
             <ErrorBoundary name="Header">
-                <ReportsHeader />
+                <ReportsHeader onExport={handleExport} />
             </ErrorBoundary>
 
             <ErrorBoundary name="Filters">
@@ -210,7 +272,12 @@ const MyReportsPage: React.FC = () => {
                 {/* Main Content (Charts & Breakdowns) - 8 Cols */}
                 <div className="xl:col-span-8">
                     <ErrorBoundary name="Charts">
-                        <ReportsCharts trendData={trendData} pieData={pieData} />
+                        <ReportsCharts
+                            trendData={trendData}
+                            pieData={pieData}
+                            trendView={trendView}
+                            onTrendViewChange={setTrendView}
+                        />
                     </ErrorBoundary>
 
                     <ErrorBoundary name="Breakdown">
@@ -222,16 +289,17 @@ const MyReportsPage: React.FC = () => {
                             entries={enrichedEntries}
                             searchQuery={searchQuery}
                             onSearchChange={setSearchQuery}
+                            onView={handleView}
                         />
                     </ErrorBoundary>
                 </div>
 
                 {/* Right Sidebar (Compliance & Summary) - 4 Cols */}
-                <div className="xl:col-span-4">
+                {/* <div className="xl:col-span-4">
                     <ErrorBoundary name="ProofCompliance">
-                        <ProofComplianceCard entries={filteredEntries} />
+                         Proof Compliance Removed
                     </ErrorBoundary>
-                </div>
+                </div> */}
 
             </div>
 

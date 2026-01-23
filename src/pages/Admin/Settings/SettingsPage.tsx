@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SettingsSidebar, { type SettingsSection } from '../../../components/admin/settings/SettingsSidebar';
 import { Save, RotateCcw, History } from 'lucide-react';
 import { settingsService, type AppSettings } from '../../../services/settingsService';
+import { useToast } from '../../../context/ToastContext';
 
 // Imported components
 import CompanySetup from '../../../components/admin/settings/CompanySetup';
@@ -15,24 +16,37 @@ import NotificationSettings from '../../../components/admin/settings/Notificatio
 import SecuritySettings from '../../../components/admin/settings/SecuritySettings';
 import AuditLogsSettings from '../../../components/admin/settings/AuditLogsSettings';
 import IntegrationsSettings from '../../../components/admin/settings/IntegrationsSettings';
+import EmailSettings from '../../../components/admin/settings/EmailSettings';
 
 const SettingsPage: React.FC = () => {
+    const { showToast } = useToast();
     const [activeSection, setActiveSection] = useState<SettingsSection>('COMPANY');
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
 
-    useEffect(() => {
-        // Load settings
+    const loadSettings = () => {
         const loaded = settingsService.getSettings();
         setSettings(loaded);
+        setHasChanges(false);
+    };
+
+    useEffect(() => {
+        loadSettings();
     }, []);
 
     const handleSave = () => {
         if (settings) {
             settingsService.updateSettings(settings);
+            showToast('Settings saved successfully', 'success');
+            setHasChanges(false);
         }
-        alert('Settings saved successfully!');
-        setHasChanges(false);
+    };
+
+    const handleReset = () => {
+        if (confirm('Are you sure you want to discard your changes?')) {
+            loadSettings();
+            showToast('Changes discarded', 'info');
+        }
     };
 
     const handleUpdateSection = <K extends keyof AppSettings>(section: K, data: Partial<AppSettings[K]>) => {
@@ -64,6 +78,8 @@ const SettingsPage: React.FC = () => {
                 return <CategoriesSetup />;
             case 'NOTIFICATIONS':
                 return <NotificationSettings data={settings.notifications} onChange={(d) => handleUpdateSection('notifications', d)} />;
+            case 'EMAIL':
+                return <EmailSettings data={settings.email} onChange={(d) => handleUpdateSection('email', d)} />;
             case 'SECURITY':
                 return <SecuritySettings data={settings.security} onChange={(d) => handleUpdateSection('security', d)} />;
             case 'DATA':
@@ -88,12 +104,15 @@ const SettingsPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center space-x-3">
-                    <button className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                    <button
+                        onClick={() => setActiveSection('DATA')}
+                        className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                    >
                         <History className="h-4 w-4 mr-2" />
                         Audit History
                     </button>
                     <button
-                        onClick={() => window.location.reload()}
+                        onClick={handleReset}
                         className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
                     >
                         <RotateCcw className="h-4 w-4 mr-2" />
@@ -103,8 +122,8 @@ const SettingsPage: React.FC = () => {
                         onClick={handleSave}
                         disabled={!hasChanges}
                         className={`flex items-center px-5 py-2 rounded-lg shadow-md transition-all text-sm font-medium ${hasChanges
-                                ? "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200"
-                                : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                            ? "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200"
+                            : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                             }`}
                     >
                         <Save className="h-4 w-4 mr-2" />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, HelpCircle, FileText } from 'lucide-react';
+import { Calendar, HelpCircle, FileText, ArrowLeft } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -8,9 +8,18 @@ const TimerHeader: React.FC = () => {
 
     return (
         <div className="flex items-center justify-between mb-8">
-            <div>
-                <h1 className="text-2xl font-bold text-slate-900">Timer</h1>
-                <p className="text-slate-500 text-sm mt-1">Track your working time live</p>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="p-2 -ml-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+                    title="Go Back"
+                >
+                    <ArrowLeft className="h-6 w-6" />
+                </button>
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Timer</h1>
+                    <p className="text-slate-500 text-sm mt-1">Track your working time live</p>
+                </div>
             </div>
             <div className="flex items-center space-x-3">
                 <button

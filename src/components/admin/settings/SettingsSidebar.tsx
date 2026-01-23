@@ -10,7 +10,8 @@ import {
     Bell,
     Shield,
     Database,
-    Waypoints
+    Waypoints,
+    Mail // Add Mail
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -25,6 +26,7 @@ export type SettingsSection =
     | 'NOTIFICATIONS'
     | 'SECURITY'
     | 'DATA'
+    | 'EMAIL' // New
     | 'INTEGRATIONS';
 
 interface SettingsSidebarProps {
@@ -42,6 +44,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ activeSection, onSele
         { id: 'BILLING', label: 'Billing & Invoices', icon: Receipt },
         { id: 'PAYROLL', label: 'Payroll & Costing', icon: DollarSign },
         { id: 'CATEGORIES', label: 'Categories & Tasks', icon: ListChecks },
+        { id: 'EMAIL', label: 'Email Server', icon: Mail },
         { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell },
         { id: 'SECURITY', label: 'Security & Access', icon: Shield },
         { id: 'DATA', label: 'Data & Audit Logs', icon: Database },

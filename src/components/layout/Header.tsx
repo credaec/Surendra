@@ -6,6 +6,8 @@ import ProfileSettingsModal from './ProfileSettingsModal';
 import { useLanguage } from '../../context/LanguageContext';
 import GlobalSearch from './GlobalSearch';
 
+import { mockBackend } from '../../services/mockBackend';
+
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
@@ -13,12 +15,52 @@ const Header: React.FC = () => {
 
     // Notifications State
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications] = useState([
-        { id: 1, title: 'Project Update', message: 'BCS Skylights deadline extended to March 1st.', time: '2 hours ago', unread: true },
-        { id: 2, title: 'Admin Notice', message: 'Please update your proof documents for last week.', time: '5 hours ago', unread: true },
-        { id: 3, title: 'System', message: 'Timesheet for Jan 6-12 has been approved.', time: '1 day ago', unread: false },
-    ]);
-    const unreadCount = notifications.filter(n => n.unread).length;
+    const [notifications, setNotifications] = useState<any[]>([]);
+
+    const loadNotifications = () => {
+        if (user?.id) {
+            const data = mockBackend.getNotifications(user.id);
+            setNotifications(data);
+        }
+    };
+
+    React.useEffect(() => {
+        loadNotifications();
+        // Poll for new notifications every minute (simple real-time simulation)
+        const interval = setInterval(loadNotifications, 60000);
+        return () => clearInterval(interval);
+    }, [user]);
+
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    const handleMarkAllRead = () => {
+        if (!user) return;
+        // In a real app, backend would have a bulk endpoint.
+        // Here we just mark displayed ones as read one by one or update local state + backend
+        notifications.forEach(n => {
+            if (!n.isRead) mockBackend.markNotificationRead(n.id);
+        });
+        loadNotifications();
+    };
+
+    // Helper to format time relative
+    const getTimeAgo = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " years ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " months ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hours ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " mins ago";
+        return "Just now";
+    };
 
     // Profile Dropdown State
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -71,18 +113,29 @@ const Header: React.FC = () => {
                             <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50">
                                 <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
                                     <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                                    <button className="text-xs text-blue-600 hover:text-blue-500">Mark all read</button>
+                                    <button
+                                        onClick={handleMarkAllRead}
+                                        className="text-xs text-blue-600 hover:text-blue-500"
+                                    >
+                                        Mark all read
+                                    </button>
                                 </div>
                                 <div className="max-h-96 overflow-y-auto">
-                                    {notifications.map((notif) => (
-                                        <div key={notif.id} className={`px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 ${notif.unread ? 'bg-blue-50/30' : ''}`}>
-                                            <div className="flex justify-between items-start">
-                                                <p className="text-sm font-medium text-gray-900">{notif.title}</p>
-                                                <span className="text-xs text-gray-400">{notif.time}</span>
-                                            </div>
-                                            <p className="text-xs text-gray-600 mt-1">{notif.message}</p>
+                                    {notifications.length === 0 ? (
+                                        <div className="px-4 py-6 text-center text-gray-400 text-sm">
+                                            No notifications
                                         </div>
-                                    ))}
+                                    ) : (
+                                        notifications.map((notif) => (
+                                            <div key={notif.id} className={`px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 ${!notif.isRead ? 'bg-blue-50/30' : ''}`}>
+                                                <div className="flex justify-between items-start">
+                                                    <p className="text-sm font-medium text-gray-900">{notif.title}</p>
+                                                    <span className="text-xs text-gray-400">{getTimeAgo(notif.createdAt)}</span>
+                                                </div>
+                                                <p className="text-xs text-gray-600 mt-1">{notif.message}</p>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                                 <div className="px-4 py-2 border-t border-gray-100 text-center">
                                     <button className="text-xs font-medium text-blue-600 hover:text-blue-500">View all updates</button>

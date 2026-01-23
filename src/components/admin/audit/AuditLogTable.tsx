@@ -1,6 +1,7 @@
 import React from 'react';
 import { Eye, Copy } from 'lucide-react';
 import type { AuditLog } from '../../../services/auditService';
+import { useToast } from '../../../context/ToastContext';
 
 interface AuditLogTableProps {
     logs: AuditLog[];
@@ -8,6 +9,8 @@ interface AuditLogTableProps {
 }
 
 const AuditLogTable: React.FC<AuditLogTableProps> = ({ logs, onViewIds }) => {
+
+    const { showToast } = useToast();
 
     const getSeverityBadge = (severity: string) => {
         switch (severity) {
@@ -24,6 +27,11 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({ logs, onViewIds }) => {
         return new Date(isoString).toLocaleString('en-US', {
             month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
         });
+    };
+
+    const handleCopyId = (id: string) => {
+        navigator.clipboard.writeText(id);
+        showToast('Log ID copied to clipboard', 'success');
     };
 
     return (
@@ -73,7 +81,7 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({ logs, onViewIds }) => {
                                         <button
                                             title="Copy ID"
                                             className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                            onClick={() => navigator.clipboard.writeText(log.id)}
+                                            onClick={() => handleCopyId(log.id)}
                                         >
                                             <Copy className="h-4 w-4" />
                                         </button>

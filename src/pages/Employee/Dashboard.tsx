@@ -7,7 +7,7 @@ import TimerBanner from '../../components/employee/dashboard/TimerBanner';
 import KPIStats from '../../components/employee/dashboard/KPIStats';
 import TimesheetSnapshot from '../../components/employee/dashboard/TimesheetSnapshot';
 import RecentEntries from '../../components/employee/dashboard/RecentEntries';
-import { ProofPendingCard, MyProjectsCard, NotificationsCard } from '../../components/employee/dashboard/RightSidebarComponents';
+import { MyProjectsCard, NotificationsCard } from '../../components/employee/dashboard/RightSidebarComponents';
 
 const EmployeeDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -18,7 +18,21 @@ const EmployeeDashboard: React.FC = () => {
     useEffect(() => {
         if (user) {
             const timer = mockBackend.getActiveTimer(user.id);
-            setActiveTimer(timer);
+            if (timer) {
+                // Enrich with Category Name
+                const categories = mockBackend.getTaskCategories();
+                const category = categories.find(c => c.id === timer.categoryId);
+                // We're modifying the structure slightly to pass "taskName" instead of ID if possible, 
+                // or we rely on TimerBanner to accept it. 
+                // Since TimerBanner generic prop is 'task', we can just pass the name there.
+
+                setActiveTimer({
+                    ...timer,
+                    taskName: category?.name || timer.categoryId
+                });
+            } else {
+                setActiveTimer(null);
+            }
         }
     }, [user]);
 
@@ -67,7 +81,7 @@ const EmployeeDashboard: React.FC = () => {
                 isActive={!!activeTimer}
                 startTime={activeTimer?.startTime}
                 project={activeTimer?.projectName}
-                task={activeTimer?.categoryId} // Or task name if available
+                task={activeTimer?.taskName || activeTimer?.categoryId} // Use enriched name
                 onPause={() => navigate('/employee/timer')}
                 onStop={() => navigate('/employee/timer')}
             />
@@ -92,7 +106,6 @@ const EmployeeDashboard: React.FC = () => {
 
                     {/* Right Column (Controls & Alerts) - 4 Cols */}
                     <div className="col-span-12 xl:col-span-4 space-y-6">
-                        <ProofPendingCard />
                         <MyProjectsCard />
                         <NotificationsCard />
 
@@ -100,7 +113,6 @@ const EmployeeDashboard: React.FC = () => {
                         <div className="bg-blue-50 rounded-lg p-4 border border-blue-100 mt-8">
                             <p className="text-xs text-blue-700 text-center">
                                 💡 Only approved & locked hours are considered for billing.
-                                Make sure to upload proofs where required.
                             </p>
                         </div>
                     </div>

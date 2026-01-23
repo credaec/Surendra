@@ -1,11 +1,13 @@
 import React from 'react';
 import { Image as ImageIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface RecentHistoryCardProps {
     entries: any[]; // Using any for brevity given TimeEntry schema variations
 }
 
 const RecentHistoryCard: React.FC<RecentHistoryCardProps> = ({ entries }) => {
+    const navigate = useNavigate();
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -40,7 +42,10 @@ const RecentHistoryCard: React.FC<RecentHistoryCardProps> = ({ entries }) => {
                 ))}
             </div>
             <div className="p-3 border-t border-slate-100 text-center">
-                <button className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                <button
+                    onClick={() => navigate('/employee/timesheet')}
+                    className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors w-full py-1"
+                >
                     View All Activity
                 </button>
             </div>

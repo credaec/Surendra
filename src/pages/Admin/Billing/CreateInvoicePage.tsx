@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Plus, Trash2, Building2, MapPin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { mockBackend } from '../../../services/mockBackend';
 import { settingsService } from '../../../services/settingsService'; // Import Settings Service
 import type { Client, Project } from '../../../types/schema';
 
 const CreateInvoicePage: React.FC = () => {
     const navigate = useNavigate();
+    const { id } = useParams();
+    const isEditMode = !!id;
+
     const [clients, setClients] = useState<Client[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedClient, setSelectedClient] = useState<Client | undefined>(undefined);
@@ -40,9 +43,53 @@ const CreateInvoicePage: React.FC = () => {
     });
 
     useEffect(() => {
-        setClients(mockBackend.getClients());
-        setProjects(mockBackend.getProjects());
-    }, []);
+        const loadedClients = mockBackend.getClients();
+        const loadedProjects = mockBackend.getProjects();
+        setClients(loadedClients);
+        setProjects(loadedProjects);
+
+        if (id) {
+            const allInvoices = mockBackend.getInvoices();
+            const invoice = allInvoices.find(i => i.id === id);
+
+            if (invoice) {
+                const client = loadedClients.find(c => c.id === invoice.clientId); // Map mock invoice client ID if needed, mock invoice usually has clientId property? 
+                // Wait, invoice schema in mock might differ slightly from Create form.
+                // Let's verify invoice structure from a previous turn or inference.
+                // Assuming Invoice has generic shape compatible.
+
+                // Hack: Mock invoice might not have all fields separate, lets map best effort
+                setSelectedClient(client);
+
+                setFormData({
+                    invoiceNo: invoice.invoiceNo,
+                    invoiceDate: invoice.date,
+                    dueDate: invoice.dueDate,
+                    status: invoice.status,
+                    senderName: appSettings.company.name, // defaults
+                    senderAddress: appSettings.company.address,
+                    senderCityState: `${appSettings.company.city}, ${appSettings.company.state}`,
+                    senderEmail: 'billing@credaec.in',
+                    clientId: invoice.clientId || (client ? client.id : ''),
+                    invoiceNo: invoice.invoiceNo,
+                    invoiceDate: invoice.date,
+                    dueDate: invoice.dueDate,
+                    status: invoice.status as any,
+                    senderName: appSettings.company.name,
+                    senderAddress: appSettings.company.address,
+                    senderCityState: `${appSettings.company.city}, ${appSettings.company.state}`,
+                    senderEmail: 'billing@credaec.in',
+                    clientId: client?.id || '',
+                    projectId: invoice.projectId || '',
+                    items: invoice.items || [],
+                    notes: appSettings.billing.invoiceNotesTemplate,
+                    terms: 'Payment is due within 15 days.',
+                    taxRate: 10,
+                    discount: 0
+                });
+            }
+        }
+    }, [id]);
 
     const handleClientChange = (clientId: string) => {
         const client = clients.find(c => c.id === clientId);
@@ -105,21 +152,34 @@ const CreateInvoicePage: React.FC = () => {
         const taxAmount = calculateTax();
         const total = calculateTotal();
 
-        const newInvoice = {
+        const invoiceData = {
             ...formData,
             status,
             clientId: selectedClient?.id || '',
             clientName: selectedClient?.companyName || '',
             projectId: formData.projectId,
             projectName: project?.name || '',
-            amount: total, // Expected by addInvoice as subtotal-ish
+            amount: total,
             subtotal,
             taxAmount,
             totalAmount: total,
             items: formData.items
         };
 
-        mockBackend.addInvoice(newInvoice as any);
+        if (isEditMode && id) {
+            // Update existing
+            // Mock backend might need update method, or we manually update list
+            const allInvoices = mockBackend.getInvoices();
+            const idx = allInvoices.findIndex(i => i.id === id);
+            if (idx !== -1) {
+                allInvoices[idx] = { ...allInvoices[idx], ...invoiceData, id };
+                localStorage.setItem('credence_invoices_v1', JSON.stringify(allInvoices));
+            }
+        } else {
+            // Create new
+            mockBackend.addInvoice(invoiceData as any);
+        }
+
         navigate('/admin/billing/invoices');
     };
 
@@ -132,8 +192,8 @@ const CreateInvoicePage: React.FC = () => {
                         <ArrowLeft className="h-5 w-5" />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">New Invoice</h1>
-                        <p className="text-slate-500 text-sm">Create and send a new invoice</p>
+                        <h1 className="text-2xl font-bold text-slate-900">{isEditMode ? 'Edit Invoice' : 'New Invoice'}</h1>
+                        <p className="text-slate-500 text-sm">{isEditMode ? 'Update invoice details' : 'Create and send a new invoice'}</p>
                     </div>
                 </div>
                 <div className="flex space-x-3">

@@ -7,7 +7,7 @@ import WeeklyGrid from '../../components/employee/timesheet/WeeklyGrid';
 import type { DayStats } from '../../components/employee/timesheet/WeeklyGrid';
 import DailyEntriesTable from '../../components/employee/timesheet/DailyEntriesTable';
 import type { TimeEntryRow } from '../../components/employee/timesheet/DailyEntriesTable';
-import { WeeklySummaryCard, ProofPendingTimesheetCard, ValidationChecklist } from '../../components/employee/timesheet/TimesheetSidebar';
+import { WeeklySummaryCard, ValidationChecklist } from '../../components/employee/timesheet/TimesheetSidebar';
 import SubmitModal from '../../components/employee/timesheet/SubmitModal';
 import { useAuth } from '../../context/AuthContext';
 import { mockBackend } from '../../services/mockBackend';
@@ -34,13 +34,17 @@ const TimesheetPage: React.FC = () => {
         }
     }, [user]);
 
-    // Handle incoming navigation state for "Manual Entry"
+    // Handle incoming navigation state for "Manual Entry" or specific date view
     useEffect(() => {
-        if (location.state && (location.state as any).openAddEntry) {
-            // Check if we have an AddEntryModal, if not, just log or show alert for now
-            // Ideally toggle a state: setIsAddEntryModalOpen(true);
-            console.log("Auto-opening Add Entry Modal");
-            // setIsAddEntryModalOpen(true); // TODO: Implement AddEntryModal
+        if (location.state) {
+            const state = location.state as any;
+            if (state.openAddEntry) {
+                console.log("Auto-opening Add Entry Modal");
+                // setIsAddEntryModalOpen(true); 
+            }
+            if (state.date) {
+                setSelectedDate(state.date);
+            }
         }
     }, [location]);
 
@@ -71,18 +75,29 @@ const TimesheetPage: React.FC = () => {
     // 4. Get Current Day Entries for Table
     const currentDayEntries: TimeEntryRow[] = useMemo(() => {
         const dayEntries = entries.filter(e => e.date === selectedDate);
-        return dayEntries.map(e => ({
-            id: e.id,
-            startTime: '09:00 AM', // Mock start/end for now if not tracked
-            endTime: '05:00 PM',
-            duration: `${Math.floor(e.durationMinutes / 60)}h ${e.durationMinutes % 60}m`,
-            project: mockBackend.getProjectById(e.projectId)?.name || 'Unknown Project',
-            category: e.categoryId,
-            notes: e.description,
-            isBillable: e.isBillable,
-            hasProof: e.proofUrl ? true : false,
-            status: e.status
-        }));
+        return dayEntries.map(e => {
+            // Helper to format time
+            const formatTime = (isoString?: string) => {
+                if (!isoString) return '-';
+                try {
+                    return format(parseISO(isoString), 'hh:mm a');
+                } catch (err) {
+                    return '-';
+                }
+            };
+
+            return {
+                id: e.id,
+                startTime: formatTime(e.startTime),
+                endTime: formatTime(e.endTime),
+                duration: `${Math.floor(e.durationMinutes / 60)}h ${e.durationMinutes % 60}m`,
+                project: mockBackend.getProjectById(e.projectId)?.name || 'Unknown Project',
+                category: e.categoryId,
+                notes: e.description,
+                isBillable: e.isBillable,
+                status: e.status
+            };
+        });
     }, [entries, selectedDate]);
 
     // 5. Logic
@@ -91,9 +106,7 @@ const TimesheetPage: React.FC = () => {
     const getValidationErrors = () => {
         // Simple validation: check if any billable entry on selected day is missing proof
         // Real app would check whole week
-        return currentDayEntries
-            .filter(e => e.isBillable && !e.hasProof)
-            .map(e => `Proof required for ${e.project}`);
+        return [];
     };
 
     const handleSubmit = () => {
@@ -101,9 +114,46 @@ const TimesheetPage: React.FC = () => {
     };
 
     const confirmSubmit = () => {
+        if (!user) return;
+
+        // 1. Calculate Summary for the Week
+        // weekStart is already defined in component scope
+        const weekEnd = addDays(weekStart, 6);
+        const startStr = format(weekStart, 'yyyy-MM-dd');
+        const endStr = format(weekEnd, 'yyyy-MM-dd');
+
+        // Filter entries for this week
+        const weekEntries = entries.filter(e => e.date >= startStr && e.date <= endStr);
+
+        // Stats
+        const totalHours = weekEntries.reduce((sum, e) => sum + e.durationMinutes / 60, 0);
+        const billableHours = weekEntries.filter(e => e.isBillable).reduce((sum, e) => sum + e.durationMinutes / 60, 0);
+        const nonBillableHours = totalHours - billableHours;
+
+        // Projects List
+        const uniqueProjectIds = Array.from(new Set(weekEntries.map(e => e.projectId)));
+        const projectNames = uniqueProjectIds.map(pid => {
+            const p = mockBackend.getProjectById(pid);
+            return p ? p.name : 'Unknown';
+        });
+
+        // 2. Submit to Backend
+        mockBackend.submitTimesheet({
+            employeeId: user.id,
+            employeeName: user.name,
+            avatarInitials: user.avatarInitials,
+            weekRange: weekRangeLabel,
+            totalHours,
+            billableHours,
+            nonBillableHours,
+            projectCount: uniqueProjectIds.length,
+            projects: projectNames,
+            // remarks: '' 
+        });
+
         setStatus('SUBMITTED');
         setIsSubmitModalOpen(false);
-        // Here we would call mockBackend.submitTimesheet(weekId)
+        alert('Timesheet submitted successfully for approval.');
     };
 
     const handlePrevWeek = () => {
@@ -217,10 +267,6 @@ const TimesheetPage: React.FC = () => {
                     <ValidationChecklist
                         errors={getValidationErrors()}
                         warnings={[]}
-                    />
-
-                    <ProofPendingTimesheetCard
-                        missingCount={currentDayEntries.filter(e => e.isBillable && !e.hasProof).length}
                     />
 
                     {!isLocked && (
