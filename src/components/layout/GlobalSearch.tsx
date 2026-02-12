@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, ArrowRight, User as UserIcon, Briefcase, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface SearchResult {
@@ -57,7 +57,7 @@ const GlobalSearch: React.FC = () => {
         newResults.push(...matchedPages);
 
         // 2. Search Projects (from Backend)
-        const projects = mockBackend.getProjects();
+        const projects = backendService.getProjects();
         const matchedProjects = projects
             .filter(p => p.name.toLowerCase().includes(searchQuery) || p.clientName.toLowerCase().includes(searchQuery))
             .map(p => ({
@@ -71,7 +71,7 @@ const GlobalSearch: React.FC = () => {
         newResults.push(...matchedProjects);
 
         // 3. Search Employees (from Backend)
-        const users = mockBackend.getUsers();
+        const users = backendService.getUsers();
         const matchedUsers = users
             .filter(u => u.name.toLowerCase().includes(searchQuery) || u.email.toLowerCase().includes(searchQuery))
             .map(u => ({
@@ -114,14 +114,14 @@ const GlobalSearch: React.FC = () => {
     };
 
     return (
-        <div className="relative w-96" ref={containerRef}>
+        <div className="relative w-full max-w-md group" ref={containerRef}>
             <div className="relative w-full">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-4 w-4 text-gray-400" />
+                <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-blue-500">
+                    <Search className="h-4.5 w-4.5 text-slate-400" />
                 </span>
                 <input
                     type="text"
-                    className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:text-sm transition-all"
+                    className="block w-full pl-11 pr-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl leading-5 bg-slate-50 dark:bg-slate-950/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 sm:text-sm font-medium transition-all duration-300"
                     placeholder={t('Search projects, employees...', 'Search projects, employees...')}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -132,39 +132,40 @@ const GlobalSearch: React.FC = () => {
 
             {/* Results Dropdown */}
             {isOpen && results.length > 0 && (
-                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-96 overflow-y-auto">
-                    {/* Categories could be added here if needed */}
-                    <div className="px-2">
+                <div className="absolute top-full left-0 mt-3 w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-200 dark:ring-slate-800 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-[500px] overflow-y-auto">
+                    <div className="px-3 space-y-1">
                         {results.map((result, index) => (
                             <button
                                 key={result.id}
                                 onClick={() => handleSelect(result)}
-                                className={`w-full text-left px-3 py-2.5 rounded-md flex items-center justify-between group transition-colors ${index === selectedIndex ? 'bg-blue-50' : 'hover:bg-slate-50'
+                                className={`w-full text-left px-4 py-3 rounded-xl flex items-center justify-between group/item transition-all duration-200 ${index === selectedIndex ? 'bg-blue-50 dark:bg-blue-500/10 ring-1 ring-blue-100 dark:ring-blue-900/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                                     }`}
                             >
                                 <div className="flex items-center min-w-0">
-                                    <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${result.type === 'PAGE' ? 'bg-indigo-50 text-indigo-600' :
-                                        result.type === 'PROJECT' ? 'bg-orange-50 text-orange-600' :
-                                            'bg-blue-50 text-blue-600'
+                                    <div className={`flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover/item:scale-110 ${result.type === 'PAGE' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' :
+                                        result.type === 'PROJECT' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                                            'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                         }`}>
                                         {result.icon}
                                     </div>
-                                    <div className="ml-3 min-w-0 flex-1">
-                                        <div className="text-sm font-medium text-slate-900 truncate">
+                                    <div className="ml-4 min-w-0 flex-1">
+                                        <div className="text-sm font-bold text-slate-900 dark:text-white truncate flex items-center">
                                             {result.title}
                                             {result.type !== 'PAGE' && (
-                                                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 uppercase tracking-wide">
+                                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-widest group-hover/item:bg-blue-100 dark:group-hover/item:bg-blue-900/40 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 transition-colors">
                                                     {result.type}
                                                 </span>
                                             )}
                                         </div>
                                         {result.subtitle && (
-                                            <div className="text-xs text-slate-500 truncate">{result.subtitle}</div>
+                                            <div className="text-xs font-medium text-slate-500 dark:text-slate-500 truncate mt-0.5">{result.subtitle}</div>
                                         )}
                                     </div>
                                 </div>
-                                {index === selectedIndex && (
-                                    <ArrowRight className="h-4 w-4 text-blue-400 ml-2" />
+                                {(index === selectedIndex) && (
+                                    <div className="bg-blue-600 dark:bg-blue-400 rounded-full p-1 ml-2 shadow-lg shadow-blue-500/20">
+                                        <ArrowRight className="h-3.5 w-3.5 text-white dark:text-slate-950" />
+                                    </div>
                                 )}
                             </button>
                         ))}
@@ -173,8 +174,13 @@ const GlobalSearch: React.FC = () => {
             )}
 
             {isOpen && query && results.length === 0 && (
-                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5 py-8 text-center z-50">
-                    <p className="text-sm text-slate-500">No results found for "{query}"</p>
+                <div className="absolute top-full left-0 mt-3 w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-200 dark:ring-slate-800 py-12 text-center z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex flex-col items-center">
+                        <div className="h-16 w-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                            <Search className="h-8 w-8 text-slate-200 dark:text-slate-700" />
+                        </div>
+                        <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">No results found for <span className="text-slate-900 dark:text-white">"{query}"</span></p>
+                    </div>
                 </div>
             )}
         </div>
@@ -182,3 +188,4 @@ const GlobalSearch: React.FC = () => {
 };
 
 export default GlobalSearch;
+

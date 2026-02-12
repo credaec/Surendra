@@ -4,10 +4,11 @@ import {
     Briefcase,
     Lock,
     Unlock,
-    AlertTriangle
+    AlertTriangle,
+    Users
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import type { PayrollRun } from '../../../services/mockBackend';
+import type { PayrollRun } from '../../../services/backendService';
 
 interface PayrollKPIsProps {
     data: PayrollRun | null;
@@ -27,7 +28,6 @@ const PayrollKPIs: React.FC<PayrollKPIsProps> = ({
     pendingHours
 }) => {
 
-    // Default values if no run selected
     const totalEmployees = data?.totalEmployees || 0;
     const totalPayable = data?.totalPayable || 0;
     const isLocked = data?.status === 'LOCKED';
@@ -41,77 +41,82 @@ const PayrollKPIs: React.FC<PayrollKPIsProps> = ({
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
             {/* 1. Total Payable */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-slate-500">Total Payable</h3>
-                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                        <DollarSign className="h-5 w-5" />
+            <div className="bg-white dark:bg-surface p-8 rounded-[2.5rem] border border-slate-100 dark:border-border shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/5">
+                <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Total Payable</h3>
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                        <DollarSign className="h-6 w-6" />
                     </div>
                 </div>
                 <div>
-                    <span className="text-2xl font-bold text-slate-900">{formatCurrency(totalPayable)}</span>
-                    <p className="text-xs text-slate-500 mt-1">For {totalEmployees} employees</p>
+                    <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{formatCurrency(totalPayable)}</span>
+                    <div className="flex items-center mt-3 space-x-2">
+                        <Users className="h-3.5 w-3.5 text-slate-400" />
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{totalEmployees} employees</p>
+                    </div>
                 </div>
             </div>
 
             {/* 2. Total Project Cost */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-slate-500">Project Cost</h3>
-                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                        <Briefcase className="h-5 w-5" />
+            <div className="bg-white dark:bg-surface p-8 rounded-[2.5rem] border border-slate-100 dark:border-border shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5">
+                <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Project Cost</h3>
+                    <div className="p-3 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+                        <Briefcase className="h-6 w-6" />
                     </div>
                 </div>
                 <div>
-                    <span className="text-2xl font-bold text-slate-900">{formatCurrency(projectCost)}</span>
-                    <p className="text-xs text-slate-500 mt-1">Internal Cost Allocation</p>
+                    <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{formatCurrency(projectCost)}</span>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-3 uppercase tracking-widest">Internal Allocation</p>
                 </div>
             </div>
 
             {/* 3. Hours Breakdown */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-slate-500">Total Approved Hrs</h3>
-                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                        <Clock className="h-5 w-5" />
+            <div className="bg-white dark:bg-surface p-8 rounded-[2.5rem] border border-slate-100 dark:border-border shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/5">
+                <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Approved Hours</h3>
+                    <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                        <Clock className="h-6 w-6" />
                     </div>
                 </div>
                 <div>
-                    <span className="text-2xl font-bold text-slate-900">{approvedHours}h</span>
-                    <div className="flex items-center space-x-2 mt-1 text-xs">
-                        <span className="text-emerald-600 font-medium">{billableHours}h Billable</span>
-                        <span className="text-slate-300">|</span>
-                        <span className="text-slate-500">{nonBillableHours}h Non-Billable</span>
+                    <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{approvedHours}<span className="text-2xl ml-1 text-slate-300 dark:text-slate-600">h</span></span>
+                    <div className="flex items-center space-x-3 mt-3 text-[10px] font-black uppercase tracking-widest">
+                        <span className="text-emerald-600 dark:text-emerald-400">{billableHours}h Bill</span>
+                        <span className="text-slate-200 dark:text-slate-700">|</span>
+                        <span className="text-slate-400 dark:text-slate-500">{nonBillableHours}h Non</span>
                     </div>
                 </div>
             </div>
 
             {/* 4. Status & Risks */}
             <div className={cn(
-                "p-5 rounded-xl border shadow-sm flex flex-col justify-between",
-                pendingHours > 0 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"
+                "p-8 rounded-[2.5rem] border shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-xl",
+                pendingHours > 0
+                    ? "bg-amber-50 dark:bg-amber-500/5 border-amber-200 dark:border-amber-900/40 hover:shadow-amber-500/10"
+                    : "bg-white dark:bg-surface border-slate-100 dark:border-border"
             )}>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className={cn("text-sm font-medium", pendingHours > 0 ? "text-amber-800" : "text-slate-500")}>
+                <div className="flex items-center justify-between mb-8">
+                    <h3 className={cn("text-[10px] font-black uppercase tracking-[0.2em]", pendingHours > 0 ? "text-amber-800 dark:text-amber-500" : "text-slate-400 dark:text-slate-500")}>
                         {isLocked ? "Payroll Status" : "Pending Impact"}
                     </h3>
-                    <div className={cn("p-2 rounded-lg", isLocked ? "bg-slate-100 text-slate-600" : "bg-amber-100 text-amber-600")}>
-                        {isLocked ? <Lock className="h-5 w-5" /> : (pendingHours > 0 ? <AlertTriangle className="h-5 w-5" /> : <Unlock className="h-5 w-5" />)}
+                    <div className={cn("p-3 rounded-2xl shadow-inner group-hover:scale-110 transition-transform duration-300", isLocked ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" : "bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400")}>
+                        {isLocked ? <Lock className="h-6 w-6" /> : (pendingHours > 0 ? <AlertTriangle className="h-6 w-6" /> : <Unlock className="h-6 w-6" />)}
                     </div>
                 </div>
                 <div>
                     {isLocked ? (
                         <>
-                            <span className="text-2xl font-bold text-slate-700">LOCKED</span>
-                            <p className="text-xs text-slate-500 mt-1">Period is finalized</p>
+                            <span className="text-4xl font-black text-slate-700 dark:text-slate-300 tracking-tighter leading-none">LOCKED</span>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-3 uppercase tracking-widest">Period Finalized</p>
                         </>
                     ) : (
                         <>
-                            <span className="text-2xl font-bold text-slate-900">{pendingHours}h</span>
-                            <p className="text-xs text-amber-700 mt-1">Hrs waiting approval</p>
+                            <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{pendingHours}<span className="text-2xl ml-1 text-slate-300 dark:text-slate-600">h</span></span>
+                            <p className={cn("text-[10px] font-bold mt-3 uppercase tracking-widest", pendingHours > 0 ? "text-amber-700 dark:text-amber-400" : "text-slate-400 dark:text-slate-500")}>Waiting Approval</p>
                         </>
                     )}
                 </div>

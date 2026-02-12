@@ -31,57 +31,57 @@ const AvailabilityStats: React.FC<AvailabilityStatsProps> = ({ events }) => {
     ).length;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-slate-300 transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-slate-500">On Leave Today</h3>
-                    <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">On Leave Today</h3>
+                    <div className="p-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl shadow-inner group-hover:scale-110 transition-transform">
                         <Users className="h-5 w-5" />
                     </div>
                 </div>
                 <div>
-                    <span className="text-2xl font-bold text-slate-900">{employeesOnLeaveToday}</span>
-                    <p className="text-xs text-slate-500 mt-1">Employees unavailable</p>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{employeesOnLeaveToday}</span>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Employees unavailable</p>
                 </div>
             </div>
 
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-slate-300 transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-slate-500">Upcoming Holidays</h3>
-                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Upcoming Holidays</h3>
+                    <div className="p-2.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl shadow-inner group-hover:scale-110 transition-transform">
                         <Palmtree className="h-5 w-5" />
                     </div>
                 </div>
                 <div>
-                    <span className="text-2xl font-bold text-slate-900">{upcomingHolidays}</span>
-                    <p className="text-xs text-slate-500 mt-1">In next 30 days</p>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{upcomingHolidays}</span>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">In next 30 days</p>
                 </div>
             </div>
 
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-slate-300 transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-slate-500">Planned Leaves</h3>
-                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Planned Leaves</h3>
+                    <div className="p-2.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl shadow-inner group-hover:scale-110 transition-transform">
                         <Calendar className="h-5 w-5" />
                     </div>
                 </div>
                 <div>
-                    <span className="text-2xl font-bold text-slate-900">{upcomingLeaves}</span>
-                    <p className="text-xs text-slate-500 mt-1">Requests for next 30 days</p>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{upcomingLeaves}</span>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Requests for next 30 days</p>
                 </div>
             </div>
 
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-slate-300 transition-colors">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-slate-500">Team Availability</h3>
-                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Team Availability</h3>
+                    <div className="p-2.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shadow-inner group-hover:scale-110 transition-transform">
                         <Clock className="h-5 w-5" />
                     </div>
                 </div>
                 <div>
-                    <span className="text-2xl font-bold text-slate-900">92%</span>
-                    <p className="text-xs text-slate-500 mt-1">Working capacity this week</p>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">92%</span>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Working capacity this week</p>
                 </div>
             </div>
 

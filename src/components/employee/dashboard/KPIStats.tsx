@@ -1,14 +1,17 @@
 import React from 'react';
-import { Clock, TrendingUp, DollarSign, CalendarCheck } from 'lucide-react';
+import { Clock, TrendingUp, DollarSign, CalendarCheck, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
 import { isSameDay, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
+import { cn } from '../../../lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 const KPIStats: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
 
     // Live Metrics
-    const entries = user ? mockBackend.getEntries(user.id) : [];
+    const entries = (user ? backendService.getEntries(user.id) : []).filter(e => e.status !== 'REJECTED');
     const today = new Date();
 
     // Today's Hours
@@ -34,78 +37,80 @@ const KPIStats: React.FC = () => {
         ? Math.round((weekBillableSeconds / weekSeconds) * 100)
         : 0;
 
+    const cards = [
+        {
+            title: 'Today Logged',
+            value: `${todayHours}h ${todayMins}m`,
+            subtitle: 'Target 8h',
+            icon: Clock,
+            color: 'blue'
+        },
+        {
+            title: 'This Week',
+            value: `${weekHours}h ${weekMins}m`,
+            subtitle: 'Mon–Sun total',
+            icon: TrendingUp,
+            color: 'emerald'
+        },
+        {
+            title: 'Billable %',
+            value: `${billablePct}%`,
+            subtitle: 'Billable vs Total',
+            icon: DollarSign,
+            color: 'amber'
+        }
+    ];
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-
-            {/* Card 1: Today Logged */}
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Today Logged</p>
-                    <div className="text-2xl font-bold text-slate-900">{todayHours}h {todayMins}m</div>
-                    <p className="text-xs text-slate-400 mt-1">Target 8h</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {cards.map((card, idx) => (
+                <div key={idx} className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">{card.title}</p>
+                        <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">{card.value}</div>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-tight">{card.subtitle}</p>
+                    </div>
+                    <div className={cn(
+                        "h-14 w-14 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110",
+                        card.color === 'blue' && "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 shadow-lg shadow-blue-500/10",
+                        card.color === 'emerald' && "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-lg shadow-emerald-500/10",
+                        card.color === 'amber' && "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-lg shadow-amber-500/10"
+                    )}>
+                        <card.icon className="h-7 w-7" />
+                    </div>
                 </div>
-                <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                    <Clock className="h-5 w-5" />
-                </div>
-            </div>
-
-            {/* Card 2: This Week */}
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">This Week</p>
-                    <div className="text-2xl font-bold text-slate-900">{weekHours}h {weekMins}m</div>
-                    <p className="text-xs text-slate-400 mt-1">Mon–Sun total</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-                    <TrendingUp className="h-5 w-5" />
-                </div>
-            </div>
-
-            {/* Card 3: Billable % */}
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Billable %</p>
-                    <div className="text-2xl font-bold text-slate-900">{billablePct}%</div>
-                    <p className="text-xs text-slate-400 mt-1">Billable vs Total</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-                    <DollarSign className="h-5 w-5" />
-                </div>
-            </div>
+            ))}
 
             {/* Card 4: Timesheet Status */}
-            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Timesheet Status</p>
-                    <CalendarCheck className="h-5 w-5 text-purple-600" />
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between group hover:shadow-xl hover:shadow-purple-500/5 transition-all duration-300">
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Timesheet Status</p>
+                    <div className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-400 shadow-lg shadow-purple-500/10 group-hover:scale-110 transition-transform">
+                        <CalendarCheck className="h-5 w-5" />
+                    </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-2">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${(() => {
-                        // 1. Determine Status Logic
-                        // Check if an approval request exists for this user for this week
-                        const approvals = mockBackend.getApprovals();
-                        // Logic matches week range string format in backend (e.g., 'Jan 08 - Jan 14, 2026')
-                        // Ideally we construct this string or check entries status. 
-                        // For MVP simplicity: check if ANY pending approval exists, else 'Draft'
-                        const userApproval = approvals.find(a =>
-                            a.employeeId === user?.id &&
-                            (a.status === 'PENDING' || a.status === 'SUBMITTED')
-                        );
-
-                        const status = userApproval ? userApproval.status : 'Draft';
-
-                        switch (status) {
-                            case 'APPROVED': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-                            case 'PENDING':
-                            case 'SUBMITTED': return 'bg-amber-50 text-amber-700 border-amber-100';
-                            case 'REJECTED': return 'bg-rose-50 text-rose-700 border-rose-100';
-                            default: return 'bg-purple-50 text-purple-700 border-purple-100'; // Draft
-                        }
-                    })()
-                        }`}>
+                <div className="flex items-center justify-between mt-auto pt-4">
+                    <span className={cn(
+                        "inline-flex items-center px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border",
+                        (() => {
+                            const approvals = backendService.getApprovals();
+                            const userApproval = approvals.find(a =>
+                                a.employeeId === user?.id &&
+                                (a.status === 'PENDING' || a.status === 'SUBMITTED' || a.status === 'APPROVED')
+                            );
+                            const status = userApproval ? userApproval.status : 'Draft';
+                            switch (status) {
+                                case 'APPROVED': return 'bg-emerald-50/50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20';
+                                case 'PENDING':
+                                case 'SUBMITTED': return 'bg-amber-50/50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-500/20';
+                                case 'REJECTED': return 'bg-rose-50/50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-500/20';
+                                default: return 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'; // Draft
+                            }
+                        })()
+                    )}>
                         {(() => {
-                            const approvals = mockBackend.getApprovals();
+                            const approvals = backendService.getApprovals();
                             const userApproval = approvals.find(a =>
                                 a.employeeId === user?.id &&
                                 (a.status === 'PENDING' || a.status === 'SUBMITTED' || a.status === 'APPROVED')
@@ -114,14 +119,13 @@ const KPIStats: React.FC = () => {
                         })()}
                     </span>
                     <button
-                        onClick={() => window.location.href = '/employee/timesheet'}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                        onClick={() => navigate('/employee/timesheet')}
+                        className="flex items-center text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 hover:translate-x-1 transition-all"
                     >
-                        View
+                        Review <ArrowRight className="h-3.5 w-3.5 ml-2" />
                     </button>
                 </div>
             </div>
-
         </div>
     );
 };

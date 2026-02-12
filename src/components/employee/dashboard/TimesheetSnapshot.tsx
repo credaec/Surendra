@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../lib/utils';
 import { useAuth } from '../../../context/AuthContext';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, parseISO, isWithinInterval } from 'date-fns';
+import { CalendarRange, Send, Clock3 } from 'lucide-react';
 
 const TimesheetSnapshot: React.FC = () => {
     const { user } = useAuth();
@@ -18,7 +19,7 @@ const TimesheetSnapshot: React.FC = () => {
         const weekDays = eachDayOfInterval({ start, end });
 
         // Fetch entries
-        const entries = user ? mockBackend.getEntries(user.id) : [];
+        const entries = user ? backendService.getEntries(user.id) : [];
         const weekEntries = entries.filter(e => isWithinInterval(parseISO(e.date), { start, end }));
 
         let total = 0;
@@ -50,49 +51,62 @@ const TimesheetSnapshot: React.FC = () => {
 
     // Format hours for display (e.g. 8.5)
     const formatHours = (h: number) => {
-        if (h === 0) return '-';
+        if (h === 0) return '—';
         return Number.isInteger(h) ? h : h.toFixed(1);
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full transition-all duration-300">
             {/* Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                    <h3 className="font-semibold text-slate-900">This Week Timesheet</h3>
-                    <p className="text-xs text-slate-500 mt-1">{weekRangeStr}</p>
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+                <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-500/10 rounded-xl">
+                        <CalendarRange className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Timesheet Snapshot</h3>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1">{weekRangeStr}</p>
+                    </div>
                 </div>
                 <button
                     onClick={() => navigate('/employee/timesheet')}
-                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 shadow-sm shadow-blue-200 transition-all"
+                    className="flex items-center px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
                 >
-                    Submit Timesheet
+                    <Send className="h-3.5 w-3.5 mr-2" /> Submit
                 </button>
             </div>
 
             {/* Body: Weekly Grid Mini View */}
-            <div className="p-5 flex-1">
-                <div className="grid grid-cols-7 gap-2 h-full">
+            <div className="p-6 flex-1">
+                <div className="grid grid-cols-7 gap-3 h-full">
                     {weekData.map((day) => (
                         <div
                             key={day.date}
                             className={cn(
-                                "flex flex-col items-center justify-center p-2 rounded-lg border cursor-pointer transition-all hover:shadow-sm",
+                                "flex flex-col items-center justify-center p-3 rounded-2xl border transition-all relative group",
                                 day.isToday
-                                    ? "bg-blue-50/50 border-blue-200"
-                                    : "bg-slate-50/50 border-transparent hover:bg-white hover:border-slate-200"
+                                    ? "bg-blue-50/50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 ring-2 ring-blue-500/10 shadow-lg shadow-blue-500/5"
+                                    : "bg-slate-50/30 dark:bg-slate-950/30 border-transparent hover:bg-white dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700"
                             )}
                         >
-                            <span className={cn("text-[10px] font-semibold uppercase mb-1", day.isToday ? "text-blue-600" : "text-slate-400")}>
+                            <span className={cn(
+                                "text-[10px] font-black uppercase tracking-widest mb-2 transition-colors",
+                                day.isToday ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"
+                            )}>
                                 {day.dayName}
                             </span>
                             <div className="flex items-baseline">
-                                <span className={cn("text-lg font-bold", day.hours > 0 ? "text-slate-900" : "text-slate-300")}>
+                                <span className={cn(
+                                    "text-xl font-black tracking-tighter transition-all",
+                                    day.hours > 0
+                                        ? "text-slate-900 dark:text-white"
+                                        : "text-slate-200 dark:text-slate-800 group-hover:text-slate-300 dark:group-hover:text-slate-700"
+                                )}>
                                     {formatHours(day.hours)}
                                 </span>
                             </div>
                             {day.billable && day.hours > 0 && (
-                                <div className="h-1 w-1 rounded-full bg-emerald-500 mt-1" title="Contains Billable Hours" />
+                                <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" title="Contains Billable Hours" />
                             )}
                         </div>
                     ))}
@@ -100,13 +114,14 @@ const TimesheetSnapshot: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex items-center text-xs text-slate-500">
-                    <span className="h-1.5 w-1.5 rounded-full bg-slate-300 mr-2" />
-                    After submit, editing is locked.
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950/20 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    <Clock3 className="h-3.5 w-3.5 mr-2 text-slate-300 dark:text-slate-700" />
+                    Period Total
                 </div>
-                <div className="text-sm font-bold text-slate-900">
-                    {formatHours(totalHours)}h <span className="text-slate-400 font-normal text-xs">Total</span>
+                <div className="flex items-baseline space-x-1">
+                    <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">{formatHours(totalHours)}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 italic">hrs</span>
                 </div>
             </div>
         </div>

@@ -5,14 +5,30 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/index.js",
+    "start": "npm run build && node server/index.js"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.0.2",
+    "@azure/msal-react": "^5.0.2",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@prisma/client": "5.10.2",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "cluster": "^0.7.7",
+    "cors": "^2.8.6",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.562.0",
+    "node-windows": "^1.0.0-beta.8",
+    "nodemailer": "^8.0.1",
+    "prisma": "5.10.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.3",
@@ -21,6 +37,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.58.2",
     "@types/node": "^20.11.24",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
@@ -32,6 +49,7 @@
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"

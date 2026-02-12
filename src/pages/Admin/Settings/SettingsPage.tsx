@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SettingsSidebar, { type SettingsSection } from '../../../components/admin/settings/SettingsSidebar';
-import { Save, RotateCcw, History } from 'lucide-react';
+import { Save, RotateCcw, History, Settings, Loader2 } from 'lucide-react';
+import { cn } from '../../../lib/utils';
 import { settingsService, type AppSettings } from '../../../services/settingsService';
 import { useToast } from '../../../context/ToastContext';
 
@@ -14,6 +15,7 @@ import PayrollSettings from '../../../components/admin/settings/PayrollSettings'
 import CategoriesSetup from '../../../components/admin/settings/CategoriesSetup';
 import NotificationSettings from '../../../components/admin/settings/NotificationSettings';
 import SecuritySettings from '../../../components/admin/settings/SecuritySettings';
+import BackupSettings from '../../../components/admin/settings/BackupSettings';
 import AuditLogsSettings from '../../../components/admin/settings/AuditLogsSettings';
 import IntegrationsSettings from '../../../components/admin/settings/IntegrationsSettings';
 import EmailSettings from '../../../components/admin/settings/EmailSettings';
@@ -23,27 +25,43 @@ const SettingsPage: React.FC = () => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('COMPANY');
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
 
-    const loadSettings = () => {
-        const loaded = settingsService.getSettings();
-        setSettings(loaded);
-        setHasChanges(false);
+    const loadSettings = async () => {
+        setIsLoading(true);
+        try {
+            const loaded = await settingsService.getSettings();
+            setSettings(loaded);
+            setHasChanges(false);
+        } catch (error) {
+            showToast('Failed to load settings from database', 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
         loadSettings();
     }, []);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (settings) {
-            settingsService.updateSettings(settings);
-            showToast('Settings saved successfully', 'success');
-            setHasChanges(false);
+            setIsSaving(true);
+            try {
+                await settingsService.updateSettings(settings);
+                showToast('Settings successfully synchronized to database', 'success');
+                setHasChanges(false);
+            } catch (error) {
+                showToast('Persistence failed', 'error');
+            } finally {
+                setIsSaving(false);
+            }
         }
     };
 
     const handleReset = () => {
-        if (confirm('Are you sure you want to discard your changes?')) {
+        if (confirm('Are you sure you want to discard your changes and reload from the database?')) {
             loadSettings();
             showToast('Changes discarded', 'info');
         }
@@ -59,7 +77,14 @@ const SettingsPage: React.FC = () => {
     };
 
     const renderContent = () => {
-        if (!settings) return <div>Loading...</div>;
+        if (isLoading) return (
+            <div className="h-full flex flex-col items-center justify-center p-12 text-slate-400 space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Retrieving Global Configuration...</p>
+            </div>
+        );
+
+        if (!settings) return <div className="p-12 text-slate-500 font-medium tracking-tight">Configuration unavailable.</div>;
 
         switch (activeSection) {
             case 'COMPANY':
@@ -86,60 +111,64 @@ const SettingsPage: React.FC = () => {
                 return <AuditLogsSettings />;
             case 'INTEGRATIONS':
                 return <IntegrationsSettings />;
+            case 'BACKUP':
+                return <BackupSettings />;
             default: return null;
         }
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-                    <div className="flex items-center text-sm text-slate-500 mt-1">
-                        <span>Admin</span>
-                        <span className="mx-2">/</span>
-                        <span className="text-blue-600 font-medium">System Configuration</span>
+        <div className="w-full px-6 lg:px-8 py-8 min-h-screen bg-slate-50 dark:bg-slate-950/20 animate-in fade-in duration-700">
+            {/* Full Width Clean Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-slate-200 dark:border-slate-800 pb-8">
+                <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
+                        <Settings className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white leading-tight font-sans tracking-tight">System Settings</h1>
+                        <p className="text-sm text-slate-500 font-medium mt-1 uppercase tracking-widest text-[10px]">Production Node: Live Database Mode</p>
                     </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
                     <button
-                        onClick={() => setActiveSection('DATA')}
-                        className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
-                    >
-                        <History className="h-4 w-4 mr-2" />
-                        Audit History
-                    </button>
-                    <button
                         onClick={handleReset}
-                        className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                        className="flex items-center px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm active:scale-95"
                     >
                         <RotateCcw className="h-4 w-4 mr-2" />
-                        Reset
+                        Reload Live
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={!hasChanges}
-                        className={`flex items-center px-5 py-2 rounded-lg shadow-md transition-all text-sm font-medium ${hasChanges
-                            ? "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200"
-                            : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
-                            }`}
+                        disabled={!hasChanges || isSaving}
+                        className={cn(
+                            "flex items-center px-8 py-2.5 text-sm font-bold rounded-xl shadow-lg transition-all active:scale-95",
+                            hasChanges
+                                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20"
+                                : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none"
+                        )}
                     >
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                        {isSaving ? 'Syncing...' : 'Save to DB'}
                     </button>
                 </div>
             </div>
 
-            {/* Layout */}
+            {/* Layout - Stretching to full width */}
             <div className="flex flex-col lg:flex-row gap-8">
-                {/* Left Sidebar */}
-                <SettingsSidebar activeSection={activeSection} onSelectSection={setActiveSection} />
+                {/* Sidebar - Fixed Width at Large Screens */}
+                <div className="lg:w-72 xl:w-80 flex-shrink-0">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-sm">
+                        <SettingsSidebar activeSection={activeSection} onSelectSection={setActiveSection} />
+                    </div>
+                </div>
 
-                {/* Right Content */}
-                <div className="flex-1 min-w-0">
-                    {renderContent()}
+                {/* Main Content Area - Growing to fill all remaining space */}
+                <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden min-h-[800px]">
+                    <div className="h-full">
+                        {renderContent()}
+                    </div>
                 </div>
             </div>
         </div>

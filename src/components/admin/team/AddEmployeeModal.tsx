@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Briefcase, Shield } from 'lucide-react';
-import { mockBackend, type User as UserType } from '../../../services/mockBackend';
+import { backendService, type User as UserType } from '../../../services/backendService';
 
 interface AddEmployeeModalProps {
     isOpen: boolean;
@@ -10,12 +10,15 @@ interface AddEmployeeModalProps {
 }
 
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, onSuccess, userToEdit }) => {
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         designation: '',
-        role: 'EMPLOYEE' as 'ADMIN' | 'EMPLOYEE'
+        hourlyCostRate: 0,
+        role: 'EMPLOYEE' as 'ADMIN' | 'EMPLOYEE',
+        password: ''
     });
 
     useEffect(() => {
@@ -27,7 +30,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                     lastName: nameParts.slice(1).join(' ') || '',
                     email: userToEdit.email,
                     designation: userToEdit.designation,
-                    role: userToEdit.role as 'ADMIN' | 'EMPLOYEE'
+                    hourlyCostRate: userToEdit.hourlyCostRate || 0,
+                    role: userToEdit.role as 'ADMIN' | 'EMPLOYEE',
+                    password: ''
                 });
             } else {
                 setFormData({
@@ -35,7 +40,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                     lastName: '',
                     email: '',
                     designation: '',
-                    role: 'EMPLOYEE'
+                    hourlyCostRate: 0,
+                    role: 'EMPLOYEE',
+                    password: ''
                 });
             }
         }
@@ -43,20 +50,22 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         const userData = {
             name: `${formData.firstName} ${formData.lastName}`,
             email: formData.email,
             designation: formData.designation,
-            role: formData.role
+            hourlyCostRate: Number(formData.hourlyCostRate),
+            role: formData.role,
+            password: formData.password
         };
 
         if (userToEdit) {
-            mockBackend.updateUser(userToEdit.id, userData);
+            await backendService.updateUser({ ...userData, id: userToEdit.id } as any);
         } else {
-            mockBackend.addUser(userData as any);
+            await backendService.addUser(userData as any);
         }
 
         onSuccess();
@@ -95,7 +104,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                                 <input
                                     type="text"
                                     required
-                                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    className="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                     placeholder="John"
                                     value={formData.firstName}
                                     onChange={e => setFormData({ ...formData, firstName: e.target.value })}
@@ -107,7 +116,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                             <input
                                 type="text"
                                 required
-                                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                className="w-full px-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                 placeholder="Doe"
                                 value={formData.lastName}
                                 onChange={e => setFormData({ ...formData, lastName: e.target.value })}
@@ -123,7 +132,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                             <input
                                 type="email"
                                 required
-                                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                className="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                 placeholder="john.doe@company.com"
                                 value={formData.email}
                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -131,21 +140,53 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
                         </div>
                     </div>
 
-                    {/* Designation */}
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-700">Designation</label>
-                        <div className="relative">
-                            <Briefcase className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    {/* Designation & Rate */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-700">Designation</label>
+                            <div className="relative">
+                                <Briefcase className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    placeholder="e.g. Senior Developer"
+                                    value={formData.designation}
+                                    onChange={e => setFormData({ ...formData, designation: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-700">Hourly Rate ($)</label>
                             <input
-                                type="text"
-                                required
-                                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                placeholder="e.g. Senior Developer"
-                                value={formData.designation}
-                                onChange={e => setFormData({ ...formData, designation: e.target.value })}
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className="w-full px-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                placeholder="0.00"
+                                value={formData.hourlyCostRate}
+                                onChange={e => setFormData({ ...formData, hourlyCostRate: parseFloat(e.target.value) || 0 })}
                             />
                         </div>
                     </div>
+
+                    {/* Password (only on creation) */}
+                    {!isEditMode && (
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-700">Password</label>
+                            <div className="relative">
+                                <Shield className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                <input
+                                    type="password"
+                                    required
+                                    className="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-white placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    placeholder="••••••••"
+                                    value={(formData as any).password || ''}
+                                    onChange={e => setFormData({ ...formData, password: e.target.value } as any)}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Role Selection */}
                     <div className="space-y-1.5 pt-2">
@@ -214,3 +255,4 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({ isOpen, onClose, on
 };
 
 export default AddEmployeeModal;
+

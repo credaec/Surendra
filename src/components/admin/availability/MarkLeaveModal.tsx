@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Search, Trash2 } from 'lucide-react';
 import type { AvailabilityEvent, User } from '../../../types/schema';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
 import { cn } from '../../../lib/utils';
 
 interface MarkLeaveModalProps {
@@ -27,7 +27,7 @@ const MarkLeaveModal: React.FC<MarkLeaveModalProps> = ({ isOpen, onClose, onSave
     // Initialize data
     useEffect(() => {
         if (isOpen) {
-            const allUsers = mockBackend.getUsers();
+            const allUsers = backendService.getUsers();
             setUsers(allUsers);
         }
     }, [isOpen]);
@@ -230,3 +230,4 @@ const MarkLeaveModal: React.FC<MarkLeaveModalProps> = ({ isOpen, onClose, onSave
 };
 
 export default MarkLeaveModal;
+

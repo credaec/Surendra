@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
@@ -16,19 +16,20 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData, trend
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
             {/* Chart A: Hours Trend */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            {/* Chart A: Hours Trend */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-semibold text-slate-900">Hours Trend</h3>
-                    <div className="flex bg-slate-100 rounded-lg p-0.5">
+                    <h3 className="font-semibold text-slate-900 dark:text-white">Hours Trend</h3>
+                    <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
                         <button
                             onClick={() => onTrendViewChange('day')}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${trendView === 'day' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${trendView === 'day' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                         >
                             Day
                         </button>
                         <button
                             onClick={() => onTrendViewChange('week')}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${trendView === 'week' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${trendView === 'week' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                         >
                             Week
                         </button>
@@ -73,8 +74,8 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData, trend
             </div>
 
             {/* Chart B: Billable Split */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                <h3 className="font-semibold text-slate-900 mb-6">Billable vs Non-Billable</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-6">Billable vs Non-Billable</h3>
                 <div className="h-64 flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>

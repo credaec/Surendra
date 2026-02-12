@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import InvoiceKPICards from '../../../components/admin/billing/InvoiceKPICards';
 import InvoiceFilters, { type InvoiceFilterState } from '../../../components/admin/billing/InvoiceFilters';
 import InvoicesTable from '../../../components/admin/billing/InvoicesTable';
-import { mockBackend, type Invoice } from '../../../services/mockBackend';
+import { backendService, type Invoice } from '../../../services/backendService';
 import type { Client, Project } from '../../../types/schema';
 import SendInvoiceModal from '../../../components/admin/billing/SendInvoiceModal';
 import { useToast } from '../../../context/ToastContext';
+import { cn } from '../../../lib/utils';
 
 const InvoicesPage: React.FC = () => {
     const navigate = useNavigate();
@@ -59,10 +60,10 @@ const InvoicesPage: React.FC = () => {
 
     useEffect(() => {
         // Load initial data
-        const data = mockBackend.getInvoices();
+        const data = backendService.getInvoices();
         setInvoices(data);
-        setClients(mockBackend.getClients());
-        setProjects(mockBackend.getProjects());
+        setClients(backendService.getClients());
+        setProjects(backendService.getProjects());
     }, []);
 
     useEffect(() => {
@@ -126,14 +127,20 @@ const InvoicesPage: React.FC = () => {
         }
     };
 
-    const handleConfirmSend = (email: string, subject: string, message: string) => {
+    const handleConfirmSend = async (email: string, subject: string, message: string) => {
         if (actionInvoice) {
-            mockBackend.updateInvoiceStatus(actionInvoice.id, 'SENT');
-            const updated = mockBackend.getInvoices();
-            setInvoices(updated);
-            showToast(`Invoice ${actionInvoice.invoiceNo} sent to ${email} successfully!`, 'success');
-            setIsSendModalOpen(false);
-            setActionInvoice(null);
+            try {
+                await backendService.sendInvoiceEmail(actionInvoice.id, email, subject, message);
+                await backendService.initialize(); // Re-sync to get updated status
+                const updated = backendService.getInvoices();
+                setInvoices(updated);
+                showToast(`Invoice ${actionInvoice.invoiceNo} sent to ${email} successfully!`, 'success');
+                setIsSendModalOpen(false);
+                setActionInvoice(null);
+            } catch (error) {
+                console.error(error);
+                showToast('Failed to send email. Please check Email Settings.', 'error');
+            }
         }
     };
 
@@ -141,34 +148,31 @@ const InvoicesPage: React.FC = () => {
         navigate(`/admin/billing/invoices/${id}?tab=payments`);
     };
 
-    const handleDeleteInvoice = (id: string) => {
+    const handleDeleteInvoice = async (id: string) => {
         if (showTrash) {
             // Permanent Delete
             if (window.confirm('This will permanently delete the invoice. Cannot be undone. Continue?')) {
-                const updated = invoices.filter(inv => inv.id !== id);
-                setInvoices(updated);
-                localStorage.setItem('credence_invoices_v1', JSON.stringify(updated));
+                await backendService.deleteInvoice(id);
+                setInvoices(prev => prev.filter(inv => inv.id !== id));
                 showToast('Invoice permanently deleted.', 'success');
             }
         } else {
             // Soft Delete
             if (window.confirm('Move this invoice to Trash?')) {
-                const updated = invoices.map(inv =>
+                await backendService.softDeleteInvoice(id);
+                setInvoices(prev => prev.map(inv =>
                     inv.id === id ? { ...inv, isDeleted: true } : inv
-                );
-                setInvoices(updated);
-                localStorage.setItem('credence_invoices_v1', JSON.stringify(updated));
+                ));
                 showToast('Invoice moved to Trash.', 'info');
             }
         }
     };
 
-    const handleRestoreInvoice = (id: string) => {
-        const updated = invoices.map(inv =>
+    const handleRestoreInvoice = async (id: string) => {
+        await backendService.restoreInvoice(id);
+        setInvoices(prev => prev.map(inv =>
             inv.id === id ? { ...inv, isDeleted: false } : inv
-        );
-        setInvoices(updated);
-        localStorage.setItem('credence_invoices_v1', JSON.stringify(updated));
+        ));
         showToast('Invoice restored successfully!', 'success');
     };
 
@@ -282,25 +286,34 @@ const InvoicesPage: React.FC = () => {
         setActiveFilters(pendingFilters);
     };
 
+    // Helper to get client email
+    const getClientEmail = () => {
+        if (!actionInvoice) return '';
+        const client = clients.find(c => c.id === actionInvoice.clientId);
+        return client?.email || '';
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
                         {showTrash ? 'Trash Bin' : 'Invoices & Billing'}
                     </h1>
-                    <p className="text-slate-500 mt-1">
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
                         {showTrash ? 'Manage and restore deleted invoices.' : 'Manage client invoicing, track payments, and monitor revenue.'}
                     </p>
                 </div>
                 <div className="flex items-center space-x-3">
                     <button
                         onClick={() => setShowTrash(!showTrash)}
-                        className={`flex items-center px-4 py-2 border rounded-lg shadow-sm transition-colors text-sm font-medium ${showTrash
-                                ? 'bg-slate-800 text-white border-slate-900 hover:bg-slate-700'
-                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
+                        className={cn(
+                            "flex items-center px-4 py-2.5 rounded-xl border font-bold text-sm transition-all duration-200",
+                            showTrash
+                                ? "bg-slate-900 dark:bg-slate-800 text-white border-slate-900 dark:border-slate-700 hover:bg-slate-800 dark:hover:bg-slate-700 shadow-lg shadow-slate-500/10"
+                                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                        )}
                     >
                         {showTrash ? <RotateCcw className="h-4 w-4 mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
                         {showTrash ? 'Back to Invoices' : 'Trash Bin'}
@@ -310,14 +323,14 @@ const InvoicesPage: React.FC = () => {
                         <>
                             <button
                                 onClick={handleExportReport}
-                                className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 shadow-sm transition-colors text-sm font-medium"
+                                className="flex items-center px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all text-sm font-bold shadow-sm"
                             >
                                 <Download className="h-4 w-4 mr-2" />
                                 Export Report
                             </button>
                             <button
                                 onClick={handleCreateInvoice}
-                                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all text-sm font-medium"
+                                className="flex items-center px-4 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all text-sm font-bold active:scale-95"
                             >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Create New Invoice
@@ -359,8 +372,6 @@ const InvoicesPage: React.FC = () => {
                     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
                 }}
                 onSelectAll={(ids) => setSelectedIds(ids)}
-                onSort={() => { }}
-                sortConfig={{ key: 'date', direction: 'desc' }}
                 onView={handleViewInvoice}
                 onEdit={handleEditInvoice}
                 onSend={handleSendInvoice}
@@ -378,10 +389,11 @@ const InvoicesPage: React.FC = () => {
                 onClose={() => setIsSendModalOpen(false)}
                 onSend={handleConfirmSend}
                 invoiceNo={actionInvoice?.invoiceNo || ''}
-                clientEmail="client@example.com" // Mock, normally actionInvoice.clientEmail
+                clientEmail={getClientEmail()}
             />
         </div>
     );
 };
 
 export default InvoicesPage;
+

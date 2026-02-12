@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { X, User, Settings, Mail, Shield, Smartphone, Globe, Moon, Bell, Sun } from 'lucide-react';
+import { X, User, Settings, Mail, Shield, Smartphone, Globe, Moon, Bell, Sun, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { cn } from '../../lib/utils';
 
 interface ProfileSettingsModalProps {
     isOpen: boolean;
@@ -24,141 +25,156 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
 
     // Use Portal to render outside of parent stacking context
     return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-sans text-gray-900 dark:text-gray-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-sans selection:bg-blue-500/30">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
 
             {/* Modal Content */}
-            <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border dark:border-slate-700">
+            <div className="relative bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
 
-                {/* Header */}
-                <div className="flex border-b border-gray-100 dark:border-slate-700">
+                {/* Header/Tabs */}
+                <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-2">
                     <button
                         onClick={() => setActiveTab('PROFILE')}
-                        className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${activeTab === 'PROFILE' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-750'}`}
+                        className={cn(
+                            "flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] rounded-[1.5rem] transition-all duration-300 flex items-center justify-center space-x-3",
+                            activeTab === 'PROFILE'
+                                ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm shadow-blue-500/10 active:scale-95"
+                                : "text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400"
+                        )}
                     >
-                        <div className="flex items-center justify-center space-x-2">
-                            <User className="h-4 w-4" />
-                            <span>{t('My Profile', 'My Profile')}</span>
-                        </div>
+                        <User className={cn("h-4 w-4", activeTab === 'PROFILE' ? "animate-pulse" : "")} />
+                        <span>{t('Profile', 'Profile')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('SETTINGS')}
-                        className={`flex-1 py-4 text-sm font-medium text-center transition-colors ${activeTab === 'SETTINGS' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-750'}`}
+                        className={cn(
+                            "flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] rounded-[1.5rem] transition-all duration-300 flex items-center justify-center space-x-3",
+                            activeTab === 'SETTINGS'
+                                ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm shadow-blue-500/10 active:scale-95"
+                                : "text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400"
+                        )}
                     >
-                        <div className="flex items-center justify-center space-x-2">
-                            <Settings className="h-4 w-4" />
-                            <span>{t('Preferences', 'Preferences')}</span>
-                        </div>
+                        <Settings className={cn("h-4 w-4", activeTab === 'SETTINGS' ? "animate-spin-slow" : "")} />
+                        <span>{t('Settings', 'Settings')}</span>
                     </button>
 
-                    {/* Close Button */}
-                    <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors">
+                    {/* Close Button - absolute but within header padding context */}
+                    <button onClick={onClose} className="absolute top-6 right-8 p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm active:scale-90 z-20">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
                 {/* Body */}
-                <div className="p-8 min-h-[400px]">
+                <div className="p-10 min-h-[450px]">
                     {activeTab === 'PROFILE' ? (
-                        <div className="space-y-8 animate-in slide-in-from-left-4 duration-300">
+                        <div className="space-y-10 animate-in slide-in-from-left-8 duration-500">
                             {/* Profile Header */}
-                            <div className="flex items-center space-x-6">
-                                <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-blue-50 dark:ring-blue-900">
-                                    {user?.avatarInitials}
+                            <div className="flex items-center space-x-8">
+                                <div className="relative group">
+                                    <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300"></div>
+                                    <div className="relative h-28 w-28 rounded-full bg-slate-900 flex items-center justify-center text-white text-4xl font-black shadow-2xl border-4 border-white dark:border-slate-900">
+                                        {user?.avatarInitials}
+                                    </div>
+                                    <div className="absolute bottom-1 right-1 h-6 w-6 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg"></div>
                                 </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{user?.name}</h2>
-                                    <p className="text-gray-500 dark:text-slate-400 font-medium">{user?.designation}</p>
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 mt-2">
+                                <div className="space-y-2">
+                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{user?.name}</h2>
+                                    <p className="text-sm font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">{user?.designation}</p>
+                                    <div className="inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
                                         Active Employee
-                                    </span>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Details Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-slate-750 p-6 rounded-xl border border-gray-100 dark:border-slate-700">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
-                                        <Mail className="h-3 w-3 mr-1.5" /> Email Address
-                                    </label>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-slate-200">{user?.email}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
-                                        <Shield className="h-3 w-3 mr-1.5" /> Role Access
-                                    </label>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-slate-200">{user?.role === 'ADMIN' ? 'Full Administrator Access' : 'Standard Employee Access'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
-                                        <Smartphone className="h-3 w-3 mr-1.5" /> Phone
-                                    </label>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-slate-200">+1 (555) 000-0000</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
-                                        <Globe className="h-3 w-3 mr-1.5" /> Location
-                                    </label>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-slate-200">New York, USA</p>
-                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {[
+                                    { icon: Mail, label: 'Email Address', value: user?.email },
+                                    { icon: Shield, label: 'Role Access', value: user?.role === 'ADMIN' ? 'Full Administrator' : 'Standard Employee' },
+                                    { icon: Smartphone, label: 'Phone', value: '+1 (555) 000-0000' },
+                                    { icon: Globe, label: 'Location', value: 'New York, USA' }
+                                ].map((item, idx) => (
+                                    <div key={idx} className="bg-slate-50 dark:bg-slate-950/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 group hover:border-blue-200 dark:hover:border-blue-800 transition-all duration-300">
+                                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center mb-2">
+                                            <item.icon className="h-3.5 w-3.5 mr-2" /> {item.label}
+                                        </label>
+                                        <p className="text-sm font-bold text-slate-900 dark:text-slate-200">{item.value}</p>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
+                        <div className="space-y-10 animate-in slide-in-from-right-8 duration-500">
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Settings</h3>
+                                <h3 className="text-xs font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-6">Preferences & Theme</h3>
                                 <div className="space-y-4">
 
                                     {/* Setting Item */}
-                                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-blue-600 dark:text-blue-400">
-                                                <Bell className="h-5 w-5" />
+                                    <div className="flex items-center justify-between p-5 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800 bg-white dark:bg-slate-950 shadow-sm transition-all group">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                                                <Bell className="h-6 w-6" />
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">Email Notifications</p>
-                                                <p className="text-sm text-gray-500 dark:text-slate-400">Receive weekly summaries and alerts</p>
+                                                <p className="font-black text-slate-900 dark:text-white tracking-tight">Email Notifications</p>
+                                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Weekly summaries and system alerts</p>
                                             </div>
                                         </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" checked={emailNotifs} onChange={() => setEmailNotifs(!emailNotifs)} className="sr-only peer" />
-                                            <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 dark:peer-focus:ring-blue-900 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </label>
+                                        <button
+                                            onClick={() => setEmailNotifs(!emailNotifs)}
+                                            className={cn(
+                                                "w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner",
+                                                emailNotifs ? "bg-blue-600 shadow-blue-500/20" : "bg-slate-200 dark:bg-slate-800"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-lg transition-all duration-300",
+                                                emailNotifs ? "translate-x-6" : "translate-x-0"
+                                            )} />
+                                        </button>
                                     </div>
 
                                     {/* Setting Item - Dark Mode */}
-                                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg text-purple-600 dark:text-purple-400">
-                                                {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                                    <div className="flex items-center justify-between p-5 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 bg-white dark:bg-slate-950 shadow-sm transition-all group">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-2xl text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                                                {isDarkMode ? <Moon className="h-6 w-6" /> : <Sun className="h-6 w-6" />}
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">Dark Mode</p>
-                                                <p className="text-sm text-gray-500 dark:text-slate-400">Switch to a darker interface theme</p>
+                                                <p className="font-black text-slate-900 dark:text-white tracking-tight">Interface Theme</p>
+                                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Currently using {isDarkMode ? 'Dark' : 'Light'} Mode</p>
                                             </div>
                                         </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" checked={isDarkMode} onChange={toggleTheme} className="sr-only peer" />
-                                            <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 dark:peer-focus:ring-purple-900 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                                        </label>
+                                        <button
+                                            onClick={toggleTheme}
+                                            className={cn(
+                                                "w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner",
+                                                isDarkMode ? "bg-purple-600 shadow-purple-500/20" : "bg-slate-200 dark:bg-slate-800"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-lg transition-all duration-300",
+                                                isDarkMode ? "translate-x-6" : "translate-x-0"
+                                            )} />
+                                        </button>
                                     </div>
 
                                     {/* Setting Item */}
-                                    <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg text-emerald-600 dark:text-emerald-400">
-                                                <Globe className="h-5 w-5" />
+                                    <div className="flex items-center justify-between p-5 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-800 bg-white dark:bg-slate-950 shadow-sm transition-all group">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                                                <Globe className="h-6 w-6" />
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">Language</p>
-                                                <p className="text-sm text-gray-500 dark:text-slate-400">Select your preferred system language</p>
+                                                <p className="font-black text-slate-900 dark:text-white tracking-tight">Default Language</p>
+                                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">System display language</p>
                                             </div>
                                         </div>
                                         <select
                                             value={language}
                                             onChange={(e) => setLanguage(e.target.value as any)}
-                                            className="block w-40 pl-3 pr-10 py-2 text-base border-gray-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                                            className="bg-slate-50 dark:bg-slate-900 border-none text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 px-4 py-2 appearance-none cursor-pointer"
                                         >
                                             <option>English (US)</option>
                                             <option>Spanish</option>
@@ -174,23 +190,22 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onC
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 dark:bg-slate-800/50 px-8 py-4 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+                <div className="bg-slate-50/50 dark:bg-slate-950/50 px-10 py-6 border-t border-slate-100 dark:border-slate-800 flex justify-end items-center space-x-4">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600 transition-all shadow-sm active:scale-95"
                     >
-                        Close
+                        Dismiss
                     </button>
                     {activeTab === 'SETTINGS' && (
                         <button
-                            className="ml-3 px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            className="px-8 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/20 transition-all active:scale-95 flex items-center"
                             onClick={() => {
-                                // Mock Save
-                                alert("Settings Saved!");
                                 onClose();
                             }}
                         >
-                            Save Changes
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Apply Changes
                         </button>
                     )}
                 </div>

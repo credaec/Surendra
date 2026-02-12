@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, Calendar, User, Briefcase } from 'lucide-react';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import { format, differenceInMinutes, parse } from 'date-fns';
 import type { User as UserType, Project, TaskCategory } from '../../types/schema';
 
@@ -31,13 +31,13 @@ const ManualEntryModal: React.FC<ManualEntryModalProps> = ({ isOpen, onClose, on
 
     useEffect(() => {
         if (isOpen) {
-            setEmployees(mockBackend.getUsers().filter(u => u.role === 'EMPLOYEE'));
-            setProjects(mockBackend.getProjects());
-            setCategories(mockBackend.getTaskCategories());
+            setEmployees(backendService.getUsers().filter(u => u.role === 'EMPLOYEE'));
+            setProjects(backendService.getProjects());
+            setCategories(backendService.getTaskCategories());
         }
     }, [isOpen]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
@@ -52,7 +52,7 @@ const ManualEntryModal: React.FC<ManualEntryModalProps> = ({ isOpen, onClose, on
                 return;
             }
 
-            mockBackend.addEntry({
+            await backendService.addTimeEntry({
                 userId: formData.employeeId,
                 projectId: formData.projectId,
                 categoryId: formData.categoryId,
@@ -134,9 +134,9 @@ const ManualEntryModal: React.FC<ManualEntryModalProps> = ({ isOpen, onClose, on
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none bg-white"
                         >
                             <option value="">Select Category...</option>
-                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             {/* Assuming categoryId in TimeEntry stores the name for now based on previous mock data observation, 
-                                but schema says categoryId. If mockBackend stores names, we stick to names or IDs. 
+                                but schema says categoryId. If backendService stores names, we stick to names or IDs. 
                                 Let's assume names for now if other components use names, or IDs if strictly following schema.
                                 Checking schema TaskCategory has id and name. 
                                 Checking TimeEntry has categoryId. 
@@ -210,3 +210,4 @@ const ManualEntryModal: React.FC<ManualEntryModalProps> = ({ isOpen, onClose, on
 };
 
 export default ManualEntryModal;
+

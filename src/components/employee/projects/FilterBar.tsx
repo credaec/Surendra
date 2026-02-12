@@ -25,7 +25,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
     ];
 
     return (
-        <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm border-b border-slate-200 -mx-6 px-6 py-3 mb-6 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 -mx-6 px-6 py-3 mb-6 flex items-center justify-between transition-colors">
 
             {/* Status Filters */}
             <div className="flex items-center space-x-1">
@@ -36,8 +36,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         className={cn(
                             "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
                             currentFilter === filter.value
-                                ? "bg-slate-900 text-white shadow-sm"
-                                : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+                                ? "bg-slate-900 dark:bg-blue-600 text-white shadow-sm"
+                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
                         )}
                     >
                         {filter.label}
@@ -46,15 +46,15 @@ const FilterBar: React.FC<FilterBarProps> = ({
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center space-x-3 border-l border-slate-200 pl-3">
+            <div className="flex items-center space-x-3 border-l border-slate-200 dark:border-slate-800 pl-3">
 
                 {/* View Toggle */}
-                <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
                     <button
                         onClick={() => onViewModeChange('grid')}
                         className={cn(
                             "p-1.5 rounded-md transition-all",
-                            viewMode === 'grid' ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                            viewMode === 'grid' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                         )}
                         title="Grid View"
                     >
@@ -64,7 +64,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         onClick={() => onViewModeChange('list')}
                         className={cn(
                             "p-1.5 rounded-md transition-all",
-                            viewMode === 'list' ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                            viewMode === 'list' ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                         )}
                         title="List View"
                     >

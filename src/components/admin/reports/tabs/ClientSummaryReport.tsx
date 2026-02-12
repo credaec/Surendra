@@ -1,18 +1,19 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { ArrowRight, Briefcase, DollarSign, PieChart, TrendingUp } from 'lucide-react';
 import KPICard from '../../../dashboard/KPICard';
-// import { cn } '../../../../lib/utils';
-import { mockBackend } from '../../../../services/mockBackend';
+import { backendService } from '../../../../services/backendService';
+import { useTheme } from '../../../../context/ThemeContext';
 
 const ClientSummaryReport: React.FC<any> = ({ filters }) => {
+    const { isDarkMode } = useTheme();
     const [searchQuery, setSearchQuery] = React.useState('');
 
     const filteredData = React.useMemo(() => {
-        const invoices = mockBackend.getInvoices();
-        const projects = mockBackend.getProjects();
+        const invoices = backendService.getInvoices();
+        const projects = backendService.getProjects();
 
         // Group by Client
         const clientMap = new Map<string, any>();
@@ -36,9 +37,7 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
         });
 
         // Calculate financials from Invoices
-        // (If we had entries, we'd calc billable hours, but let's focus on revenue here)
         invoices.forEach(inv => {
-            // If client not in projects (e.g. ad-hoc invoice), add them?
             if (!clientMap.has(inv.clientId)) {
                 clientMap.set(inv.clientId, {
                     id: inv.clientId,
@@ -57,16 +56,9 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
         });
 
         return Array.from(clientMap.values()).filter(c => {
-            // 1. Text Search (Local)
             const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-            // 2. Client Filter (Global)
             const matchesClient = !filters.client || c.id === filters.client;
-
-            // 3. Project Filter (Global)
             const matchesProject = !filters.project || c.projectIds.includes(filters.project);
-
-            // 4. Status Filter (Global) - assuming 'Active' for all found clients for now
             const matchesStatus = !filters.status || filters.status === 'all' || c.status === filters.status;
 
             return matchesSearch && matchesClient && matchesProject && matchesStatus;
@@ -83,11 +75,15 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
         return { totalClients, totalProjects, totalRevenue, totalPending };
     }, [filteredData]);
 
-    // Prepare chart data from filteredData
     const chartData = filteredData.map(c => ({
         name: c.name,
         amount: c.billedAmt,
     }));
+
+    const textColor = isDarkMode ? '#94a3b8' : '#64748b';
+    const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
+    const tooltipBg = isDarkMode ? '#0f172a' : '#fff';
+    const tooltipBorder = isDarkMode ? '#1e293b' : '#e2e8f0';
 
     return (
         <div className="space-y-6">
@@ -117,24 +113,24 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
                     title="Pending Payments"
                     value={`$${(stats.totalPending / 1000).toFixed(1)}k`}
                     subValue="Outstanding"
-                    icon={TrendingUp} // Using TrendingUp as a placeholder for financial status
+                    icon={TrendingUp}
                 />
             </div>
 
             {/* Middle Section: Revenue Chart */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Revenue by Client</h3>
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Revenue by Client</h3>
                 <div className="h-72 w-full" style={{ minWidth: 0, minHeight: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b' }}
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: textColor, fontSize: 11 }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fill: textColor, fontSize: 11 }}
                                 tickFormatter={(val) => `$${val / 1000}k`}
                             />
                             <Tooltip
-                                cursor={{ fill: '#f8fafc' }}
-                                contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                                cursor={{ fill: isDarkMode ? '#1e293b' : '#f8fafc' }}
+                                contentStyle={{ backgroundColor: tooltipBg, borderRadius: '8px', border: `1px solid ${tooltipBorder}`, color: isDarkMode ? '#fff' : '#000' }}
                                 formatter={(value: any) => [`$${(value || 0).toLocaleString()}`, 'Billed Revenue']}
                             />
                             <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40}>
@@ -148,14 +144,14 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
             </div>
 
             {/* Bottom Section: Client List Table */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-slate-800">Client Portfolio</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Client Portfolio</h3>
                     <div className="flex space-x-2">
                         <input
                             type="text"
                             placeholder="Search clients..."
-                            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -164,7 +160,7 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+                        <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-100 dark:border-slate-800">
                             <tr>
                                 <th className="px-6 py-4">Client Name</th>
                                 <th className="px-6 py-4 text-center">Projects</th>
@@ -175,36 +171,36 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
                                 <th className="px-6 py-4"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {filteredData.length > 0 ? (
                                 filteredData.map((client) => (
                                     <tr
                                         key={client.id}
                                         onClick={() => filters.onViewDetail && filters.onViewDetail('client', client.id, client.name)}
-                                        className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer"
                                     >
-                                        <td className="px-6 py-4 font-medium text-slate-900 flex items-center">
-                                            <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-xs font-bold">
+                                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white flex items-center">
+                                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mr-3 text-xs font-bold">
                                                 {client.name.substring(0, 2).toUpperCase()}
                                             </div>
                                             {client.name}
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
                                                 {client.projects}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-right text-slate-600 font-mono">{client.billableHours}h</td>
-                                        <td className="px-6 py-4 text-right text-emerald-600 font-mono font-medium">${client.billedAmt.toLocaleString()}</td>
-                                        <td className="px-6 py-4 text-right text-amber-600 font-mono font-medium">${client.pendingAmt.toLocaleString()}</td>
+                                        <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400 font-mono">{client.billableHours}h</td>
+                                        <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400 font-mono font-medium">${client.billedAmt.toLocaleString()}</td>
+                                        <td className="px-6 py-4 text-right text-amber-600 dark:text-amber-400 font-mono font-medium">${client.pendingAmt.toLocaleString()}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${client.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${client.status === 'Active' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                                                 }`}>
                                                 {client.status}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button className="text-slate-400 dark:text-slate-600 hover:text-blue-600 dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all">
                                                 <ArrowRight className="h-4 w-4" />
                                             </button>
                                         </td>
@@ -212,7 +208,7 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-500 dark:text-slate-500 font-medium">
                                         No clients found matching "{searchQuery}"
                                     </td>
                                 </tr>
@@ -226,3 +222,4 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
 };
 
 export default ClientSummaryReport;
+

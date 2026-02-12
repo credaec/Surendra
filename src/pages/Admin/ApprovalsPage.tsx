@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, RefreshCw, Download, Bell } from 'lucide-react';
-import { mockBackend, type ApprovalRequest } from '../../services/mockBackend';
+import { cn } from '../../lib/utils';
+import { backendService, type ApprovalRequest } from '../../services/backendService';
 import ApprovalKPICards from '../../components/admin/approvals/ApprovalKPICards';
 import ApprovalFilters, { type ApprovalFilterState } from '../../components/admin/approvals/ApprovalFilters';
 import ApprovalTable from '../../components/admin/approvals/ApprovalTable';
@@ -32,14 +33,18 @@ const ApprovalsPage: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Fetch Data
-    const refreshData = () => {
+    const refreshData = async () => {
         setIsRefreshing(true);
-        const data = mockBackend.getApprovals();
-        setApprovals([...data]);
-        setSelectedIds([]);
-        setFilters(DEFAULT_FILTERS);
-        // Visual feedback only
-        setTimeout(() => setIsRefreshing(false), 500);
+        try {
+            const data = await backendService.refreshApprovals();
+            setApprovals([...data]);
+            setSelectedIds([]);
+            setFilters(DEFAULT_FILTERS);
+        } catch (error) {
+            console.error("Failed to refresh approvals:", error);
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     useEffect(() => {
@@ -94,7 +99,7 @@ const ApprovalsPage: React.FC = () => {
 
     const handleApprove = (id: string) => {
         // Call backend to persist
-        mockBackend.updateApprovalStatus(id, 'APPROVED');
+        backendService.updateApprovalStatus(id, 'APPROVED');
 
         const updated = approvals.map(a => a.id === id ? { ...a, status: 'APPROVED' as const } : a);
         setApprovals(updated);
@@ -111,7 +116,7 @@ const ApprovalsPage: React.FC = () => {
 
     const handleReject = (id: string) => {
         // Call backend to persist
-        mockBackend.updateApprovalStatus(id, 'REJECTED');
+        backendService.updateApprovalStatus(id, 'REJECTED');
 
         const updated = approvals.map(a => a.id === id ? { ...a, status: 'REJECTED' as const } : a);
         setApprovals(updated);
@@ -128,7 +133,7 @@ const ApprovalsPage: React.FC = () => {
         if (!confirm(`Approve ${selectedIds.length} timesheets?`)) return;
 
         // Persist all
-        selectedIds.forEach(id => mockBackend.updateApprovalStatus(id, 'APPROVED'));
+        selectedIds.forEach(id => backendService.updateApprovalStatus(id, 'APPROVED'));
 
         const updated = approvals.map(a => selectedIds.includes(a.id) ? { ...a, status: 'APPROVED' as const } : a);
         setApprovals(updated);
@@ -139,7 +144,7 @@ const ApprovalsPage: React.FC = () => {
         if (!confirm(`Reject ${selectedIds.length} timesheets?`)) return;
 
         // Persist all
-        selectedIds.forEach(id => mockBackend.updateApprovalStatus(id, 'REJECTED'));
+        selectedIds.forEach(id => backendService.updateApprovalStatus(id, 'REJECTED'));
 
         const updated = approvals.map(a => selectedIds.includes(a.id) ? { ...a, status: 'REJECTED' as const } : a);
         setApprovals(updated);
@@ -151,67 +156,93 @@ const ApprovalsPage: React.FC = () => {
     };
 
     const handleExport = () => {
-        alert("Exporting approval data to CSV...");
-        // Logic for actual export could go here
+        const headers = ['Employee', 'Week', 'Submitted On', 'Projects', 'Total Hours', 'Billable', 'Non-Billable', 'Status'];
+        const rows = filteredApprovals.map(a => [
+            `"${a.employeeName}"`,
+            `"${a.weekRange}"`,
+            new Date(a.submittedOn).toLocaleDateString(),
+            `"${a.projects.join(', ')}"`,
+            a.totalHours.toFixed(2),
+            a.billableHours.toFixed(2),
+            a.nonBillableHours.toFixed(2),
+            a.status
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Approvals_Export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+        <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-10 transition-all duration-300 space-y-8">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                 <div>
-                    <div className="flex items-center text-xs text-slate-500 mb-1">
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Timesheet Approval</h1>
+                    <div className="flex items-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-2">
                         <span>Admin</span>
-                        <span className="mx-2">/</span>
+                        <span className="mx-2 opacity-30">/</span>
                         <span>Time Tracking</span>
-                        <span className="mx-2">/</span>
-                        <span className="font-medium text-slate-900">Timesheet Approval</span>
+                        <span className="mx-2 opacity-30">/</span>
+                        <span className="text-blue-600 dark:text-blue-400 font-black">Approval</span>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Timesheet Approval</h1>
                 </div>
 
-                <div className="flex items-center space-x-2 overflow-x-auto pb-1">
+                <div className="flex items-center space-x-3 overflow-x-auto pb-1">
                     {selectedIds.length > 0 && (
                         <>
                             <button
                                 onClick={handleBulkApprove}
-                                className="flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm animate-in fade-in slide-in-from-top-2"
+                                className="flex items-center px-5 py-2.5 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all text-sm font-bold active:scale-95 animate-in fade-in slide-in-from-top-2"
                             >
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Approve ({selectedIds.length})
                             </button>
                             <button
                                 onClick={handleBulkReject}
-                                className="flex items-center px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-medium hover:bg-rose-50 transition-colors shadow-sm animate-in fade-in slide-in-from-top-2"
+                                className="flex items-center px-5 py-2.5 bg-rose-600 dark:bg-rose-500 text-white rounded-xl hover:bg-rose-700 dark:hover:bg-rose-600 shadow-lg shadow-rose-500/20 transition-all text-sm font-bold active:scale-95 animate-in fade-in slide-in-from-top-2"
                             >
                                 <XCircle className="h-4 w-4 mr-2" />
                                 Reject ({selectedIds.length})
                             </button>
-                            <div className="w-px h-6 bg-slate-300 mx-2"></div>
+                            <div className="w-px h-8 bg-slate-200 dark:bg-slate-800 mx-1"></div>
                         </>
                     )}
 
                     <button
                         onClick={handleSendReminder}
-                        className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap"
+                        className="flex items-center px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all text-sm font-bold shadow-sm whitespace-nowrap"
                     >
-                        <Bell className="h-4 w-4 mr-2" />
+                        <Bell className="h-4 w-4 mr-2 text-blue-500" />
                         Send Reminder
                     </button>
                     <button
                         onClick={handleExport}
-                        className="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap"
+                        className="flex items-center px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all text-sm font-bold shadow-sm whitespace-nowrap"
                     >
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="h-4 w-4 mr-2 text-slate-400" />
                         Export
                     </button>
                     <button
                         onClick={refreshData}
                         disabled={isRefreshing}
-                        className={`p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={cn(
+                            "p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95",
+                            isRefreshing && "opacity-50 cursor-not-allowed"
+                        )}
                         title="Refresh Data"
                     >
-                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
                     </button>
                 </div>
             </div>
@@ -255,3 +286,4 @@ const ApprovalsPage: React.FC = () => {
 };
 
 export default ApprovalsPage;
+

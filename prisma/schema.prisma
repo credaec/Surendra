@@ -1,0 +1,315 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Models
+
+model User {
+  id             String  @id
+  name           String
+  email          String  @unique
+  password       String  @default("$2a$10$XtW/C.5.y.5.y.5.y.5.y.5.y.5.y.5.y.5.y.5.y.5.y") // Placeholder hash
+  phone          String?
+  role           String  @default("EMPLOYEE")
+  status         String  @default("ACTIVE")
+  avatarUrl      String?
+  department     String?
+  designation    String?
+  joiningDate    DateTime?
+  hourlyCostRate Float?
+  avatarInitials String?
+
+  // Relations
+  timeEntries    TimeEntry[]
+  assignments    UserAssignment[]
+  payrollRecords PayrollRecord[]
+  notifications  Notification[]
+}
+
+model Client {
+  id            String   @id
+  name          String
+  companyName   String
+  email         String?
+  phone         String?
+  currency      String   @default("USD")
+  status        String   @default("ACTIVE")
+  totalProjects Int      @default(0)
+
+  // Relations
+  projects      Project[]
+  invoices      Invoice[]
+  documents     ClientDocument[]
+  contacts      ClientContact[]
+}
+
+model ClientContact {
+  id        String  @id @default(uuid())
+  clientId  String
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  role      String?
+  email     String
+  phone     String?
+  isPrimary Boolean @default(false)
+}
+
+model ClientDocument {
+  id         String   @id
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name       String
+  size       String
+  uploadDate DateTime
+  type       String
+}
+
+model Project {
+  id             String        @id
+  code           String        @unique
+  name           String
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id])
+  clientName     String        // Denormalized
+  status         String        @default("ACTIVE")
+  type           String        @default("HOURLY")
+  priority       String        @default("MEDIUM")
+  description    String?
+  startDate      DateTime
+  endDate        DateTime?
+  deliveryDate   DateTime?
+  currency       String        @default("USD")
+  
+  // Financials
+  budgetAmount   Float?
+  estimatedHours Float?
+  monthlyHourCap Float?
+  
+  // Billing
+  billingMode    String // HOURLY_RATE, FIXED_FEE, RETAINER
+  rateLogic      String // GLOBAL_PROJECT_RATE, CATEGORY_BASED_RATE, EMPLOYEE_BASED_RATE
+  globalRate     Float?
+
+  // JSON columns for complex nested structures to simplify migration
+  milestones     String? // JSON
+  teamMembers    String? // JSON: { userId, role, accessLevel, rates }[]
+  entryRules     String? // JSON
+  alerts         String? // JSON
+
+  // Metrics (Legacy/Cache)
+  usedHours      Float   @default(0)
+  billableHours  Float   @default(0)
+  usedBudget     Float?
+
+  // Relations
+  tasks          Task[]
+  timeEntries    TimeEntry[]
+  invoices       Invoice[]
+}
+
+model TaskCategory {
+  id                 String   @id
+  name               String
+  isBillable         Boolean  @default(true)
+  defaultRate        Float?
+  isProofRequired    Boolean  @default(false)
+  isNotesRequired    Boolean  @default(false)
+  restrictedToProjects String? // JSON array of project IDs or relation
+  status             String   @default("ACTIVE")
+  
+  tasks              Task[]
+  timeEntries        TimeEntry[]
+  assignments        UserAssignment[]
+}
+
+model Task {
+  id          String   @id
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  categoryId  String
+  category    TaskCategory @relation(fields: [categoryId], references: [id])
+  assignedToId String?
+  status      String   @default("NOT_STARTED")
+  priority    String   @default("MEDIUM")
+  dueDate     DateTime?
+  
+  timeEntries TimeEntry[]
+}
+
+model TimeEntry {
+  id              String          @id
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  projectId       String
+  project         Project         @relation(fields: [projectId], references: [id])
+  taskId          String?
+  task            Task?           @relation(fields: [taskId], references: [id])
+  categoryId      String
+  category        TaskCategory    @relation(fields: [categoryId], references: [id])
+  
+  date            DateTime
+  startTime       DateTime?
+  endTime         DateTime?
+  durationMinutes Int
+  
+  description     String?
+  notes           String?
+  isBillable      Boolean         @default(true)
+  status          String          @default("DRAFT")
+  
+  proofUrl        String?
+  deletedAt       DateTime?
+  activityLogs    String?         // JSON
+  isEdited        Boolean         @default(false)
+  lastEditedAt    DateTime?
+}
+
+model UserAssignment {
+  id          String   @id
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    TaskCategory @relation(fields: [categoryId], references: [id])
+  projectId   String?
+  assignedAt  DateTime @default(now())
+  assignedBy  String?
+}
+
+model AvailabilityEvent {
+  id          String   @id
+  title       String
+  type        String   // HOLIDAY, LEAVE, etc.
+  subType     String?
+  startDate   DateTime
+  endDate     DateTime
+  isAllDay    Boolean  @default(true)
+  resourceId  String?  // Employee ID for leave
+  notes       String?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+}
+
+model Invoice {
+  id            String   @id
+  invoiceNo     String   @unique
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  clientName    String   // Denormalized
+  projectId     String?
+  project       Project? @relation(fields: [projectId], references: [id]) // Optional link
+  projectName   String?
+  
+  date          DateTime
+  dueDate       DateTime
+  currency      String
+  status        String   // DRAFT, SENT, PAID, etc.
+  
+  items         String   // JSON: InvoiceItem[]
+  subtotal      Float
+  taxAmount     Float
+  totalAmount   Float
+  paidAmount    Float    @default(0)
+  balanceAmount Float
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  
+  payments      String?  // JSON: PaymentRecord[]
+  type          String   @default("FIXED") // TIMESHEET | FIXED
+  isDeleted     Boolean  @default(false)
+}
+
+model PayrollRun {
+  id                 String          @id
+  period             String          // "Jan 2026"
+  status             String          // DRAFT, LOCKED, PAID
+  totalEmployees     Int
+  totalPayable       Float
+  totalApprovedHours Float
+  generatedAt        DateTime        @default(now())
+  generatedBy        String?
+  isLocked           Boolean         @default(false)
+  
+  records            PayrollRecord[]
+}
+
+model PayrollRecord {
+  id               String      @id
+  payrollRunId     String
+  payrollRun       PayrollRun  @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeId       String
+  employee         User        @relation(fields: [employeeId], references: [id])
+  employeeName     String
+  designation      String?
+  department       String?
+  joinDate         DateTime?
+  
+  totalHours       Float
+  approvedHours    Float
+  billableHours    Float
+  nonBillableHours Float
+  
+  rateType         String      // HOURLY, MONTHLY
+  hourlyRate       Float
+  basePay          Float
+  overtimeHours    Float       @default(0)
+  overtimeAmount   Float       @default(0)
+  deductions       Float       @default(0)
+  bonus            Float       @default(0)
+  totalPayable     Float
+  status           String      // DRAFT, APPROVED, PAID, HOLD
+}
+
+model Notification {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BackupLog {
+  id        String   @id @default(uuid())
+  date      DateTime @default(now())
+  location  String
+  status    String   // SUCCESS, FAILED
+  details   String?
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  module      String
+  action      String
+  severity    String
+  userId      String
+  userName    String
+  userRole    String
+  userEmail   String
+  targetType  String
+  targetId    String
+  targetName  String
+  summary     String
+  details     String?
+  changes     String?  // JSON string
+  ipAddress   String?
+  device      String?
+  browser     String?
+}
+
+model AppSettings {
+  id      String @id @default("GLOBAL")
+  content String // Store as JSON string for maximum flexibility
+  updatedAt DateTime @updatedAt
+}

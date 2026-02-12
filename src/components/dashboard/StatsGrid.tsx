@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import KPICard from './KPICard';
 import { Clock, AlertTriangle, DollarSign, Zap, PieChart, Briefcase, TrendingUp, AlertCircle } from 'lucide-react';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 const StatsGrid: React.FC = () => {
@@ -18,9 +18,9 @@ const StatsGrid: React.FC = () => {
 
     useEffect(() => {
         const calculateStats = () => {
-            const projects = mockBackend.getProjects();
-            const entries = mockBackend.getEntries();
-            const users = mockBackend.getUsers();
+            const projects = backendService.getProjects();
+            const entries = backendService.getEntries();
+            const users = backendService.getUsers();
 
             // 1. Time Stats (Current Month)
             const now = new Date();
@@ -32,6 +32,8 @@ const StatsGrid: React.FC = () => {
             let totalCostVal = 0;
 
             entries.forEach(entry => {
+                if (entry.status === 'REJECTED') return;
+
                 const entryDate = parseISO(entry.date);
                 if (isWithinInterval(entryDate, { start: monthStart, end: monthEnd })) {
                     monthTotalMinutes += entry.durationMinutes;
@@ -169,3 +171,4 @@ const StatsGrid: React.FC = () => {
 };
 
 export default StatsGrid;
+

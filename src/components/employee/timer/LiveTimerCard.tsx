@@ -34,24 +34,24 @@ const LiveTimerCard: React.FC<LiveTimerCardProps> = ({
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            <div className="p-8 flex flex-col items-center justify-center bg-gradient-to-b from-slate-50/80 to-white">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
+            <div className="p-8 flex flex-col items-center justify-center bg-gradient-to-b from-slate-50/80 to-white dark:from-slate-800 dark:to-slate-900">
 
                 {/* Status Badge */}
                 <div className={cn(
                     "mb-6 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center border",
                     isRunning
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100 animate-pulse"
+                        ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800 animate-pulse"
                         : isPaused
-                            ? "bg-amber-50 text-amber-600 border-amber-100"
-                            : "bg-slate-100 text-slate-500 border-slate-200"
+                            ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
+                            : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600"
                 )}>
                     <div className={cn("h-2 w-2 rounded-full mr-2", isRunning ? "bg-emerald-500" : isPaused ? "bg-amber-500" : "bg-slate-400")} />
                     {isRunning ? "Running" : isPaused ? "Paused" : "Not Started"}
                 </div>
 
                 {/* Timer Display */}
-                <div className="text-7xl font-mono font-bold text-slate-900 tracking-wider font-variant-numeric tabular-nums mb-8">
+                <div className="text-7xl font-mono font-bold text-slate-900 dark:text-white tracking-wider font-variant-numeric tabular-nums mb-8">
                     {formatTime(elapsedSeconds)}
                 </div>
 
@@ -98,11 +98,11 @@ const LiveTimerCard: React.FC<LiveTimerCardProps> = ({
 
                 {/* Timer Meta (Visible when running/paused) */}
                 {(elapsedSeconds > 0 || isRunning) && (
-                    <div className="mt-8 flex items-center text-sm text-slate-900 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                    <div className="mt-8 flex items-center text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700/50 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-600">
                         <span className="font-semibold mr-2">{project || "Select Project"}</span>
                         <span className="text-slate-400 mx-2">•</span>
-                        <span className="text-slate-600">{task || "Select Category"}</span>
-                        <span className="ml-3 text-[10px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded border border-emerald-200">BILLABLE</span>
+                        <span className="text-slate-600 dark:text-slate-300">{task || "Select Category"}</span>
+                        <span className="ml-3 text-[10px] font-bold px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 rounded border border-emerald-200 dark:border-emerald-800">BILLABLE</span>
                     </div>
                 )}
 

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Eye, Edit3, Send, CreditCard, Download, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
+import { Eye, Send, CreditCard, Download, Trash2, AlertCircle, RotateCcw } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import type { Invoice } from '../../../services/mockBackend';
+import type { Invoice } from '../../../services/backendService';
 
 interface InvoicesTableProps {
     data: Invoice[];
@@ -23,7 +23,6 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
     selectedIds,
     onSelect,
     onSelectAll,
-    onView,
     onEdit,
     onSend,
     onMarkPayment,
@@ -60,75 +59,85 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
     };
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all duration-300">
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                    <thead className="bg-slate-50/50 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                            <th className="px-4 py-4 w-10">
+                            <th className="px-5 py-4 w-10">
                                 <input
                                     type="checkbox"
-                                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800"
                                     checked={data.length > 0 && selectedIds.length === data.length}
                                     onChange={(e) => onSelectAll(e.target.checked ? data.map(i => i.id) : [])}
                                 />
                             </th>
-                            <th className="px-4 py-4">Invoice No</th>
-                            <th className="px-4 py-4">Client</th>
-                            <th className="px-4 py-4">Project</th>
-                            <th className="px-4 py-4">Date</th>
-                            <th className="px-4 py-4">Due Date</th>
-                            <th className="px-4 py-4 text-right">Amount</th>
-                            <th className="px-4 py-4 text-right">Balance</th>
-                            <th className="px-4 py-4">Status</th>
-                            <th className="px-4 py-4 text-right">Action</th>
+                            <th className="px-5 py-4 text-[10px] uppercase tracking-widest">Invoice No</th>
+                            <th className="px-5 py-4 text-[10px] uppercase tracking-widest">Client</th>
+                            <th className="px-5 py-4 text-[10px] uppercase tracking-widest">Project</th>
+                            <th className="px-5 py-4 text-[10px] uppercase tracking-widest">Date</th>
+                            <th className="px-5 py-4 text-[10px] uppercase tracking-widest">Due Date</th>
+                            <th className="px-5 py-4 text-right text-[10px] uppercase tracking-widest">Amount</th>
+                            <th className="px-5 py-4 text-right text-[10px] uppercase tracking-widest">Balance</th>
+                            <th className="px-5 py-4 text-[10px] uppercase tracking-widest">Status</th>
+                            <th className="px-5 py-4 text-right text-[10px] uppercase tracking-widest">Action</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {data.map((item) => (
-                            <tr key={item.id} className={cn("hover:bg-slate-50 transition-colors", selectedIds.includes(item.id) && "bg-blue-50/30", isTrashMode && 'bg-slate-50/50 grayscale-[0.5]')}>
-                                <td className="px-4 py-4">
+                            <tr key={item.id} className={cn(
+                                "group transition-all duration-200",
+                                selectedIds.includes(item.id) ? "bg-blue-50/30 dark:bg-blue-500/5 shadow-inner" : "hover:bg-slate-50 dark:hover:bg-slate-800/50",
+                                isTrashMode && 'opacity-60 grayscale-[0.5]'
+                            )}>
+                                <td className="px-5 py-4">
                                     <input
                                         type="checkbox"
-                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800 transition-all"
                                         checked={selectedIds.includes(item.id)}
                                         onChange={() => onSelect(item.id)}
                                     />
                                 </td>
-                                <td className="px-4 py-4 font-medium text-slate-900">{item.invoiceNo}</td>
-                                <td className="px-4 py-4 text-slate-700">{item.clientName}</td>
-                                <td className="px-4 py-4 text-slate-500">{item.projectName}</td>
-                                <td className="px-4 py-4 text-slate-500">{item.date}</td>
-                                <td className="px-4 py-4 text-slate-500">{item.dueDate}</td>
-                                <td className="px-4 py-4 text-right font-medium text-slate-900">{formatCurrency(item.totalAmount, item.currency)}</td>
-                                <td className="px-4 py-4 text-right font-medium text-slate-700">
-                                    {item.balanceAmount > 0 ? (
-                                        <span className={cn(item.status === 'OVERDUE' ? "text-rose-600" : "")}>{formatCurrency(item.balanceAmount, item.currency)}</span>
+                                <td className="px-5 py-4 font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.invoiceNo}</td>
+                                <td className="px-5 py-4 font-bold text-slate-700 dark:text-slate-200">{item.clientName}</td>
+                                <td className="px-5 py-4 font-medium text-slate-500 dark:text-slate-400">{item.projectName || '-'}</td>
+                                <td className="px-5 py-4 font-medium text-slate-500 dark:text-slate-400">
+                                    {new Date(item.date).toLocaleDateString()}
+                                </td>
+                                <td className="px-5 py-4 font-medium text-slate-500 dark:text-slate-400">
+                                    {new Date(item.dueDate).toLocaleDateString()}
+                                </td>
+                                <td className="px-5 py-4 text-right font-black text-slate-900 dark:text-white">{formatCurrency(item.totalAmount, item.currency)}</td>
+                                <td className="px-5 py-4 text-right font-black">
+                                    {item.status === 'PAID' ? (
+                                        <span className="text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">Paid</span>
                                     ) : (
-                                        <span className="text-emerald-600">Paid</span>
+                                        <span className={cn(item.status === 'OVERDUE' ? "text-rose-600 dark:text-rose-500" : "text-slate-700 dark:text-slate-200")}>
+                                            {formatCurrency(item.balanceAmount, item.currency)}
+                                        </span>
                                     )}
                                 </td>
-                                <td className="px-4 py-4">
+                                <td className="px-5 py-4">
                                     {isTrashMode ? (
-                                        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-500">DELETED</span>
+                                        <span className="inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">DELETED</span>
                                     ) : (
                                         getStatusBadge(item.status)
                                     )}
                                 </td>
-                                <td className="px-4 py-4 text-right">
-                                    <div className="flex items-center justify-end space-x-1">
+                                <td className="px-5 py-4 text-right">
+                                    <div className="flex items-center justify-end space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                         {isTrashMode ? (
                                             <>
                                                 <button
                                                     onClick={() => onRestore && onRestore(item.id)}
-                                                    className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                                                    className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all"
                                                     title="Restore Invoice"
                                                 >
                                                     <RotateCcw className="h-4 w-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => onDelete(item.id)}
-                                                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
+                                                    className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
                                                     title="Permanently Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -138,7 +147,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                                             <>
                                                 <button
                                                     onClick={() => onEdit(item.id)}
-                                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                    className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-all"
                                                     title="View/Edit"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -147,7 +156,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                                                 {(item.status === 'DRAFT' || item.status === 'SENT') && (
                                                     <button
                                                         onClick={() => onSend(item.id)}
-                                                        className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                                                        className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all"
                                                         title="Send Invoice"
                                                     >
                                                         <Send className="h-4 w-4" />
@@ -157,7 +166,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                                                 {(item.status === 'SENT' || item.status === 'PARTIAL' || item.status === 'OVERDUE') && (
                                                     <button
                                                         onClick={() => onMarkPayment(item.id)}
-                                                        className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded"
+                                                        className="p-2 text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl transition-all"
                                                         title="Record Payment"
                                                     >
                                                         <CreditCard className="h-4 w-4" />
@@ -166,7 +175,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
 
                                                 <button
                                                     onClick={() => onDownload(item.id)}
-                                                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded"
+                                                    className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
                                                     title="Download PDF"
                                                 >
                                                     <Download className="h-4 w-4" />
@@ -174,7 +183,7 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
 
                                                 <button
                                                     onClick={() => onDelete(item.id)}
-                                                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
+                                                    className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
                                                     title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -187,8 +196,13 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
                         ))}
                         {data.length === 0 && (
                             <tr>
-                                <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
-                                    <p>{isTrashMode ? 'Trash is empty.' : 'No invoices found matching your filters.'}</p>
+                                <td colSpan={10} className="px-6 py-20 text-center">
+                                    <div className="flex flex-col items-center">
+                                        <div className="h-16 w-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                                            <AlertCircle className="h-8 w-8 text-slate-200 dark:text-slate-700" />
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{isTrashMode ? 'Trash is empty.' : 'No invoices found matching your filters.'}</p>
+                                    </div>
                                 </td>
                             </tr>
                         )}
@@ -200,3 +214,4 @@ const InvoicesTable: React.FC<InvoicesTableProps> = ({
 };
 
 export default InvoicesTable;
+

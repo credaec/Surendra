@@ -1,13 +1,16 @@
+import { api } from './api';
+import { auditService } from './auditService';
+
 export interface CompanyConfig {
     name: string;
-    logoUrl?: string; // Optional
+    logoUrl?: string;
     address: string;
     city: string;
     state: string;
     country: string;
     timezone: string;
     weekStartDay: 'MONDAY' | 'SUNDAY';
-    workingDays: string[]; // e.g. ['MON', 'TUE', '...']
+    workingDays: string[];
     currency: 'USD' | 'INR' | 'EUR';
     secondaryCurrency?: string;
 }
@@ -19,7 +22,7 @@ export interface TimesheetConfig {
     allowBackdatedEntries: boolean;
     requireDescription: boolean;
     requireProof: boolean;
-    autoSubmitWeekly: boolean; // Sunday 11:59 PM
+    autoSubmitWeekly: boolean;
     approvalMode: 'SINGLE_LEVEL' | 'MULTI_LEVEL';
 }
 
@@ -57,10 +60,10 @@ export interface EmailConfig {
     port: number;
     secure: boolean;
     username: string;
-    password?: string; // Standard Auth
-    clientId?: string; // OAuth2
-    clientSecret?: string; // OAuth2
-    refreshToken?: string; // OAuth2
+    password?: string;
+    clientId?: string;
+    clientSecret?: string;
+    refreshToken?: string;
 }
 
 export interface AppSettings {
@@ -76,10 +79,33 @@ export interface AppSettings {
     };
     client: ClientConfig;
     project: ProjectConfig;
-    email: EmailConfig; // New
+    email: EmailConfig;
+    backup: BackupConfig;
 }
 
-// ... (ClientConfig and ProjectConfig interfaces remain unchanged)
+export interface BackupConfig {
+    enabled: boolean;
+    schedule: string;
+    localBackup: {
+        enabled: boolean;
+        path: string;
+    };
+    networkBackup: {
+        enabled: boolean;
+        path: string;
+        username: string;
+        password?: string;
+    };
+    ftpBackup: {
+        enabled: boolean;
+        host: string;
+        port: number;
+        username: string;
+        password?: string;
+    };
+    lastBackupDate: string;
+}
+
 export interface ClientConfig {
     requireEmailPhone: boolean;
     enableCategories: boolean;
@@ -94,12 +120,12 @@ export interface ProjectConfig {
 
 const DEFAULT_SETTINGS: AppSettings = {
     company: {
-        name: 'Credence Time Tracker',
-        address: '123 Tech Park',
-        city: 'San Francisco',
-        state: 'CA',
-        country: 'USA',
-        timezone: 'UTC-8',
+        name: 'Pulse Time Tracker',
+        address: '12 Tech Street',
+        city: 'Digital City',
+        state: 'DS',
+        country: 'Global',
+        timezone: 'UTC+0',
         weekStartDay: 'MONDAY',
         workingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
         currency: 'USD'
@@ -153,49 +179,62 @@ const DEFAULT_SETTINGS: AppSettings = {
     email: {
         service: 'Custom',
         authType: 'STANDARD',
-        fromEmail: 'noreply@credencetracker.com',
-        fromName: 'Credence Notifications',
+        fromEmail: 'noreply@localhost.com',
+        fromName: 'Pulse Notifications',
         host: 'smtp.example.com',
         port: 587,
         secure: true,
         username: 'apikey',
         password: ''
+    },
+    backup: {
+        enabled: true,
+        schedule: 'Daily (Midnight)',
+        localBackup: { enabled: false, path: 'C:\\Backups\\CRED' },
+        networkBackup: { enabled: false, path: '', username: '' },
+        ftpBackup: { enabled: false, host: '', port: 21, username: '' },
+        lastBackupDate: ''
     }
 };
 
-const STORAGE_KEY = 'credence_app_settings_v1';
-
-import { auditService } from './auditService';
+const STORAGE_KEY = 'pulse_app_settings_v1';
 
 export const settingsService = {
-    getSettings: (): AppSettings => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+    getSettings: async (): Promise<AppSettings> => {
+        try {
+            const data = await api.get('/settings');
+            if (Object.keys(data).length === 0) {
+                // If DB is empty, check localStorage then fallback to default
+                const stored = localStorage.getItem(STORAGE_KEY);
+                return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
+            }
+            return { ...DEFAULT_SETTINGS, ...data };
+        } catch (error) {
+            console.error('Failed to fetch settings from API, using local storage:', error);
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
         }
-        return DEFAULT_SETTINGS;
     },
 
-    updateSettings: (newSettings: Partial<AppSettings>): AppSettings => {
-        const current = settingsService.getSettings();
-        const updated = { ...current, ...newSettings };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-        // Audit Log
-        auditService.logAction('SETTINGS', 'UPDATE', 'INFO', 'Updated global settings', { type: 'System', id: 'SETTINGS', name: 'App Settings' });
-
-        return updated;
+    updateSettings: async (settings: AppSettings): Promise<AppSettings> => {
+        try {
+            const data = await api.post('/settings', settings);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            auditService.logAction('SYSTEM', 'UPDATE', 'INFO', 'Global application settings updated', { type: 'System', id: 'SETTINGS', name: 'Global Configuration' });
+            return data;
+        } catch (error) {
+            console.error('Failed to update settings on server, updating locally only:', error);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+            return settings;
+        }
     },
 
-    updateSection: <K extends keyof AppSettings>(section: K, data: Partial<AppSettings[K]>) => {
-        const current = settingsService.getSettings();
-        const updatedSection = { ...current[section], ...data };
-        const updated = { ...current, [section]: updatedSection };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-        // Audit Log
-        auditService.logAction('SETTINGS', 'UPDATE', 'INFO', `Updated ${section} settings`, { type: 'System', id: `SETTINGS-${section.toUpperCase()}`, name: `${section} Settings` });
-
-        return updated;
+    updateSection: async <K extends keyof AppSettings>(section: K, data: Partial<AppSettings[K]>) => {
+        const current = await settingsService.getSettings();
+        const updated = {
+            ...current,
+            [section]: { ...current[section], ...data }
+        };
+        return settingsService.updateSettings(updated);
     }
 };

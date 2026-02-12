@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, Building2 } from 'lucide-react';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import type { Project } from '../../types/schema';
 import { cn } from '../../lib/utils';
 
@@ -12,7 +12,7 @@ const ProjectDetailsPage: React.FC = () => {
 
     useEffect(() => {
         if (id) {
-            const found = mockBackend.getProjectById(id);
+            const found = backendService.getProjectById(id);
             if (found) {
                 setProject(found);
             } else {
@@ -82,8 +82,10 @@ const ProjectDetailsPage: React.FC = () => {
                                             {member.role.charAt(0)}
                                         </div>
                                         <div>
-                                            {/* In a real app we'd resolve name from userId */}
-                                            <p className="text-sm font-medium text-slate-900">User {member.userId}</p>
+                                            {/* Resolve name from userId */}
+                                            <p className="text-sm font-medium text-slate-900">
+                                                {backendService.getUsers().find(u => u.id === member.userId)?.name || `User ${member.userId}`}
+                                            </p>
                                             <p className="text-xs text-slate-500">{member.role}</p>
                                         </div>
                                     </div>
@@ -114,3 +116,4 @@ const ProjectDetailsPage: React.FC = () => {
 };
 
 export default ProjectDetailsPage;
+

@@ -18,6 +18,15 @@ export interface User {
     hourlyCostRate?: number; // Admin only, internal cost
 }
 
+export interface UserAssignment {
+    id: string;
+    userId: string;
+    categoryId: string;
+    projectId?: string; // Optional if linked to specific project
+    assignedAt: string;
+    assignedBy?: string; // ID of the Admin/Manager who assigned it
+}
+
 
 export interface ClientContact {
     id: string;
@@ -40,7 +49,7 @@ export interface Client {
     contacts?: ClientContact[];
 }
 
-export type ProjectStatus = 'PLANNED' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
+export type ProjectStatus = 'PLANNED' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED' | 'DELETED';
 export type ProjectType = 'HOURLY' | 'FIXED' | 'RETAINER' | 'INTERNAL';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -159,6 +168,10 @@ export interface TimeEntry {
     status: TimeEntryStatus;
 
     proofUrl?: string; // Attachment
+    deletedAt?: string; // ISO String for soft delete
+    activityLogs?: string; // JSON String of activity logs
+    isEdited?: boolean;
+    lastEditedAt?: string;
 }
 
 export interface Timesheet {

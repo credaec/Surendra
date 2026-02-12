@@ -6,7 +6,7 @@ import ReportsKPICards from '../../components/employee/reports/ReportsKPICards';
 import ReportsCharts from '../../components/employee/reports/ReportsCharts';
 import ReportsBreakdown from '../../components/employee/reports/ReportsBreakdown';
 import ReportsTable from '../../components/employee/reports/ReportsTable';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import type { TimeEntry, Project } from '../../types/schema';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -36,10 +36,10 @@ const MyReportsPage: React.FC = () => {
     useEffect(() => {
         const fetchData = () => {
             if (user) {
-                const entries = mockBackend.getEntries(user.id);
+                const entries = backendService.getEntries(user.id);
                 setAllEntries(entries);
             }
-            const projs = mockBackend.getProjects();
+            const projs = backendService.getProjects();
             setProjects(projs);
             setLoading(false);
         };
@@ -308,3 +308,4 @@ const MyReportsPage: React.FC = () => {
 };
 
 export default MyReportsPage;
+

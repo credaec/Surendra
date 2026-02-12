@@ -13,7 +13,7 @@ import {
     subMonths,
     parseISO
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Palmtree, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Palmtree, User, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { AvailabilityEvent } from '../../../types/schema';
 
@@ -37,10 +37,6 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ events, onE
 
     const getDayEvents = (day: Date) => {
         return events.filter(e => {
-            // Simplified: Checking start date match for now. 
-            // Better logic would be isWithinInterval, but start match is fine for single day events
-            // For multi-day, we typically just show on start or span (span is harder in simple grid)
-            // Let's stick to start date for simple visualization or simplistic range check
             const start = parseISO(e.startDate);
             const end = parseISO(e.endDate);
             return isSameDay(day, start) || (day > start && day <= end);
@@ -48,49 +44,61 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ events, onE
     };
 
     return (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[700px]">
+        <div className="bg-white dark:bg-surface border border-slate-200 dark:border-border rounded-[2.5rem] shadow-sm flex flex-col h-[750px] overflow-hidden transition-all duration-300">
             {/* Calendar Toolbar */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                <div className="flex items-center space-x-4">
-                    <h2 className="text-lg font-bold text-slate-900">
-                        {format(currentMonth, 'MMMM yyyy')}
-                    </h2>
-                    <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                        <button onClick={prevMonth} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-slate-900 shadow-sm">
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <button onClick={goToToday} className="px-3 py-1 text-xs font-medium text-slate-600 hover:bg-white rounded-md transition-colors mx-1">
-                            Today
-                        </button>
-                        <button onClick={nextMonth} className="p-1 hover:bg-white rounded-md transition-colors text-slate-500 hover:text-slate-900 shadow-sm">
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
+            <div className="flex items-center justify-between p-8 border-b border-slate-200 dark:border-border bg-slate-50/50 dark:bg-background/20">
+                <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-4">
+                        <div className="p-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-xl shadow-blue-500/20">
+                            <CalendarIcon className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                                {format(currentMonth, 'MMMM')}
+                            </h2>
+                            <p className="text-sm font-black text-slate-400 dark:text-slate-500 tracking-[0.2em]">{format(currentMonth, 'yyyy')}</p>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-3 text-sm">
-                    <div className="flex items-center">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
-                        <span className="text-slate-600">Holidays</span>
+                <div className="flex items-center space-x-6">
+                    <div className="hidden lg:flex items-center space-x-6 mr-6 text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800/50 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                        <div className="flex items-center group cursor-help">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 mr-2 shadow-[0_0_10px_rgba(16,185,129,0.4)] group-hover:scale-125 transition-transform"></span>
+                            <span className="text-slate-500 dark:text-slate-400">Holidays</span>
+                        </div>
+                        <div className="w-px h-4 bg-slate-300 dark:bg-slate-600" />
+                        <div className="flex items-center group cursor-help">
+                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 dark:bg-blue-400 mr-2 shadow-[0_0_10px_rgba(59,130,246,0.4)] group-hover:scale-125 transition-transform"></span>
+                            <span className="text-slate-500 dark:text-slate-400">Leaves</span>
+                        </div>
                     </div>
-                    <div className="flex items-center">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-                        <span className="text-slate-600">Leaves</span>
+
+                    <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-1.5 shadow-sm">
+                        <button onClick={prevMonth} className="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:text-slate-500 dark:hover:text-white active:scale-90">
+                            <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <button onClick={goToToday} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all mx-1 active:scale-95 border-x border-slate-100 dark:border-slate-800">
+                            Today
+                        </button>
+                        <button onClick={nextMonth} className="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-slate-900 dark:text-slate-500 dark:hover:text-white active:scale-90">
+                            <ChevronRight className="h-5 w-5" />
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Calendar Grid Header */}
-            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+            <div className="grid grid-cols-7 border-b border-slate-200 dark:border-border bg-white dark:bg-surface shadow-sm relative z-10">
                 {weekDays.map(day => (
-                    <div key={day} className="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                    <div key={day} className="py-6 text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.25em]">
                         {day}
                     </div>
                 ))}
             </div>
 
             {/* Calendar Grid Body */}
-            <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+            <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-slate-100 dark:bg-background gap-px border-b border-l border-slate-200 dark:border-border">
                 {calendarDays.map((day) => {
                     const dayEvents = getDayEvents(day);
                     const isOtherMonth = !isSameMonth(day, currentMonth);
@@ -100,21 +108,25 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ events, onE
                         <div
                             key={day.toString()}
                             className={cn(
-                                "border-b border-r border-slate-100 p-2 min-h-[100px] flex flex-col transition-colors",
-                                isOtherMonth ? "bg-slate-50/50 text-slate-400" : "bg-white",
-                                // Remove bottom/right borders for last row/col if needed, but grid usually handles
+                                "relative p-4 flex flex-col transition-all duration-300 group/day overflow-hidden",
+                                isOtherMonth ? "bg-slate-50/60 dark:bg-background/60" : "bg-white dark:bg-surface hover:bg-slate-50 dark:hover:bg-slate-800/20",
                             )}
                         >
-                            <div className="flex justify-between items-start mb-1">
+                            <div className="flex justify-between items-start mb-4 relative z-10">
                                 <span className={cn(
-                                    "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                                    isCurrentDay ? "bg-blue-600 text-white" : "text-slate-700"
+                                    "text-sm font-black w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-300",
+                                    isCurrentDay
+                                        ? "bg-blue-600 dark:bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-110"
+                                        : "text-slate-400 dark:text-slate-500 group-hover/day:text-slate-900 dark:group-hover/day:text-white group-hover/day:bg-slate-100 dark:group-hover/day:bg-slate-800"
                                 )}>
                                     {format(day, 'd')}
                                 </span>
+                                {dayEvents.length > 0 && !isOtherMonth && (
+                                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse mt-3 mr-1 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                                )}
                             </div>
 
-                            <div className="space-y-1 overflow-y-auto max-h-[80px] custom-scrollbar">
+                            <div className="space-y-2 overflow-y-auto pr-1 flex-1 custom-scrollbar relative z-10">
                                 {dayEvents.map(event => (
                                     <button
                                         key={event.id}
@@ -123,19 +135,19 @@ const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({ events, onE
                                             onEventClick(event);
                                         }}
                                         className={cn(
-                                            "w-full text-left px-2 py-1 rounded text-xs font-medium truncate flex items-center mb-0.5",
+                                            "w-full text-left px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tight truncate flex items-center transition-all duration-200 active:scale-[0.98] border shadow-sm group/event",
                                             event.type === 'HOLIDAY'
-                                                ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100"
-                                                : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100"
+                                                ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border-emerald-100 dark:border-emerald-500/20"
+                                                : "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-blue-100 dark:border-blue-500/20"
                                         )}
                                         title={event.title}
                                     >
                                         {event.type === 'HOLIDAY' ? (
-                                            <Palmtree className="h-3 w-3 mr-1 flex-shrink-0" />
+                                            <Palmtree className="h-3 w-3 mr-2 flex-shrink-0 opacity-70 group-hover/event:opacity-100 transition-opacity" />
                                         ) : (
-                                            <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                                            <User className="h-3 w-3 mr-2 flex-shrink-0 opacity-70 group-hover/event:opacity-100 transition-opacity" />
                                         )}
-                                        {event.title}
+                                        <span className="truncate">{event.title}</span>
                                     </button>
                                 ))}
                             </div>

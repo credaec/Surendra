@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { mockBackend } from '../../services/mockBackend';
-import { ArrowLeftRight, ShieldCheck, UserCircle } from 'lucide-react';
+import { backendService } from '../../services/backendService';
+import { cn } from '../../lib/utils';
 
 interface RoleSwitcherProps {
     currentMode: 'ADMIN' | 'EMPLOYEE';
@@ -10,70 +10,60 @@ interface RoleSwitcherProps {
 const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ currentMode }) => {
     const { user } = useAuth();
 
-    // Prevent rendering if no user (shouldn't happen)
     if (!user) return null;
 
-    // Use the explicitly passed currentMode to determine view state, overriding potentially stale auth user state
     const isAdminView = currentMode === 'ADMIN';
 
-    // SECURITY CHECK: 
-    // Only show this switcher if the *REAL* user role in backend is ADMIN.
-    // This prevents regular employees (like Naresh) from switching to Admin view even if they are in Employee view.
-    const realUser = mockBackend.getUsers().find(u => u.id === user.id);
+    const realUser = backendService.getUsers().find(u => u.id === user.id);
 
-    // If user not found or is strictly an EMPLOYEE, do not show switcher.
-    // NOTE: This assumes 'ADMIN' is the only privileged role.
     if (!realUser || realUser.role !== 'ADMIN') {
-        return null; // Render nothing for non-admins
+        return null;
     }
 
     const handleSwitch = () => {
-        // Target role is the opposite of the *current mode* we are viewing
         const targetRole = isAdminView ? 'EMPLOYEE' : 'ADMIN';
         const targetUrl = isAdminView ? '/employee/dashboard' : '/admin/dashboard';
-
-        // Create updated user with target role
         const updatedUser = { ...user, role: targetRole };
-
-        // Persist to local storage so AuthContext picks it up on next load
-        localStorage.setItem('credence_user', JSON.stringify(updatedUser));
-
-        // Force reload to apply new context
+        localStorage.setItem('pulse_user', JSON.stringify(updatedUser));
         window.location.href = targetUrl;
     };
 
     return (
-        <div className="p-4 border-t border-slate-800 bg-slate-950">
-            <div className="bg-slate-900/50 rounded-xl p-3 border border-slate-800">
-                {/* Header: Current Status */}
-                <div className="flex items-center space-x-3 mb-3">
-                    <div className={`p-2 rounded-lg shrink-0 ${isAdminView
-                        ? 'bg-indigo-500/10 text-indigo-400'
-                        : 'bg-emerald-500/10 text-emerald-400'
-                        }`}>
-                        {isAdminView ? <ShieldCheck className="w-5 h-5" /> : <UserCircle className="w-5 h-5" />}
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-                            Current Mode
-                        </p>
-                        <h4 className="text-sm font-bold text-slate-200 truncate leading-tight">
-                            {isAdminView ? 'Admin Console' : 'Employee Portal'}
-                        </h4>
-                    </div>
-                </div>
-
-                {/* Switch Button */}
-                <button
-                    onClick={handleSwitch}
-                    className="w-full text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white py-2 px-3 rounded-lg flex items-center justify-center transition-all group border border-slate-700"
-                >
-                    <ArrowLeftRight className="w-3.5 h-3.5 mr-2 group-hover:rotate-180 transition-transform" />
-                    Switch to {isAdminView ? 'Employee View' : 'Admin Console'}
-                </button>
+        <div className="flex items-center justify-between p-2 rounded-2xl bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 mb-2">
+            <div className="flex items-center space-x-2 pl-1">
+                <div className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    isAdminView ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                )} />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    {isAdminView ? 'Admin Hub' : 'User Portal'}
+                </span>
             </div>
+
+            <button
+                onClick={handleSwitch}
+                className={cn(
+                    "relative w-10 h-5 rounded-full transition-all duration-500 group overflow-hidden",
+                    isAdminView ? "bg-blue-600/20 border border-blue-500/20" : "bg-emerald-600/20 border border-emerald-500/20"
+                )}
+            >
+                {/* Track Background on Hover */}
+                <div className={cn(
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+                    isAdminView ? "bg-blue-600" : "bg-emerald-600"
+                )} />
+
+                {/* Knob */}
+                <div className={cn(
+                    "absolute top-1 w-2.5 h-2.5 rounded-full transition-all duration-500 z-10 shadow-sm",
+                    isAdminView
+                        ? "left-1 bg-blue-500 group-hover:bg-white"
+                        : "left-6 bg-emerald-500 group-hover:bg-white"
+                )} />
+            </button>
         </div>
     );
 };
 
 export default RoleSwitcher;
+

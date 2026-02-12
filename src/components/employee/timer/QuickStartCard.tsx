@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 interface QuickStartCardProps {
@@ -7,6 +8,8 @@ interface QuickStartCardProps {
 }
 
 const QuickStartCard: React.FC<QuickStartCardProps> = ({ recents, onQuickStart }) => {
+    const navigate = useNavigate();
+
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
             <h3 className="font-semibold text-slate-900 mb-4 text-sm uppercase tracking-wide">Last Used</h3>
@@ -27,7 +30,10 @@ const QuickStartCard: React.FC<QuickStartCardProps> = ({ recents, onQuickStart }
                     </button>
                 ))}
             </div>
-            <button className="w-full mt-4 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors">
+            <button
+                onClick={() => navigate('/employee/projects')}
+                className="w-full mt-4 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            >
                 View All Projects
             </button>
         </div>

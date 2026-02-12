@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Clock, TrendingUp, Briefcase, DollarSign, PieChart } from 'lucide-react';
 import KPICard from '../../dashboard/KPICard';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
 
 interface ReportsKPIGridProps {
     reportType: string;
@@ -11,9 +11,9 @@ interface ReportsKPIGridProps {
 const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType, filters }) => {
 
     const stats = useMemo(() => {
-        const entries = mockBackend.getEntries();
-        const projects = mockBackend.getProjects();
-        // const users = mockBackend.getUsers(); // Not used currently
+        const entries = backendService.getEntries();
+        const projects = backendService.getProjects();
+        // const users = backendService.getUsers(); // Not used currently
 
         // Apply filters if needed (Basic Date/Status) - keeping simple for MVP
         // In a real app, we'd filter 'entries' based on 'filters.dateRange' etc.
@@ -146,10 +146,11 @@ const ReportsKPIGrid: React.FC<ReportsKPIGridProps> = ({ reportType, filters }) 
     };
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 transition-colors">
             {renderContent()}
         </div>
     );
 };
 
 export default ReportsKPIGrid;
+

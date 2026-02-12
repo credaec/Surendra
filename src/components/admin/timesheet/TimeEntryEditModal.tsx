@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, AlignLeft, Briefcase, Layers } from 'lucide-react';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
 import type { TimeEntry, Project, TaskCategory } from '../../../types/schema';
 
 interface TimeEntryEditModalProps {
@@ -20,8 +20,8 @@ const TimeEntryEditModal: React.FC<TimeEntryEditModalProps> = ({ isOpen, onClose
         if (isOpen) {
             setFormData(entry);
             // Fetch dependencies
-            setProjects(mockBackend.getProjects());
-            setCategories(mockBackend.getTaskCategories());
+            setProjects(backendService.getProjects());
+            setCategories(backendService.getTaskCategories());
         }
     }, [isOpen, entry]);
 
@@ -50,7 +50,7 @@ const TimeEntryEditModal: React.FC<TimeEntryEditModalProps> = ({ isOpen, onClose
 
         // Simulate network delay
         setTimeout(() => {
-            const updated = mockBackend.updateEntry(formData);
+            const updated = backendService.updateEntry(formData);
             if (updated) {
                 onSave(updated);
                 onClose();
@@ -204,3 +204,4 @@ const TimeEntryEditModal: React.FC<TimeEntryEditModalProps> = ({ isOpen, onClose
 };
 
 export default TimeEntryEditModal;
+

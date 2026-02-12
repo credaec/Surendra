@@ -8,7 +8,7 @@ import LiveTrackingTab from '../../components/admin/timesheet/LiveTrackingTab';
 import TimesheetDetailView from '../../components/admin/timesheet/TimesheetDetailView';
 
 import ManualEntryModal from '../../components/admin/ManualEntryModal';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 
 const AdminTimesheetsPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'weekly' | 'logs' | 'live'>('weekly');
@@ -30,16 +30,16 @@ const AdminTimesheetsPage: React.FC = () => {
 
     const handleRowApprove = (employeeId: string) => {
         if (confirm('Approve all pending entries for this employee?')) {
-            const entries = mockBackend.getEntries().filter(e => e.userId === employeeId && e.status === 'SUBMITTED');
-            entries.forEach(e => mockBackend.updateEntryStatus(e.id, 'APPROVED'));
+            const entries = backendService.getEntries().filter(e => e.userId === employeeId && e.status === 'SUBMITTED');
+            entries.forEach(e => backendService.updateEntryStatus(e.id, 'APPROVED'));
             setRefreshKey(prev => prev + 1);
         }
     };
 
     const handleRowReject = (employeeId: string) => {
         if (confirm('Reject pending entries for this employee?')) {
-            const entries = mockBackend.getEntries().filter(e => e.userId === employeeId && e.status === 'SUBMITTED');
-            entries.forEach(e => mockBackend.updateEntryStatus(e.id, 'REJECTED'));
+            const entries = backendService.getEntries().filter(e => e.userId === employeeId && e.status === 'SUBMITTED');
+            entries.forEach(e => backendService.updateEntryStatus(e.id, 'REJECTED'));
             setRefreshKey(prev => prev + 1);
         }
     };
@@ -55,7 +55,7 @@ const AdminTimesheetsPage: React.FC = () => {
     };
 
     const handleExport = () => {
-        const entries = mockBackend.getEntries();
+        const entries = backendService.getEntries();
         const csvContent = "data:text/csv;charset=utf-8,"
             + "ID,Date,User,Project,Category,Duration (m),Billable,Status\n"
             + entries.map(e => `${e.id},${e.date},${e.userId},${e.projectId},${e.categoryId},${e.durationMinutes},${e.isBillable},${e.status}`).join("\n");
@@ -69,11 +69,11 @@ const AdminTimesheetsPage: React.FC = () => {
     };
 
     const handleBulkApprove = () => {
-        const entries = mockBackend.getEntries();
+        const entries = backendService.getEntries();
         const pending = entries.filter(e => e.status === 'SUBMITTED');
         let count = 0;
         pending.forEach(e => {
-            mockBackend.updateEntryStatus(e.id, 'APPROVED');
+            backendService.updateEntryStatus(e.id, 'APPROVED');
             count++;
         });
         if (count > 0) {
@@ -119,7 +119,13 @@ const AdminTimesheetsPage: React.FC = () => {
                 onStatusChange={setFilterStatus}
             />
 
-            <TimesheetSummaryCards key={`cards-${refreshKey}`} />
+            <TimesheetSummaryCards
+                key={`cards-${refreshKey}`}
+                dateRange={dateRange}
+                filterEmployeeId={filterEmployeeId}
+                filterProjectId={filterProjectId}
+                filterClientId={filterClientId}
+            />
 
             {/* Tabs and Content */}
             {selectedEmployeeId ? (
@@ -129,24 +135,24 @@ const AdminTimesheetsPage: React.FC = () => {
                     onBack={handleBackToSummary}
                 />
             ) : (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm min-h-[400px]">
-                    <div className="border-b border-slate-200 px-6 py-4">
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm min-h-[400px] transition-all">
+                    <div className="border-b border-slate-200 dark:border-slate-800 px-6 py-4">
                         <div className="flex gap-6">
                             <button
                                 onClick={() => setActiveTab('weekly')}
-                                className={`text-sm font-medium pb-1 transition-colors ${activeTab === 'weekly' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`text-sm font-medium pb-1 transition-colors ${activeTab === 'weekly' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             >
                                 Timesheets
                             </button>
                             <button
                                 onClick={() => setActiveTab('logs')}
-                                className={`text-sm font-medium pb-1 transition-colors ${activeTab === 'logs' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`text-sm font-medium pb-1 transition-colors ${activeTab === 'logs' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             >
                                 Time Logs
                             </button>
                             <button
                                 onClick={() => setActiveTab('live')}
-                                className={`text-sm font-medium pb-1 transition-colors ${activeTab === 'live' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`text-sm font-medium pb-1 transition-colors ${activeTab === 'live' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             >
                                 Live Tracking
                             </button>
@@ -164,6 +170,7 @@ const AdminTimesheetsPage: React.FC = () => {
                                 filterProjectId={filterProjectId}
                                 filterClientId={filterClientId}
                                 filterStatus={filterStatus}
+                                dateRange={dateRange}
                             />
                         )}
                         {activeTab === 'logs' && (
@@ -173,6 +180,7 @@ const AdminTimesheetsPage: React.FC = () => {
                                 filterProjectId={filterProjectId}
                                 filterClientId={filterClientId}
                                 filterStatus={filterStatus}
+                                dateRange={dateRange}
                             />
                         )}
                         {activeTab === 'live' && <LiveTrackingTab key={`live-${refreshKey}`} />}
@@ -191,3 +199,4 @@ const AdminTimesheetsPage: React.FC = () => {
 };
 
 export default AdminTimesheetsPage;
+

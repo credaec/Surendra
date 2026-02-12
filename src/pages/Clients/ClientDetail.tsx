@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Building2, Mail, Phone, Globe, MoreHorizontal, FileText, Briefcase, Receipt, Users, FolderOpen, Save, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import type { Client, ClientContact } from '../../types/schema';
 
 const ClientDetail: React.FC = () => {
@@ -26,6 +26,9 @@ const ClientDetail: React.FC = () => {
     });
 
     // Contact Modal State
+    const [documents, setDocuments] = useState<any[]>([]);
+
+    // Contact Modal State
     const [showContactModal, setShowContactModal] = useState(false);
     const [newContact, setNewContact] = useState<Partial<ClientContact>>({
         name: '',
@@ -34,20 +37,24 @@ const ClientDetail: React.FC = () => {
         phone: ''
     });
 
-    const refreshData = () => {
+    const refreshData = async () => {
         if (!id) return;
-        const clients = mockBackend.getClients();
+
+        // Clients are cached sync for now, but usually should be async. 
+        // Assuming getClients() is sync as per backendService implementation.
+        const clients = backendService.getClients();
         const found = clients.find(c => c.id === id);
         if (found) {
             setClient(found);
             setFormData(found);
 
+            // Fetch specific async data
+            const docs = await backendService.getClientDocuments(found.id);
+            setDocuments(docs);
+
             // Calculate KPIs
-            const projects = mockBackend.getProjects().filter(p => p.clientId === id);
-            const invoices = mockBackend.getInvoices().filter(i => i.clientId === id);
-            // Approximate hours from projects (mock calculation as time entries are not directly linked to client in this simplified view, usually linked to project)
-            // Ideally we iterate projects -> entries.
-            // For now, let's just count projects and invoices real data.
+            const projects = backendService.getProjects().filter(p => p.clientId === id);
+            const invoices = backendService.getInvoices().filter(i => i.clientId === id);
 
             const totalBillable = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
             const totalPaid = invoices.filter(i => i.status === 'PAID').reduce((sum, inv) => sum + inv.totalAmount, 0);
@@ -55,7 +62,7 @@ const ClientDetail: React.FC = () => {
             const pendingCount = invoices.filter(i => i.status === 'SENT' || i.status === 'PARTIAL' || i.status === 'OVERDUE').length;
 
             const hoursLogged = projects.reduce((total, project) => {
-                const projectEntries = mockBackend.getEntries().filter(e => e.projectId === project.id);
+                const projectEntries = backendService.getEntries().filter(e => e.projectId === project.id);
                 const projectHours = projectEntries.reduce((sum, e) => sum + (e.durationMinutes / 60), 0);
                 return total + projectHours;
             }, 0);
@@ -76,17 +83,17 @@ const ClientDetail: React.FC = () => {
         refreshData();
     }, [id]);
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!client) return;
         if (confirm(`Are you sure you want to delete ${client.name}? This action cannot be undone.`)) {
-            mockBackend.deleteClient(client.id);
+            await backendService.deleteClient(client.id);
             navigate('/admin/clients');
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (client && client.id) {
-            const updated = mockBackend.updateClient(client.id, formData);
+            const updated = await backendService.updateClient({ ...client, ...formData } as Client);
             if (updated) {
                 setClient(updated);
                 setIsEditing(false);
@@ -94,9 +101,9 @@ const ClientDetail: React.FC = () => {
         }
     };
 
-    const handleAddContact = () => {
+    const handleAddContact = async () => {
         if (!client || !newContact.name || !newContact.email) return;
-        mockBackend.addClientContact(client.id, {
+        await backendService.addClientContact(client.id, {
             name: newContact.name,
             role: newContact.role || 'Contact',
             email: newContact.email,
@@ -108,11 +115,89 @@ const ClientDetail: React.FC = () => {
         refreshData();
     };
 
-    const handleDeleteContact = (contactId: string) => {
+    const handleDeleteContact = async (contactId: string) => {
         if (!client) return;
         if (confirm("Remove this contact?")) {
-            mockBackend.deleteClientContact(client.id, contactId);
+            await backendService.deleteClientContact(client.id, contactId);
             refreshData();
+        }
+    };
+
+    const handleCreateInvoice = () => {
+        if (client) {
+            navigate(`/admin/billing/invoices/create?clientId=${client.id}`);
+        }
+    };
+
+    const handleDownloadPDF = (invoice: any) => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Invoice ${invoice.invoiceNo}</title>
+                        <style>
+                            body { font-family: sans-serif; padding: 40px; }
+                            .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+                            .title { font-size: 24px; font-weight: bold; }
+                            .meta { text-align: right; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                            th { background-color: #f8f9fa; }
+                            .total { text-align: right; margin-top: 20px; font-size: 18px; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <div>
+                                <div class="title">INVOICE</div>
+                                <p>Credence Tracking</p>
+                            </div>
+                            <div class="meta">
+                                <p>Invoice #: ${invoice.invoiceNo}</p>
+                                <p>Date: ${invoice.date}</p>
+                                <p>Due: ${invoice.dueDate}</p>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Bill To:</strong> ${client?.name || invoice.clientName}</p>
+                        <p><strong>Project:</strong> ${invoice.projectName || 'N/A'}</p>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${invoice.items ? invoice.items.map((item: any) => `
+                                    <tr>
+                                        <td>${item.description || 'Service'}</td>
+                                        <td>$${(item.amount || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('') : `
+                                    <tr>
+                                        <td>Professional Services</td>
+                                        <td>$${invoice.totalAmount.toFixed(2)}</td>
+                                    </tr>
+                                `}
+                            </tbody>
+                        </table>
+                        
+                        <div class="total">
+                            Total: $${invoice.totalAmount.toFixed(2)}
+                        </div>
+                        
+                        <script>
+                            window.onload = function() { window.print(); }
+                        </script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+        } else {
+            alert('Please allow popups to download PDF');
         }
     };
 
@@ -137,26 +222,26 @@ const ClientDetail: React.FC = () => {
                     {isEditing ? (
                         <input
                             type="text"
-                            className="text-2xl font-bold text-slate-900 border-b border-slate-300 focus:outline-none focus:border-blue-500 bg-transparent w-full"
+                            className="text-2xl font-bold text-slate-900 dark:text-white border-b border-slate-300 dark:border-slate-700 focus:outline-none focus:border-blue-500 bg-transparent w-full"
                             value={formData.name || ''}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         />
                     ) : (
-                        <h1 className="text-2xl font-bold text-slate-900">{client.name}</h1>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{client.name}</h1>
                     )}
 
-                    <div className="flex items-center text-sm text-slate-500 space-x-4 mt-1">
+                    <div className="flex items-center text-sm text-slate-500 dark:text-slate-400 space-x-4 mt-1">
                         <span className="flex items-center">
                             <Building2 className="h-3 w-3 mr-1" />
                             {isEditing ? (
                                 <input
-                                    className="border-b border-slate-300 focus:outline-none focus:border-blue-500 bg-transparent"
+                                    className="border-b border-slate-300 dark:border-slate-700 focus:outline-none focus:border-blue-500 bg-transparent text-slate-900 dark:text-white"
                                     value={formData.companyName || ''}
                                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                                 />
                             ) : client.companyName}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-100">{client.status}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium border border-emerald-100 dark:border-emerald-800">{client.status}</span>
                     </div>
                 </div>
                 <div className="flex space-x-2">
@@ -239,52 +324,52 @@ const ClientDetail: React.FC = () => {
                     <div className="lg:col-span-2 space-y-6">
                         {/* KPI Row - Client Dashboard */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Total Projects</div>
-                                <div className="text-2xl font-bold text-slate-900">{stats.totalProjects}</div>
+                            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold mb-1">Total Projects</div>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalProjects}</div>
                             </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Total Billable</div>
-                                <div className="text-2xl font-bold text-slate-900">${stats.totalBillable.toLocaleString()}</div>
+                            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold mb-1">Total Billable</div>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-white">${stats.totalBillable.toLocaleString()}</div>
                             </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Hours Logged</div>
-                                <div className="text-2xl font-bold text-slate-900">{stats.hoursLogged}h</div>
+                            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold mb-1">Hours Logged</div>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.hoursLogged}h</div>
                             </div>
-                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Pending Invoices</div>
-                                <div className="text-2xl font-bold text-amber-600">{stats.pendingInvoices}</div>
+                            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold mb-1">Pending Invoices</div>
+                                <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">{stats.pendingInvoices}</div>
                             </div>
                         </div>
 
                         {/* Client Notes / Address */}
-                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-                            <h3 className="text-lg font-semibold mb-4 text-slate-800">Contact & Address</h3>
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+                            <h3 className="text-lg font-semibold mb-4 text-slate-800 dark:text-white">Contact & Address</h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
+                                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
                                     {isEditing ? (
                                         <input
-                                            className="w-full border border-slate-200 rounded-md p-2 text-sm"
+                                            className="w-full border border-slate-200 dark:border-slate-600 bg-transparent dark:text-white rounded-md p-2 text-sm"
                                             value={formData.email || ''}
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         />
                                     ) : (
-                                        <div className="text-sm text-slate-900 flex items-center">
+                                        <div className="text-sm text-slate-900 dark:text-slate-200 flex items-center">
                                             <Mail className="h-4 w-4 mr-2 text-slate-400" /> {client.email}
                                         </div>
                                     )}
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-500 mb-1">Phone</label>
+                                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Phone</label>
                                     {isEditing ? (
                                         <input
-                                            className="w-full border border-slate-200 rounded-md p-2 text-sm"
+                                            className="w-full border border-slate-200 dark:border-slate-600 bg-transparent dark:text-white rounded-md p-2 text-sm"
                                             value={formData.phone || ''}
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                         />
                                     ) : (
-                                        <div className="text-sm text-slate-900 flex items-center">
+                                        <div className="text-sm text-slate-900 dark:text-slate-200 flex items-center">
                                             <Phone className="h-4 w-4 mr-2 text-slate-400" /> {client.phone || 'N/A'}
                                         </div>
                                     )}
@@ -295,19 +380,19 @@ const ClientDetail: React.FC = () => {
 
                     {/* Right Column: Key Details */}
                     <div className="space-y-6">
-                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4">Client Details</h3>
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide mb-4">Client Details</h3>
                             <div className="space-y-5">
                                 {/* Billing Type - Only Currency in schema */}
                                 <div className="flex items-start">
-                                    <div className="mt-0.5 mr-3 p-1.5 rounded-md bg-emerald-50 text-emerald-600">
+                                    <div className="mt-0.5 mr-3 p-1.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400">
                                         <span className="text-xs font-bold">$</span>
                                     </div>
                                     <div>
-                                        <span className="block text-xs font-medium text-slate-500 uppercase">Currency</span>
+                                        <span className="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Currency</span>
                                         {isEditing ? (
                                             <select
-                                                className="border border-slate-200 rounded text-sm p-1"
+                                                className="border border-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white rounded text-sm p-1"
                                                 value={formData.currency || 'USD'}
                                                 onChange={(e) => setFormData({ ...formData, currency: e.target.value as any })}
                                             >
@@ -315,18 +400,18 @@ const ClientDetail: React.FC = () => {
                                                 <option value="INR">INR</option>
                                             </select>
                                         ) : (
-                                            <span className="text-sm font-medium text-slate-900">{client.currency}</span>
+                                            <span className="text-sm font-medium text-slate-900 dark:text-white">{client.currency}</span>
                                         )}
                                     </div>
                                 </div>
 
-                                <hr className="border-slate-100 my-4" />
+                                <hr className="border-slate-100 dark:border-slate-700 my-4" />
 
                                 <div className="flex items-start">
                                     <Globe className="h-4 w-4 text-slate-400 mt-0.5 mr-3" />
                                     <div>
-                                        <span className="block text-xs text-slate-500">Status</span>
-                                        <span className="text-sm text-slate-900">{client.status}</span>
+                                        <span className="block text-xs text-slate-500 dark:text-slate-400">Status</span>
+                                        <span className="text-sm text-slate-900 dark:text-white">{client.status}</span>
                                     </div>
                                 </div>
                             </div>
@@ -350,7 +435,7 @@ const ClientDetail: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                                {mockBackend.getProjects().filter(p => p.clientId === client.id).map((project) => (
+                                {backendService.getProjects().filter(p => p.clientId === client.id).map((project) => (
                                     <tr key={project.id} className="hover:bg-slate-50 transition-colors group">
                                         <td className="py-3 px-4">
                                             <div className="font-medium text-slate-900">{project.name}</div>
@@ -389,7 +474,7 @@ const ClientDetail: React.FC = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {mockBackend.getProjects().filter(p => p.clientId === client.id).length === 0 && (
+                                {backendService.getProjects().filter(p => p.clientId === client.id).length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="py-12 text-center text-slate-400">
                                             <div className="flex flex-col items-center">
@@ -475,8 +560,8 @@ const ClientDetail: React.FC = () => {
                     {/* Invoices List */}
                     <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                            <h3 className="font-semibold text-slate-900">Recent Invoices</h3>
-                            <button className="text-sm text-blue-600 hover:underline font-medium">Create Invoice</button>
+                            <h3 className="font-semibold text-slate-900 dark:text-white">Recent Invoices</h3>
+                            <button onClick={handleCreateInvoice} className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium">Create Invoice</button>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -490,8 +575,8 @@ const ClientDetail: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {mockBackend.getInvoices().filter(inv => inv.clientId === client.id).length > 0 ? (
-                                        mockBackend.getInvoices().filter(inv => inv.clientId === client.id).map(invoice => (
+                                    {backendService.getInvoices().filter(inv => inv.clientId === client.id).length > 0 ? (
+                                        backendService.getInvoices().filter(inv => inv.clientId === client.id).map(invoice => (
                                             <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="py-3 px-6 font-medium text-slate-900">{invoice.invoiceNo}</td>
                                                 <td className="py-3 px-6 text-sm text-slate-500">{invoice.date}</td>
@@ -507,7 +592,7 @@ const ClientDetail: React.FC = () => {
                                                     </span>
                                                 </td>
                                                 <td className="py-3 px-6 text-right">
-                                                    <button className="text-slate-400 hover:text-blue-600">Download</button>
+                                                    <button onClick={() => handleDownloadPDF(invoice)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Download</button>
                                                 </td>
                                             </tr>
                                         ))
@@ -526,16 +611,16 @@ const ClientDetail: React.FC = () => {
             {activeTab === 'documents' && (
                 <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {mockBackend.getClientDocuments(client.id).map((doc) => (
+                        {documents.map((doc) => (
                             <div key={doc.id} className="group relative border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all bg-white hover:border-blue-200">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                                         <FileText className="h-6 w-6" />
                                     </div>
                                     <button
-                                        onClick={() => {
+                                        onClick={async () => {
                                             if (confirm('Delete this document?')) {
-                                                mockBackend.deleteClientDocument(doc.id);
+                                                await backendService.deleteClientDocument(doc.id);
                                                 refreshData(); // Triggers re-render
                                             }
                                         }}
@@ -549,10 +634,10 @@ const ClientDetail: React.FC = () => {
                             </div>
                         ))}
                         <button
-                            onClick={() => {
+                            onClick={async () => {
                                 const name = prompt("Enter document name (Mock Upload):", "New_Contract.pdf");
                                 if (name) {
-                                    mockBackend.addClientDocument({
+                                    await backendService.addClientDocument({
                                         clientId: client.id,
                                         name: name,
                                         size: '1.5 MB',
@@ -579,13 +664,13 @@ const ClientDetail: React.FC = () => {
             {/* Contact Modal */}
             {
                 showContactModal && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200 border border-slate-200 dark:border-slate-800">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold text-slate-900">Add New Contact</h2>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Add New Contact</h2>
                                 <button
                                     onClick={() => setShowContactModal(false)}
-                                    className="text-slate-400 hover:text-slate-600 rounded-full p-1 hover:bg-slate-100 transition-colors"
+                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-full p-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -593,12 +678,12 @@ const ClientDetail: React.FC = () => {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                         Name <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                         placeholder="e.g. Jane Doe"
                                         value={newContact.name}
                                         onChange={e => setNewContact({ ...newContact, name: e.target.value })}
@@ -607,12 +692,12 @@ const ClientDetail: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                         Role
                                     </label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                         placeholder="e.g. Project Manager"
                                         value={newContact.role}
                                         onChange={e => setNewContact({ ...newContact, role: e.target.value })}
@@ -620,12 +705,12 @@ const ClientDetail: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                         Email <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="email"
-                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                         placeholder="jane@example.com"
                                         value={newContact.email}
                                         onChange={e => setNewContact({ ...newContact, email: e.target.value })}
@@ -633,12 +718,12 @@ const ClientDetail: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                                         Phone
                                     </label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                         placeholder="+1 (555) 000-0000"
                                         value={newContact.phone}
                                         onChange={e => setNewContact({ ...newContact, phone: e.target.value })}
@@ -649,13 +734,13 @@ const ClientDetail: React.FC = () => {
                             <div className="mt-8 flex justify-end space-x-3">
                                 <button
                                     onClick={() => setShowContactModal(false)}
-                                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                                    className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleAddContact}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm"
+                                    className="px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white dark:text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-700 shadow-sm transition-colors"
                                 >
                                     Add Contact
                                 </button>
@@ -669,3 +754,4 @@ const ClientDetail: React.FC = () => {
 };
 
 export default ClientDetail;
+

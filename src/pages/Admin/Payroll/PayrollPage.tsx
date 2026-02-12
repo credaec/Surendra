@@ -8,8 +8,8 @@ import CostBreakdownTab from '../../../components/admin/payroll/CostBreakdownTab
 import ProjectCostingTab from '../../../components/admin/payroll/ProjectCostingTab';
 import PayrollExceptionsTab from '../../../components/admin/payroll/PayrollExceptionsTab';
 import PayrollSlipModal from '../../../components/admin/payroll/PayrollSlipModal';
-import { mockBackend, type PayrollRun, type PayrollRecord } from '../../../services/mockBackend';
-import { Clock, Users, Briefcase, AlertTriangle } from 'lucide-react';
+import { backendService, type PayrollRun, type PayrollRecord } from '../../../services/backendService';
+import { Clock, Users, Briefcase, AlertTriangle, Layers } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 import { useToast } from '../../../context/ToastContext';
@@ -54,7 +54,7 @@ const PayrollPage: React.FC = () => {
         showToast(`Record status marked as ${status}`, 'success');
     };
 
-    const handleDownloadSlip = (id: string) => {
+    const handleDownloadSlip = (_id: string) => {
         showToast('Downloading payroll slip...', 'info');
         setTimeout(() => {
             showToast('Download complete', 'success');
@@ -73,37 +73,89 @@ const PayrollPage: React.FC = () => {
     });
 
     useEffect(() => {
-        // Load initial data for the period
-        // In real app, we would check if run exists for filters.period, else maybe just show draft or empty
-        const runs = mockBackend.getPayrollRuns();
-        const run = runs.find(r => r.period === filters.period);
+        const loadData = async () => {
+            // Load initial data for the period
+            const runs = backendService.getPayrollRuns();
+            const run = runs.find(r => r.period === filters.period);
 
-        if (run) {
-            setCurrentRun(run);
-            const recs = mockBackend.getPayrollRecords(run.id);
-            setRecords(recs);
-        } else {
-            // Mock: Auto-calculate draft if not found? Or just null
-            // For demo, let's trigger a calculation if missing
-            const newRun = mockBackend.calculatePayroll(filters.period, {});
-            setCurrentRun(newRun);
-            // We need to fetch records again effectively (mock logic simplification)
-            setRecords([]);
-            // In a real scenario, calculatePayroll would persis to DB and we'd fetch. 
-            // Here we just set records manually for the demo if it was a fresh calc
-            // But let's stick to the mockBackend flow
-        }
+            if (run) {
+                setCurrentRun(run);
+                // Try to get records from cache first
+                let recs = backendService.getPayrollRecords(run.id);
+
+                // Auto-heal: If run exists but has no records OR has stale data, regenerate
+                // Also check if records effectively empty (all hours 0) which might indicate failed previous calc
+                const isEmpty = recs.length === 0 || (recs.every(r => r.totalHours === 0) && recs.length > 0);
+
+                if (isEmpty) {
+                    console.log('Regenerating stale/empty payroll run...');
+                    try {
+                        const newRun = await backendService.calculatePayroll(filters.period, {});
+                        setCurrentRun(newRun);
+                        const newRecs = await backendService.fetchPayrollRecords(newRun.id);
+                        setRecords(newRecs);
+                    } catch (e) {
+                        console.error('Auto-heal failed', e);
+                    }
+                } else {
+                    setRecords(recs);
+                }
+            } else {
+                // New Run
+                try {
+                    const newRun = await backendService.calculatePayroll(filters.period, {});
+                    setCurrentRun(newRun);
+                    const newRecs = await backendService.fetchPayrollRecords(newRun.id);
+                    setRecords(newRecs);
+                } catch (e) {
+                    console.error('Initial generation failed', e);
+                    showToast('Failed to load payroll data', 'error');
+                }
+            }
+        };
+        loadData();
     }, [filters.period]);
 
-    const handleGenerate = () => {
-        const newRun = mockBackend.calculatePayroll(filters.period, {});
-        setCurrentRun(newRun);
-        showToast(`Payroll successfully generated for ${filters.period}`, 'success');
+    // KPI Calculations
+    const calculateKPIs = () => {
+        if (!records.length) return {
+            billable: 0,
+            nonBillable: 0,
+            projectCost: 0,
+            pending: 0
+        };
+
+        const billable = records.reduce((acc, r) => acc + r.billableHours, 0);
+        const nonBillable = records.reduce((acc, r) => acc + r.nonBillableHours, 0);
+        const projectCost = records.reduce((acc, r) => acc + r.totalPayable, 0);
+
+        // Calculate Pending from all SUBMITTED entries
+        const allEntries = backendService.getEntries();
+        const pendingEntries = allEntries.filter(e => e.status === 'SUBMITTED');
+        const pending = Math.round(pendingEntries.reduce((acc, e) => acc + e.durationMinutes, 0) / 60);
+
+        return { billable, nonBillable, projectCost, pending };
+    };
+
+    const kpis = calculateKPIs();
+
+    const handleGenerate = async () => {
+        try {
+            showToast('Generating payroll...', 'info');
+            const newRun = await backendService.calculatePayroll(filters.period, {});
+            setCurrentRun(newRun);
+            const newRecs = await backendService.fetchPayrollRecords(newRun.id);
+            setRecords(newRecs);
+            showToast(`Payroll successfully generated for ${filters.period}`, 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to generate payroll', 'error');
+        }
     };
 
     const handleLock = () => {
         if (currentRun) {
-            mockBackend.lockPayroll(currentRun.id);
+            backendService.lockPayroll(currentRun.id);
             setCurrentRun({ ...currentRun, status: 'LOCKED', isLocked: true });
             showToast(`Payroll for ${filters.period} has been LOCKED.`, 'info');
         }
@@ -112,11 +164,11 @@ const PayrollPage: React.FC = () => {
     const handleRefresh = () => {
         showToast('Refreshing payroll data...', 'info');
         setTimeout(() => {
-            const runs = mockBackend.getPayrollRuns();
+            const runs = backendService.getPayrollRuns();
             const run = runs.find(r => r.period === filters.period);
             if (run) {
                 setCurrentRun(run);
-                const recs = mockBackend.getPayrollRecords(run.id);
+                const recs = backendService.getPayrollRecords(run.id);
                 setRecords(recs);
             }
             showToast('Data refreshed successfully.', 'success');
@@ -158,13 +210,13 @@ const PayrollPage: React.FC = () => {
 
     const tabs = [
         { id: 'SUMMARY', label: 'Payroll Summary', icon: Users },
-        { id: 'COST_BREAKDOWN', label: 'Employee Cost Breakdown', icon: Clock },
+        { id: 'COST_BREAKDOWN', label: 'Employee Cost Breakdown', icon: Layers },
         { id: 'PROJECT_COST', label: 'Project Costing', icon: Briefcase },
         { id: 'EXCEPTIONS', label: 'Exceptions / Issues', icon: AlertTriangle },
     ] as const;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 pb-10">
             <PayrollHeader
                 onGenerate={handleGenerate}
                 onLock={handleLock}
@@ -177,10 +229,10 @@ const PayrollPage: React.FC = () => {
             <PayrollKPIs
                 data={currentRun}
                 approvedHours={currentRun?.totalApprovedHours || 0}
-                billableHours={200} // Mock
-                nonBillableHours={100} // Mock
-                projectCost={35000} // Mock
-                pendingHours={15} // Mock
+                billableHours={kpis.billable}
+                nonBillableHours={kpis.nonBillable}
+                projectCost={kpis.projectCost}
+                pendingHours={kpis.pending}
             />
 
             <PayrollFilters
@@ -189,8 +241,8 @@ const PayrollPage: React.FC = () => {
             />
 
             {/* Tabs Navigation */}
-            <div className="border-b border-slate-200 mb-4">
-                <nav className="-mb-px flex space-x-8 overflow-x-auto">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-2 shadow-sm mb-8 flex justify-center md:justify-start overflow-x-auto">
+                <nav className="flex space-x-2">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.id;
@@ -199,13 +251,13 @@ const PayrollPage: React.FC = () => {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={cn(
-                                    "whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm flex items-center transition-colors",
+                                    "whitespace-nowrap py-3 px-6 rounded-3xl text-sm font-black uppercase tracking-widest transition-all duration-300 flex items-center group",
                                     isActive
-                                        ? "border-blue-600 text-blue-600"
-                                        : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl shadow-slate-900/20 dark:shadow-white/10 scale-105"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
                                 )}
                             >
-                                <Icon className={cn("h-4 w-4 mr-2", isActive ? "text-blue-600" : "text-slate-400")} />
+                                <Icon className={cn("h-4 w-4 mr-2 transition-colors", isActive ? "text-white dark:text-slate-900" : "text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white")} />
                                 {tab.label}
                             </button>
                         );
@@ -214,41 +266,43 @@ const PayrollPage: React.FC = () => {
             </div>
 
             {/* Tab Content */}
-            {activeTab === 'SUMMARY' && (
-                <PayrollSummaryTab
-                    data={records}
-                    selectedIds={selectedIds}
-                    onSelectionChange={setSelectedIds}
-                    onViewQuery={(id) => {
-                        const rec = records.find(r => r.id === id);
-                        if (rec) handleEditRecord(rec);
-                    }}
-                    onEdit={handleEditRecord}
-                    onStatusChange={handleStatusChange}
-                    onDownloadSlip={handleDownloadSlip}
-                />
-            )}
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {activeTab === 'SUMMARY' && (
+                    <PayrollSummaryTab
+                        data={records}
+                        selectedIds={selectedIds}
+                        onSelectionChange={setSelectedIds}
+                        onViewQuery={(id) => {
+                            const rec = records.find(r => r.id === id);
+                            if (rec) handleEditRecord(rec);
+                        }}
+                        onEdit={handleEditRecord}
+                        onStatusChange={handleStatusChange}
+                        onDownloadSlip={handleDownloadSlip}
+                    />
+                )}
 
-            {activeTab === 'COST_BREAKDOWN' && (
-                <CostBreakdownTab records={records} />
-            )}
+                {activeTab === 'COST_BREAKDOWN' && (
+                    <CostBreakdownTab records={records} />
+                )}
 
-            {activeTab === 'PROJECT_COST' && (
-                <ProjectCostingTab />
-            )}
+                {activeTab === 'PROJECT_COST' && (
+                    <ProjectCostingTab />
+                )}
 
-            {activeTab === 'EXCEPTIONS' && (
-                <PayrollExceptionsTab
-                    records={records}
-                    onFix={(id) => {
-                        const rec = records.find(r => r.id === id);
-                        if (rec) {
-                            handleEditRecord(rec);
-                            showToast('Opening record for correction', 'info');
-                        }
-                    }}
-                />
-            )}
+                {activeTab === 'EXCEPTIONS' && (
+                    <PayrollExceptionsTab
+                        records={records}
+                        onFix={(id) => {
+                            const rec = records.find(r => r.id === id);
+                            if (rec) {
+                                handleEditRecord(rec);
+                                showToast('Opening record for correction', 'info');
+                            }
+                        }}
+                    />
+                )}
+            </div>
 
             <PayrollSlipModal
                 isOpen={isModalOpen}

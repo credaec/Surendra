@@ -1,3 +1,5 @@
+import { api } from './api';
+
 export type AuditModule =
     | 'TIMESHEET'
     | 'PROJECTS'
@@ -25,8 +27,8 @@ export type AuditSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
 
 export interface AuditChange {
     field: string;
-    oldValue: string | number | boolean | null;
-    newValue: string | number | boolean | null;
+    oldValue: any;
+    newValue: any;
 }
 
 export interface AuditLog {
@@ -35,26 +37,19 @@ export interface AuditLog {
     module: AuditModule;
     action: AuditAction;
     severity: AuditSeverity;
-    performedBy: {
-        id: string;
-        name: string;
-        role: string;
-        email: string;
-    };
-    target: {
-        type: string;
-        id: string;
-        name: string;
-    };
+    userId: string;
+    userName: string;
+    userRole: string;
+    userEmail: string;
+    targetType: string;
+    targetId: string;
+    targetName: string;
     summary: string;
     details?: string;
-    changes?: AuditChange[];
-    metadata: {
-        ipAddress: string;
-        device: string;
-        browser: string;
-        location?: string;
-    };
+    changes?: string; // JSON string from API
+    ipAddress?: string;
+    device?: string;
+    browser?: string;
 }
 
 export interface AuditStats {
@@ -65,59 +60,19 @@ export interface AuditStats {
     settingsChanges: number;
 }
 
-// --- Mock Data Generator ---
-
-const STORAGE_KEY = 'credence_audit_logs_v1';
-
-// Initial seed if empty
-const INITIAL_LOGS: AuditLog[] = [
-    {
-        id: 'LOG-INIT',
-        timestamp: new Date().toISOString(),
-        module: 'SYSTEM',
-        action: 'CREATE',
-        severity: 'INFO',
-        performedBy: { id: 'SYS', name: 'System', role: 'System', email: 'system@credence.com' },
-        target: { type: 'System', id: 'INIT', name: 'Audit Log' },
-        summary: 'Audit logging system initialized',
-        metadata: { ipAddress: '127.0.0.1', device: 'Server', browser: 'N/A' }
-    }
-];
-
 export const auditService = {
-    getLogs: (filters?: any): AuditLog[] => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        let logs: AuditLog[] = stored ? JSON.parse(stored) : INITIAL_LOGS;
-
-        if (filters) {
-            // Basic mock filtering
-            if (filters.module) logs = logs.filter(l => l.module === filters.module);
-            if (filters.action) logs = logs.filter(l => l.action === filters.action);
-            if (filters.user) {
-                const q = filters.user.toLowerCase();
-                logs = logs.filter(l => l.performedBy.name.toLowerCase().includes(q) || l.performedBy.email.toLowerCase().includes(q));
-            }
-            if (filters.search) {
-                const q = filters.search.toLowerCase();
-                logs = logs.filter(l =>
-                    l.summary.toLowerCase().includes(q) ||
-                    l.target.name.toLowerCase().includes(q) ||
-                    l.id.toLowerCase().includes(q)
-                );
-            }
-            if (filters.dateRange === 'LAST_7_DAYS') {
-                const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                logs = logs.filter(l => new Date(l.timestamp) >= cutoff);
-            }
-            // ... other date ranges
+    getLogs: async (filters?: any): Promise<AuditLog[]> => {
+        const query = filters ? new URLSearchParams(filters).toString() : '';
+        try {
+            return await api.get(`/audit${query ? '?' + query : ''}`);
+        } catch (error) {
+            console.error('Failed to fetch audit logs:', error);
+            return [];
         }
-
-        // Sort DESC
-        return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     },
 
-    getStats: (): AuditStats => {
-        const logs = auditService.getLogs();
+    getStats: async (): Promise<AuditStats> => {
+        const logs = await auditService.getLogs();
         return {
             totalActivities: logs.length,
             criticalActions: logs.filter(l => l.severity === 'CRITICAL').length,
@@ -127,11 +82,7 @@ export const auditService = {
         };
     },
 
-    getLogDetails: (id: string): AuditLog | undefined => {
-        return auditService.getLogs().find(l => l.id === id);
-    },
-
-    logAction: (
+    logAction: async (
         module: AuditModule,
         action: AuditAction,
         severity: AuditSeverity,
@@ -141,36 +92,43 @@ export const auditService = {
         changes?: AuditChange[],
         user?: { id: string; name: string; role: string; email: string }
     ) => {
-        const logs = auditService.getLogs();
-
-        // Default to Admin if no user provided (simulating current session user)
         const performedBy = user || {
             id: 'ADM001',
-            name: 'Dhiraj Vasu',
+            name: 'Production Admin',
             role: 'Super Admin',
-            email: 'dhiraj@credence.com'
+            email: 'admin@pulse.com'
         };
 
-        const newLog: AuditLog = {
-            id: `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            timestamp: new Date().toISOString(),
+        const payload = {
             module,
             action,
             severity,
-            performedBy,
-            target,
             summary,
+            userId: performedBy.id,
+            userName: performedBy.name,
+            userRole: performedBy.role,
+            userEmail: performedBy.email,
+            targetType: target.type,
+            targetId: target.id,
+            targetName: target.name,
             details,
-            changes,
-            metadata: {
-                ipAddress: '192.168.1.10', // Mock
-                device: 'Browser',
-                browser: 'Chrome 120.0'
-            }
+            changes: changes ? JSON.stringify(changes) : null,
+            ipAddress: 'Production Instance', // In real app, server-side detection
+            device: 'Web Client',
+            browser: 'Chrome/Edge'
         };
 
-        logs.unshift(newLog);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-        return newLog;
+        try {
+            return await api.post('/audit', payload);
+        } catch (error) {
+            console.error('Background audit logging failed:', error);
+        }
+    },
+
+    getLogDetails: (id: string): AuditLog | undefined => {
+        // Since we don't have a separate API for details yet, we'll return undefined
+        // The component will handle this by not showing the drawer or showing partial data
+        // For now, in a real app, this would query the API or cache
+        return undefined;
     }
 };

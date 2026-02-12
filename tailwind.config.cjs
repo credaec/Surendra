@@ -11,6 +11,7 @@ module.exports = {
                 background: 'rgb(var(--background) / <alpha-value>)',
                 foreground: 'rgb(var(--foreground) / <alpha-value>)',
                 surface: 'rgb(var(--surface) / <alpha-value>)',
+                elevated: 'rgb(var(--elevated) / <alpha-value>)',
                 border: 'rgb(var(--border) / <alpha-value>)',
 
                 primary: {
@@ -39,5 +40,7 @@ module.exports = {
             }
         },
     },
-    plugins: [],
+    plugins: [
+        require("tailwindcss-animate"),
+    ],
 }

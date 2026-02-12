@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle, Download, Printer, Loader2 } from 'lucide-react';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
 import { useToast } from '../../../context/ToastContext';
 
 interface TimesheetDetailViewProps {
@@ -14,8 +14,8 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
     const [isApproving, setIsApproving] = useState(false);
 
     // Fetch Real Data
-    const employee = mockBackend.getUsers().find(u => u.id === employeeId);
-    const allEntries = mockBackend.getEntries().filter(e => e.userId === employeeId);
+    const employee = backendService.getUsers().find(u => u.id === employeeId);
+    const allEntries = backendService.getEntries().filter(e => e.userId === employeeId);
 
     // In a real app, filter by weekStartDate. For now, show all for demo
     const currentEntries = allEntries;
@@ -51,7 +51,7 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
 
         currentEntries.forEach(e => {
             if (e.status !== 'APPROVED') {
-                mockBackend.updateEntryStatus(e.id, 'APPROVED');
+                backendService.updateEntryStatus(e.id, 'APPROVED');
             }
         });
 
@@ -72,7 +72,7 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
         const headers = ['Date', 'Project', 'Category', 'Duration (Hours)', 'Billable', 'Notes', 'Status'];
         const rows = currentEntries.map(e => [
             e.date,
-            mockBackend.getProjects().find(p => p.id === e.projectId)?.name || 'Unknown Project',
+            backendService.getProjects().find(p => p.id === e.projectId)?.name || 'Unknown Project',
             e.categoryId,
             (e.durationMinutes / 60).toFixed(2),
             e.isBillable ? 'Yes' : 'No',
@@ -171,7 +171,7 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
                             </div>
                             <div className="divide-y divide-slate-100">
                                 {day.entries.map((entry, i) => {
-                                    const project = mockBackend.getProjects().find(p => p.id === entry.projectId);
+                                    const project = backendService.getProjects().find(p => p.id === entry.projectId);
                                     return (
                                         <div key={i} className="p-4 hover:bg-slate-50/50 transition-colors flex justify-between items-start text-sm print:bg-white">
                                             <div className="flex-1">
@@ -204,3 +204,4 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
 };
 
 export default TimesheetDetailView;
+

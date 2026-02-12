@@ -50,8 +50,8 @@ const AuditLogDrawer: React.FC<AuditLogDrawerProps> = ({ log, onClose }) => {
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                             <span className="block text-xs font-semibold text-slate-500 uppercase">Severity</span>
                             <div className={`mt-1 inline-flex items-center px-2 py-0.5 rounded text-sm font-bold ${log.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
-                                    log.severity === 'WARNING' ? 'bg-orange-100 text-orange-700' :
-                                        'bg-blue-50 text-blue-700'
+                                log.severity === 'WARNING' ? 'bg-orange-100 text-orange-700' :
+                                    'bg-blue-50 text-blue-700'
                                 }`}>
                                 {log.severity === 'CRITICAL' && <ShieldCheck className="h-4 w-4 mr-1.5" />}
                                 {log.severity}
@@ -64,9 +64,9 @@ const AuditLogDrawer: React.FC<AuditLogDrawerProps> = ({ log, onClose }) => {
                         <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-3">Target Entity</h3>
                         <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
                             <div>
-                                <div className="text-xs text-slate-500 font-medium mb-0.5">{log.target.type}</div>
-                                <div className="text-base font-semibold text-slate-900">{log.target.name}</div>
-                                <div className="text-xs font-mono text-slate-400 mt-1">{log.target.id}</div>
+                                <div className="text-xs text-slate-500 font-medium mb-0.5">{log.targetType}</div>
+                                <div className="text-base font-semibold text-slate-900">{log.targetName}</div>
+                                <div className="text-xs font-mono text-slate-400 mt-1">{log.targetId}</div>
                             </div>
                             <button className="flex items-center px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 hover:bg-white hover:border-slate-300 transition-all text-xs font-medium">
                                 View Record <ExternalLink className="h-3 w-3 ml-1.5" />
@@ -75,31 +75,48 @@ const AuditLogDrawer: React.FC<AuditLogDrawerProps> = ({ log, onClose }) => {
                     </div>
 
                     {/* 3. Changes Comparison */}
-                    {log.changes && log.changes.length > 0 && (
-                        <div>
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-3">Change Log</h3>
-                            <div className="border border-slate-200 rounded-xl overflow-hidden">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                                        <tr>
-                                            <th className="px-4 py-2 w-1/3">Field</th>
-                                            <th className="px-4 py-2 w-1/3 text-red-600">Old Value</th>
-                                            <th className="px-4 py-2 w-1/3 text-emerald-600">New Value</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-white">
-                                        {log.changes.map((change, idx) => (
-                                            <tr key={idx}>
-                                                <td className="px-4 py-3 font-medium text-slate-700">{change.field}</td>
-                                                <td className="px-4 py-3 text-red-600 bg-red-50/30 break-all">{String(change.oldValue ?? '-')}</td>
-                                                <td className="px-4 py-3 text-emerald-600 bg-emerald-50/30 break-all">{String(change.newValue ?? '-')}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
+                    {/* 3. Changes Comparison */}
+                    {(() => {
+                        let changesList: any[] = [];
+                        try {
+                            if (typeof log.changes === 'string') {
+                                changesList = JSON.parse(log.changes);
+                            } else if (Array.isArray(log.changes)) {
+                                changesList = log.changes;
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse changes:', e);
+                        }
+
+                        if (changesList && changesList.length > 0) {
+                            return (
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-3">Change Log</h3>
+                                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                                <tr>
+                                                    <th className="px-4 py-2 w-1/3">Field</th>
+                                                    <th className="px-4 py-2 w-1/3 text-red-600">Old Value</th>
+                                                    <th className="px-4 py-2 w-1/3 text-emerald-600">New Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 bg-white">
+                                                {changesList.map((change: any, idx: number) => (
+                                                    <tr key={idx}>
+                                                        <td className="px-4 py-3 font-medium text-slate-700">{change.field}</td>
+                                                        <td className="px-4 py-3 text-red-600 bg-red-50/30 break-all">{String(change.oldValue ?? '-')}</td>
+                                                        <td className="px-4 py-3 text-emerald-600 bg-emerald-50/30 break-all">{String(change.newValue ?? '-')}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
 
                     {/* 4. Metadata */}
                     <div>
@@ -108,12 +125,12 @@ const AuditLogDrawer: React.FC<AuditLogDrawerProps> = ({ log, onClose }) => {
                             <div className="flex items-center text-sm text-slate-600">
                                 <Monitor className="h-4 w-4 mr-3 text-slate-400" />
                                 <span className="font-medium mr-2">Device:</span>
-                                {log.metadata.device} • {log.metadata.browser}
+                                {log.device} • {log.browser}
                             </div>
                             <div className="flex items-center text-sm text-slate-600">
                                 <MapPin className="h-4 w-4 mr-3 text-slate-400" />
                                 <span className="font-medium mr-2">IP Address:</span>
-                                <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">{log.metadata.ipAddress}</span>
+                                <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">{log.ipAddress}</span>
                             </div>
                         </div>
                     </div>
@@ -123,11 +140,11 @@ const AuditLogDrawer: React.FC<AuditLogDrawerProps> = ({ log, onClose }) => {
                         <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-3">Performed By</h3>
                         <div className="flex items-center space-x-3">
                             <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold">
-                                {log.performedBy.name.charAt(0)}
+                                {log.userName.charAt(0)}
                             </div>
                             <div>
-                                <div className="text-sm font-semibold text-slate-900">{log.performedBy.name}</div>
-                                <div className="text-xs text-slate-500">{log.performedBy.role} • {log.performedBy.email}</div>
+                                <div className="text-sm font-semibold text-slate-900">{log.userName}</div>
+                                <div className="text-xs text-slate-500">{log.userRole} • {log.userEmail}</div>
                             </div>
                         </div>
                     </div>

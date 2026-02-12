@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext'; // Import Auth
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import type { Project, TaskCategory } from '../../types/schema';
 import TimerHeader from '../../components/employee/timer/TimerHeader';
 import LiveTimerCard from '../../components/employee/timer/LiveTimerCard';
@@ -34,23 +34,72 @@ const TimerPage: React.FC = () => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [notes, setNotes] = useState('');
 
-    // Load Projects and Check for Active Timer on Mount
+    // Load Projects and Initialize Timer State (Single Effect)
     useEffect(() => {
-        // Load Projects
-        setProjects(mockBackend.getProjects());
-        setCategories(mockBackend.getTaskCategories()); // Fetch Categories
+        if (!user) return;
 
-        // Check for active timer for this user
-        if (user) {
-            const activeTimer = mockBackend.getActiveTimer(user.id);
+        // 1. Load Data
+        setProjects(backendService.getProjects());
+        setCategories(backendService.getTaskCategories());
+
+        const state = location.state as { autoStart?: boolean; projectId?: string; categoryId?: string } | null;
+
+        // 2. Check Intent vs Active Timer
+        // Priority: Intent (new task) > Active Timer (existing state)
+
+        if (state && state.autoStart && state.projectId && state.categoryId) {
+            // === INTENT TO START NEW ===
+            // 2a. Stop active if exists
+            const activeTimer = backendService.getActiveTimer(user.id);
             if (activeTimer) {
+                backendService.stopTimer(user.id, "Auto-stopped for new task");
+            }
+
+            // 2b. Start New
+            // 2b. Start New
+            const startNewTimer = async () => {
+                const timer = await backendService.startTimer(user.id, user.name, state.projectId!, state.categoryId!);
+
+                // 2c. Update UI State
+                setSelectedProject(state.projectId!);
+                setSelectedCategory(state.categoryId!);
+                setNotes('');
+
+                if (timer.startTime) {
+                    startTimeRef.current = new Date(timer.startTime).getTime();
+                    accumulatedRef.current = 0;
+                    setIsRunning(true);
+                    setIsPaused(false);
+                    setElapsedSeconds(0);
+                }
+
+                // Clear intent to avoid loop
+                window.history.replaceState({}, '');
+            };
+            startNewTimer();
+        } else {
+            // === NO INTENT (RESTORE STATE) ===
+            const activeTimer = backendService.getActiveTimer(user.id);
+            if (activeTimer) {
+                // Restore Active Timer
                 // @ts-ignore
                 const status = activeTimer.status;
-                const totalSeconds = (activeTimer as any).accumulatedSeconds || (activeTimer.durationMinutes * 60);
+                // Fix: Only use accumulatedSeconds from storage (activityLogs or fallback)
+                let storedAccumulated = 0;
+                if (activeTimer.activityLogs) {
+                    try {
+                        const logs = JSON.parse(activeTimer.activityLogs);
+                        storedAccumulated = logs.accumulatedSeconds || 0;
+                    } catch (e) { }
+                }
+                // Fallback to legacy prop if not in logs
+                storedAccumulated = storedAccumulated || (activeTimer as any).accumulatedSeconds || 0;
 
                 if (status === 'PAUSED') {
                     setIsRunning(false);
                     setIsPaused(true);
+                    // If paused, durationMinutes IS the total time, so fallback is safe/correct here if accumulated is missing
+                    const totalSeconds = storedAccumulated || ((activeTimer.durationMinutes || 0) * 60);
                     setElapsedSeconds(totalSeconds);
                     accumulatedRef.current = totalSeconds;
                 } else {
@@ -58,39 +107,76 @@ const TimerPage: React.FC = () => {
                     setIsPaused(false);
 
                     // Set Refs for interval
+                    // Set Refs for interval
                     if (activeTimer.startTime) {
-                        startTimeRef.current = new Date(activeTimer.startTime).getTime();
-                        accumulatedRef.current = totalSeconds; // Base accumulated before current run
+                        let start = new Date(activeTimer.startTime).getTime();
+                        if (isNaN(start)) {
+                            // Fallback if startTime is corrupted: assume started now
+                            start = Date.now();
+                        }
+
+                        startTimeRef.current = start;
+                        accumulatedRef.current = isNaN(Number(storedAccumulated)) ? 0 : Number(storedAccumulated);
 
                         // Initial sync
                         const now = Date.now();
                         const currentRunSeconds = Math.floor((now - startTimeRef.current) / 1000);
-                        setElapsedSeconds(totalSeconds + currentRunSeconds);
+                        const total = accumulatedRef.current + currentRunSeconds;
+                        setElapsedSeconds(isNaN(total) ? 0 : total);
                     }
                 }
 
                 setSelectedProject(activeTimer.projectId);
                 setSelectedCategory(activeTimer.categoryId);
                 setNotes(activeTimer.description || '');
+            } else if (state) {
+                // Has state but not autostart (unlikely but possible manual pre-fill)
+                if (state.projectId) setSelectedProject(state.projectId);
+                if (state.categoryId) setSelectedCategory(state.categoryId);
             }
         }
-    }, [user]);
+    }, [user, location.state]); // Re-run if location changes (new intent) or user loads
 
-    // Calculate daily stats - Moved to top level
+    // Auto-save Notes (Debounced) to prevent data loss on crash/force stop
+    useEffect(() => {
+        if (!user || (!isRunning && !isPaused)) return;
+
+        const handler = setTimeout(() => {
+            backendService.updateActiveTimer(user.id, { description: notes });
+        }, 1000); // Auto-save after 1 second of inactivity
+
+        return () => clearTimeout(handler);
+    }, [notes, user, isRunning, isPaused]);
+
+    // Calculate daily stats
     const dailyEntries = useMemo(() => {
         if (!user) return [];
         const todayStr = new Date().toISOString().split('T')[0];
-        const allEntries = mockBackend.getEntries(user.id);
-        return allEntries.filter(e => e.date === todayStr);
+        const allEntries = backendService.getEntries(user.id);
+        return allEntries.filter(e => e.date.split('T')[0] === todayStr);
     }, [user, isRunning]);
 
+    // Recents (Last 3 unique project/category pairs from history)
+    const recentEntries = useMemo(() => {
+        if (!user) return [];
+        const all = backendService.getEntries(user.id);
+        const unique = new Map<string, any>();
 
-    // Initialize from location state
-    useEffect(() => {
-        if (!isRunning && !isPaused && location.state && location.state.projectId) {
-            setSelectedProject(location.state.projectId);
+        // Iterate creating keys "projectId-categoryId"
+        // Since getEntries usually returns sorted or we can sort by date desc
+        // Assuming all is roughly chronological, we reverse or sort first
+        // If getEntries is not guaranteed sorted, we should sort:
+        const sorted = [...all].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        for (const entry of sorted) {
+            const key = `${entry.projectId}-${entry.categoryId}`;
+            if (!unique.has(key)) {
+                unique.set(key, entry);
+            }
+            if (unique.size >= 3) break;
         }
-    }, [location.state, isRunning, isPaused]);
+        return Array.from(unique.values());
+    }, [user, isRunning]);
 
     // 3. UI State
     const [showStopModal, setShowStopModal] = useState(false);
@@ -129,35 +215,61 @@ const TimerPage: React.FC = () => {
 
         if (isPaused) {
             // RESUME
-            // @ts-ignore
-            const timer = mockBackend.resumeTimer(user.id);
-            if (timer && timer.startTime) {
-                // Update Refs
-                startTimeRef.current = new Date(timer.startTime).getTime();
-                // accumulated is already set from pause state, but safe to refresh from backend return if needed
-                // accumulatedRef.current = timer.accumulatedSeconds... (mockBackend resume doesn't return accumulated explicitly unless we modify it, but it should be consistent)
-            }
+            const resumeFn = async () => {
+                try {
+                    // @ts-ignore
+                    const timer = await backendService.resumeTimer(user.id);
+                    if (timer && timer.startTime) {
+                        // Update Refs
+                        let start = new Date(timer.startTime).getTime();
+                        if (isNaN(start)) start = Date.now();
 
-            setIsPaused(false);
-            setIsRunning(true);
+                        startTimeRef.current = start;
+
+                        let acc = 0;
+                        if (timer.activityLogs) {
+                            try {
+                                const logs = JSON.parse(timer.activityLogs);
+                                acc = logs.accumulatedSeconds || 0;
+                            } catch (e) { }
+                        }
+                        accumulatedRef.current = acc || (timer as any).accumulatedSeconds || 0;
+
+                        setIsPaused(false);
+                        setIsRunning(true);
+                        setElapsedSeconds(accumulatedRef.current);
+                    }
+                } catch (e) { console.error(e); alert("Resume failed"); }
+            };
+            resumeFn();
         } else {
             // NEW START
-            // Backend Call
-            const timer = mockBackend.startTimer(user.id, user.name, selectedProject, selectedCategory);
+            const startFn = async () => {
+                try {
+                    // Backend Call
+                    const timer = await backendService.startTimer(user.id, user.name, selectedProject, selectedCategory);
 
-            // Set Refs
-            startTimeRef.current = new Date(timer.startTime!).getTime(); // Using ! as startTimer always sets it
-            accumulatedRef.current = 0;
+                    if (timer.startTime) {
+                        // Set Refs
+                        startTimeRef.current = new Date(timer.startTime).getTime();
+                        accumulatedRef.current = 0;
 
-            setIsRunning(true);
-            setElapsedSeconds(0);
+                        setIsRunning(true);
+                        setElapsedSeconds(0);
+                    }
+                } catch (e: any) {
+                    console.error(e);
+                    alert(`Start failed: ${e.message || 'Unknown error'}`);
+                }
+            };
+            startFn();
         }
     };
 
     const handlePause = () => {
         if (!user) return;
         // @ts-ignore
-        mockBackend.pauseTimer(user.id);
+        backendService.pauseTimer(user.id);
         setIsRunning(false);
         setIsPaused(true);
     };
@@ -167,17 +279,22 @@ const TimerPage: React.FC = () => {
         setShowStopModal(true);
     };
 
-    const handleConfirmStop = () => {
+    const handleConfirmStop = async () => {
         if (!user) return;
 
-        // Backend Call
-        mockBackend.stopTimer(user.id, notes);
+        try {
+            // Backend Call
+            await backendService.stopTimer(user.id, notes);
 
-        setIsRunning(false);
-        setIsPaused(false); // Reset pause state
-        setElapsedSeconds(0);
-        setNotes('');
-        setShowStopModal(false);
+            setIsRunning(false);
+            setIsPaused(false); // Reset pause state
+            setElapsedSeconds(0);
+            setNotes('');
+            setShowStopModal(false);
+        } catch (error: any) {
+            console.error("Stop failed:", error);
+            alert(`Stop failed: ${error.message || 'Unknown error'}`);
+        }
     };
 
     // ID to Name helper
@@ -218,7 +335,12 @@ const TimerPage: React.FC = () => {
                                 onProjectChange={setSelectedProject}
                                 onCategoryChange={setSelectedCategory}
                                 onNotesChange={setNotes}
-                                readOnly={false}
+                                // Restrictions:
+                                // 1. Employees cannot change Project manually (must use assigned card logic)
+                                readOnlyProject={user?.role === 'EMPLOYEE'}
+                                // 2. Employees cannot change Category IF it was enforced by the assignment (passed in state)
+                                // If they clicked a whole project (no category in state), they CAN select category.
+                                readOnlyCategory={user?.role === 'EMPLOYEE' && !!(location.state as any)?.categoryId}
                             />
                             <button
                                 onClick={handleStart}
@@ -233,7 +355,7 @@ const TimerPage: React.FC = () => {
                     {/* Quick Start Chips */}
                     {!isRunning && (
                         <QuickStartCard
-                            recents={dailyEntries.slice(0, 3).map(e => {
+                            recents={recentEntries.map(e => {
                                 const proj = projects.find(p => p.id === e.projectId);
                                 const cat = categories.find(c => c.id === e.categoryId);
                                 return {
@@ -259,6 +381,7 @@ const TimerPage: React.FC = () => {
                         dailyTotal={dailyEntries.reduce((acc, curr) => acc + curr.durationMinutes, 0)}
                         billable={dailyEntries.filter(e => e.isBillable).reduce((acc, curr) => acc + curr.durationMinutes, 0)}
                         nonBillable={dailyEntries.filter(e => !e.isBillable).reduce((acc, curr) => acc + curr.durationMinutes, 0)}
+                        startOfDay={dailyEntries.filter(e => e.startTime).length > 0 ? dailyEntries.filter(e => e.startTime).reduce((min, e) => (e.startTime! < min ? e.startTime! : min), dailyEntries.find(e => e.startTime)?.startTime!) : undefined}
                     />
                     <RecentHistoryCard entries={dailyEntries.slice(0, 5)} />
                 </div>
@@ -278,3 +401,4 @@ const TimerPage: React.FC = () => {
 };
 
 export default TimerPage;
+

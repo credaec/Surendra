@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { X, ExternalLink } from 'lucide-react';
 
@@ -11,8 +11,8 @@ const EmployeeUtilizationChart: React.FC = () => {
 
     useEffect(() => {
         const loadData = () => {
-            const users = mockBackend.getUsers().filter(u => u.name !== 'Admin User');
-            const entries = mockBackend.getEntries();
+            const users = backendService.getUsers().filter(u => u.name !== 'Admin User');
+            const entries = backendService.getEntries();
             const now = new Date();
             const monthStart = startOfMonth(now);
             const monthEnd = endOfMonth(now);
@@ -154,3 +154,4 @@ const EmployeeUtilizationChart: React.FC = () => {
 };
 
 export default EmployeeUtilizationChart;
+

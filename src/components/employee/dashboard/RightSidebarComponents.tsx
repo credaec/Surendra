@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Bell } from 'lucide-react';
+import { Play, Bell, ArrowRight, FolderKanban, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
+import { cn } from '../../../lib/utils';
 
 export const MyProjectsCard: React.FC = () => {
     const { user } = useAuth();
@@ -13,8 +14,8 @@ export const MyProjectsCard: React.FC = () => {
         if (!user) return;
 
         // 1. Get Assignments
-        const assignments = mockBackend.getUserAssignments(user.id);
-        const allCategories = mockBackend.getTaskCategories();
+        const assignments = backendService.getUserAssignments(user.id);
+        const allCategories = backendService.getTaskCategories();
 
         // 2. Map to display items
         const items = assignments.map(asn => {
@@ -27,48 +28,58 @@ export const MyProjectsCard: React.FC = () => {
             };
         });
 
-        // 3. Fallback / Default Projects if empty (Optional, but good for demo)
-        if (items.length === 0) {
-            items.push(
-                { id: 'p1', name: 'Skyline Tower Design', subtitle: 'Apex Corp', categoryId: 'Design' },
-                { id: 'p2', name: 'Riverfront Park', subtitle: 'City Planning', categoryId: 'Planning' }
-            );
-        }
-
         setAssignedItems(items);
     }, [user]);
 
     const handleStartTimer = (item: typeof assignedItems[0]) => {
         if (!user) return;
-
-        // Mock start timer - Defaulting to "Internal" project for assigned tasks for now
-        // In a real app, we might ask which project this task belongs to.
-        mockBackend.startTimer(user.id, user.name, 'p_internal', item.categoryId);
-        navigate('/employee/timer');
+        navigate('/employee/timer', {
+            state: {
+                autoStart: true,
+                projectId: 'p1',
+                categoryId: item.categoryId
+            }
+        });
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900">My Projects & Tasks</h3>
-                <button onClick={() => navigate('/employee/projects')} className="text-xs text-blue-600 hover:underline">View All</button>
-            </div>
-            <div className="divide-y divide-slate-50">
-                {assignedItems.map(item => (
-                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
-                        <div className="flex-1 min-w-0 mr-3">
-                            <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
-                            <p className="text-xs text-slate-500 truncate">{item.subtitle}</p>
-                        </div>
-                        <button
-                            onClick={() => handleStartTimer(item)}
-                            title="Start Timer"
-                            className="h-8 w-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                        >
-                            <Play className="h-3.5 w-3.5 ml-0.5" />
-                        </button>
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden mb-8 transition-all duration-300">
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+                <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-xl">
+                        <FolderKanban className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
-                ))}
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Active Scope</h3>
+                </div>
+                <button
+                    onClick={() => navigate('/employee/projects')}
+                    className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:translate-x-1 transition-transform"
+                >
+                    View All
+                </button>
+            </div>
+            <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                {assignedItems.length > 0 ? (
+                    assignedItems.map(item => (
+                        <div key={item.id} className="p-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all group">
+                            <div className="flex-1 min-w-0 mr-4">
+                                <p className="text-sm font-black text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors uppercase tracking-tight">{item.name}</p>
+                                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase tracking-widest">{item.subtitle}</p>
+                            </div>
+                            <button
+                                onClick={() => handleStartTimer(item)}
+                                title="Start Timer"
+                                className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white dark:hover:text-white transition-all shadow-lg shadow-blue-500/10 active:scale-90"
+                            >
+                                <Play className="h-4 w-4 ml-0.5 fill-current" />
+                            </button>
+                        </div>
+                    ))
+                ) : (
+                    <div className="p-10 text-center">
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-300 dark:text-slate-700">No items assigned</p>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -80,12 +91,10 @@ export const NotificationsCard: React.FC = () => {
 
     useEffect(() => {
         if (!user) return;
-
         const dynNotifications: typeof notifications = [];
-
-        // 1. Check for Rejected Timesheets
-        const approvals = mockBackend.getApprovals();
+        const approvals = backendService.getApprovals();
         const rejected = approvals.filter(a => a.employeeId === user.id && a.status === 'REJECTED');
+
         rejected.forEach(r => {
             dynNotifications.push({
                 type: 'error',
@@ -94,27 +103,17 @@ export const NotificationsCard: React.FC = () => {
             });
         });
 
-        // 2. Check for Pending Submission (Current Week)
-        // Simple logic: If we have entries for this week but no "SUBMITTED" or "APPROVED" request
-
-        // Assuming we can get entries directly
-        const entries = mockBackend.getEntries(user.id);
-        // data-fns isn't imported here, so we'll do a simple check or just mock the logic "smartly"
-        // For now, let's look for any 'DRAFT' status entries or missing approval request for current week.
-        // To be safe and avoid complex date math imports if not present, let's use the 'active' check.
-
-        // Simpler approach for demo: Check if there are unsubmitted entries
-        const hasUnsubmitted = entries.some(e => !e.status || e.status === 'DRAFT'); // Assuming DRAFT is default/empty
+        const entries = backendService.getEntries(user.id);
+        const hasUnsubmitted = entries.some(e => !e.status || e.status === 'DRAFT');
 
         if (hasUnsubmitted) {
             dynNotifications.push({
                 type: 'warning',
-                title: 'Timesheet Submission Pending',
-                subtitle: 'You have unsubmitted hours for this week.'
+                title: 'Submission Pending',
+                subtitle: 'Unsubmitted hours for this week.'
             });
         }
 
-        // If empty, show "All caught up"
         if (dynNotifications.length === 0) {
             dynNotifications.push({
                 type: 'info',
@@ -127,21 +126,31 @@ export const NotificationsCard: React.FC = () => {
     }, [user]);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900 flex items-center">
-                    <Bell className="h-4 w-4 mr-2 text-slate-400" /> Notifications
-                </h3>
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-300">
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+                <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-500/10 rounded-xl">
+                        <Bell className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">System Feed</h3>
+                </div>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="p-6 space-y-4">
                 {notifications.map((notif, idx) => (
-                    <div key={idx} className="flex space-x-3">
-                        <div className={`h-2 w-2 mt-1.5 rounded-full flex-shrink-0 ${notif.type === 'error' ? 'bg-red-500' :
-                            notif.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
-                            }`} />
-                        <div>
-                            <p className="text-xs text-slate-900 font-medium">{notif.title}</p>
-                            <p className="text-[10px] text-slate-500 mt-0.5">{notif.subtitle}</p>
+                    <div key={idx} className="flex space-x-4 p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-950/30 border border-slate-100/50 dark:border-slate-800/50 group hover:border-blue-200 dark:hover:border-blue-800 transition-all">
+                        <div className={cn(
+                            "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110",
+                            notif.type === 'error' ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                                notif.type === 'warning' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                                    'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        )}>
+                            {notif.type === 'error' ? <AlertCircle className="h-5 w-5" /> :
+                                notif.type === 'warning' ? <AlertCircle className="h-5 w-5" /> :
+                                    <CheckCircle2 className="h-5 w-5" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{notif.title}</p>
+                            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 leading-tight mt-1">{notif.subtitle}</p>
                         </div>
                     </div>
                 ))}

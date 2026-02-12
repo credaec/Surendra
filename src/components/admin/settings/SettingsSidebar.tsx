@@ -1,33 +1,15 @@
 import React from 'react';
 import {
-    Building2,
-    Users,
-    Briefcase,
-    Clock,
-    Receipt,
-    DollarSign,
-    ListChecks,
-    Bell,
-    Shield,
-    Database,
-    Waypoints,
-    Mail // Add Mail
+    Building2, Users, Briefcase, Clock, FileText,
+    DollarSign, Tags, Bell, Mail, Shield, Database,
+    Zap, Cloud, ChevronRight
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 export type SettingsSection =
-    | 'COMPANY'
-    | 'USERS'
-    | 'PROJECTS'
-    | 'TIMESHEETS'
-    | 'BILLING'
-    | 'PAYROLL'
-    | 'CATEGORIES'
-    | 'NOTIFICATIONS'
-    | 'SECURITY'
-    | 'DATA'
-    | 'EMAIL' // New
-    | 'INTEGRATIONS';
+    | 'COMPANY' | 'USERS' | 'PROJECTS' | 'TIMESHEETS'
+    | 'BILLING' | 'PAYROLL' | 'CATEGORIES' | 'NOTIFICATIONS'
+    | 'EMAIL' | 'SECURITY' | 'BACKUP' | 'DATA' | 'INTEGRATIONS';
 
 interface SettingsSidebarProps {
     activeSection: SettingsSection;
@@ -35,45 +17,54 @@ interface SettingsSidebarProps {
 }
 
 const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ activeSection, onSelectSection }) => {
-
-    const menuItems: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
-        { id: 'COMPANY', label: 'Company Setup', icon: Building2 },
-        { id: 'USERS', label: 'Users & Roles', icon: Users },
+    const menuItems = [
+        { id: 'COMPANY', label: 'Company Profile', icon: Building2 },
+        { id: 'USERS', label: 'User Management', icon: Users },
         { id: 'PROJECTS', label: 'Projects & Clients', icon: Briefcase },
         { id: 'TIMESHEETS', label: 'Timesheet Rules', icon: Clock },
-        { id: 'BILLING', label: 'Billing & Invoices', icon: Receipt },
+        { id: 'BILLING', label: 'Billing & Invoices', icon: FileText },
         { id: 'PAYROLL', label: 'Payroll & Costing', icon: DollarSign },
-        { id: 'CATEGORIES', label: 'Categories & Tasks', icon: ListChecks },
-        { id: 'EMAIL', label: 'Email Server', icon: Mail },
+        { id: 'CATEGORIES', label: 'Categories & Tasks', icon: Tags },
         { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell },
+        { id: 'EMAIL', label: 'Email Configuration', icon: Mail },
         { id: 'SECURITY', label: 'Security & Access', icon: Shield },
-        { id: 'DATA', label: 'Data & Audit Logs', icon: Database },
-        { id: 'INTEGRATIONS', label: 'Integrations', icon: Waypoints },
+        { id: 'BACKUP', label: 'Backup & Restore', icon: Cloud },
+        { id: 'DATA', label: 'Audit Logs', icon: Database },
+        { id: 'INTEGRATIONS', label: 'Integrations', icon: Zap },
     ];
 
     return (
-        <div className="w-64 flex-shrink-0 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-fit">
-            <div className="p-4 bg-slate-50 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-700">Settings Menu</h3>
+        <nav className="flex flex-col space-y-1.5 p-2">
+            <div className="px-4 py-3 mb-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Settings Center</p>
             </div>
-            <nav className="p-2 space-y-1">
-                {menuItems.map((item) => (
+            {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+
+                return (
                     <button
                         key={item.id}
-                        onClick={() => onSelectSection(item.id)}
+                        onClick={() => onSelectSection(item.id as SettingsSection)}
                         className={cn(
-                            "w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
-                            activeSection === item.id
-                                ? "bg-blue-50 text-blue-700"
-                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                            "flex items-center w-full px-5 py-4 text-sm font-bold rounded-xl transition-all group relative overflow-hidden",
+                            isActive
+                                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
                         )}
                     >
-                        <item.icon className={cn("h-4 w-4 mr-3", activeSection === item.id ? "text-blue-600" : "text-slate-400")} />
-                        {item.label}
+                        <Icon className={cn("w-5 h-5 mr-4 flex-shrink-0 transition-colors duration-300",
+                            isActive ? "text-white" : "text-slate-400 dark:text-slate-500 group-hover:text-blue-500"
+                        )} />
+                        <span className="flex-1 text-left tracking-tight">{item.label}</span>
+                        {isActive && <ChevronRight className="w-4 h-4 ml-2 opacity-100 translate-x-0 transition-transform" />}
+                        {!isActive && (
+                            <ChevronRight className="w-4 h-4 ml-2 opacity-0 -translate-x-2 group-hover:opacity-40 group-hover:translate-x-0 transition-all" />
+                        )}
                     </button>
-                ))}
-            </nav>
-        </div>
+                );
+            })}
+        </nav>
     );
 };
 

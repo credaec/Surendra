@@ -31,10 +31,10 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="font-semibold text-slate-900">Detailed Time Entries</h3>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Detailed Time Entries</h3>
 
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -43,7 +43,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
                         placeholder="Search project/category..."
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                        className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 transition-colors"
                     />
                 </div>
             </div>
@@ -51,7 +51,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
             {/* Table */}
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-xs font-semibold">
+                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase text-xs font-semibold">
                         <tr>
                             <th className="px-6 py-3">Date</th>
                             <th className="px-6 py-3">Project</th>
@@ -62,17 +62,17 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
                             <th className="px-6 py-3 text-right">Action</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filteredEntries.map((entry) => (
-                            <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
-                                <td className="px-6 py-4 font-medium text-slate-900">{entry.date}</td>
-                                <td className="px-6 py-4 text-slate-700">{entry.projectName}</td>
+                            <tr key={entry.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{entry.date}</td>
+                                <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{entry.projectName}</td>
                                 <td className="px-6 py-4">
-                                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-medium border border-slate-200">
+                                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-xs font-medium border border-slate-200 dark:border-slate-700">
                                         {entry.taskCategory}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-right font-mono font-medium text-slate-900">
+                                <td className="px-6 py-4 text-right font-mono font-medium text-slate-900 dark:text-white">
                                     {formatDuration(entry.durationSeconds)}
                                 </td>
                                 <td className="px-6 py-4">
@@ -86,10 +86,10 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
                                 <td className="px-6 py-4 text-center">
                                     <span className={cn(
                                         "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border",
-                                        entry.status === 'APPROVED' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                                            entry.status === 'REJECTED' ? "bg-red-50 text-red-700 border-red-100" :
-                                                entry.status === 'SUBMITTED' ? "bg-amber-50 text-amber-700 border-amber-100" :
-                                                    "bg-blue-50 text-blue-700 border-blue-100" // Running
+                                        entry.status === 'APPROVED' ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800" :
+                                            entry.status === 'REJECTED' ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800" :
+                                                entry.status === 'SUBMITTED' ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-800" :
+                                                    "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800" // Running
                                     )}>
                                         {entry.status}
                                     </span>
@@ -97,7 +97,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
                                 <td className="px-6 py-4 text-right">
                                     <button
                                         onClick={() => onView(entry)}
-                                        className="text-slate-400 hover:text-blue-600 p-1"
+                                        className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 p-1"
                                     >
                                         <Eye className="h-4 w-4" />
                                     </button>

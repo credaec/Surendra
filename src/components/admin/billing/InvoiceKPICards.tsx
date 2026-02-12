@@ -9,7 +9,7 @@ import {
     Briefcase
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import type { Invoice } from '../../../services/mockBackend';
+import type { Invoice } from '../../../services/backendService';
 
 interface InvoiceKPICardsProps {
     invoices: Invoice[];
@@ -77,24 +77,24 @@ const InvoiceKPICards: React.FC<InvoiceKPICardsProps> = ({ invoices, onFilterSta
     ];
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             {/* Top Row: Financial Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between group transition-all duration-300 hover:shadow-md">
                     <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">Total Billed Amount</p>
-                        <h3 className="text-3xl font-bold text-slate-900">${stats.totalBilled.toLocaleString()}</h3>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Total Billed Amount</p>
+                        <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">${stats.totalBilled.toLocaleString()}</h3>
                     </div>
-                    <div className="p-3 rounded-lg bg-indigo-50 text-indigo-600">
+                    <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shadow-inner">
                         <Briefcase className="h-8 w-8" />
                     </div>
                 </div>
-                <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-between group transition-all duration-300 hover:shadow-md">
                     <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">Pending Receivable</p>
-                        <h3 className="text-3xl font-bold text-slate-900">${stats.pendingReceivable.toLocaleString()}</h3>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Pending Receivable</p>
+                        <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">${stats.pendingReceivable.toLocaleString()}</h3>
                     </div>
-                    <div className="p-3 rounded-lg bg-emerald-50 text-emerald-600">
+                    <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform shadow-inner">
                         <DollarSign className="h-8 w-8" />
                     </div>
                 </div>
@@ -109,15 +109,17 @@ const InvoiceKPICards: React.FC<InvoiceKPICardsProps> = ({ invoices, onFilterSta
                             key={card.title}
                             onClick={() => onFilterStatus(isActive ? 'ALL' : card.status as any)}
                             className={cn(
-                                "p-4 bg-white rounded-xl shadow-sm border cursor-pointer transition-all hover:shadow-md",
-                                isActive ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-100"
+                                "p-5 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border cursor-pointer transition-all duration-200 group/status",
+                                isActive ? "ring-2 ring-blue-500 dark:ring-blue-400 border-blue-100 dark:border-blue-900/40 shadow-lg shadow-blue-500/10" : "border-slate-100 dark:border-slate-800 hover:shadow-md hover:-translate-y-0.5"
                             )}
                         >
-                            <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs font-medium text-slate-500 uppercase">{card.title}</p>
-                                <card.icon className={cn("h-4 w-4", card.color)} />
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{card.title}</p>
+                                <div className={cn("p-1.5 rounded-lg transition-colors", card.bg, "dark:bg-opacity-10", isActive && "bg-opacity-100")}>
+                                    <card.icon className={cn("h-4 w-4", card.color, "dark:brightness-110")} />
+                                </div>
                             </div>
-                            <h3 className={cn("text-2xl font-bold", card.color)}>{card.value}</h3>
+                            <h3 className={cn("text-3xl font-black tracking-tight", card.color, "dark:brightness-110")}>{card.value}</h3>
                         </div>
                     );
                 })}
@@ -127,3 +129,4 @@ const InvoiceKPICards: React.FC<InvoiceKPICardsProps> = ({ invoices, onFilterSta
 };
 
 export default InvoiceKPICards;
+

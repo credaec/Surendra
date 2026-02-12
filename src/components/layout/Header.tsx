@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { Bell, ChevronDown, Info, LogOut, Settings } from 'lucide-react';
+import { Bell, ChevronDown, Info, LogOut, Settings, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 import GlobalSearch from './GlobalSearch';
 
-import { mockBackend } from '../../services/mockBackend';
+import { backendService } from '../../services/backendService';
+import { cn } from '../../lib/utils';
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const { t } = useLanguage();
+    const { isDarkMode, toggleTheme } = useTheme();
 
     // Notifications State
     const [showNotifications, setShowNotifications] = useState(false);
@@ -19,7 +22,7 @@ const Header: React.FC = () => {
 
     const loadNotifications = () => {
         if (user?.id) {
-            const data = mockBackend.getNotifications(user.id);
+            const data = backendService.getNotifications(user.id);
             setNotifications(data);
         }
     };
@@ -38,7 +41,7 @@ const Header: React.FC = () => {
         // In a real app, backend would have a bulk endpoint.
         // Here we just mark displayed ones as read one by one or update local state + backend
         notifications.forEach(n => {
-            if (!n.isRead) mockBackend.markNotificationRead(n.id);
+            if (!n.isRead) backendService.markNotificationRead(n.id);
         });
         loadNotifications();
     };
@@ -88,57 +91,76 @@ const Header: React.FC = () => {
 
     return (
         <>
-            <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-50 sticky-header-shadow">
+            <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-[60] transition-all duration-300">
                 {/* Search Bar */}
-                <GlobalSearch />
+                <div className="flex-1 max-w-xl">
+                    <GlobalSearch />
+                </div>
 
                 {/* Right Side Actions */}
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 lg:space-x-5">
+
+                    {/* Theme Toggle */}
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2.5 rounded-xl text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 focus:outline-none transition-all duration-200"
+                        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    >
+                        {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                    </button>
 
                     {/* Notifications */}
                     <div className="relative">
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="relative p-2 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            className="relative p-2.5 rounded-xl text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 focus:outline-none transition-all duration-200"
                         >
                             <span className="sr-only">View notifications</span>
                             <Bell className="h-5 w-5" />
                             {unreadCount > 0 && (
-                                <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+                                <span className="absolute top-2 right-2 block h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-slate-950 animate-pulse" />
                             )}
                         </button>
 
                         {/* Notifications Dropdown */}
                         {showNotifications && (
-                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50">
-                                <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                                    <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                                    <button
-                                        onClick={handleMarkAllRead}
-                                        className="text-xs text-blue-600 hover:text-blue-500"
-                                    >
-                                        Mark all read
-                                    </button>
+                            <div className="absolute right-0 mt-3 w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-200 dark:ring-slate-800 py-0 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Notifications</h3>
+                                    <div className="flex items-center space-x-4">
+                                        <button
+                                            onClick={handleMarkAllRead}
+                                            className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                                        >
+                                            Mark all read
+                                        </button>
+                                        <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                            <ChevronDown className="h-4 w-4 rotate-180" />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="max-h-96 overflow-y-auto">
+                                <div className="max-h-[450px] overflow-y-auto">
                                     {notifications.length === 0 ? (
-                                        <div className="px-4 py-6 text-center text-gray-400 text-sm">
-                                            No notifications
+                                        <div className="px-6 py-12 text-center">
+                                            <div className="h-12 w-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <Bell className="h-6 w-6 text-slate-300" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No notifications</p>
                                         </div>
                                     ) : (
                                         notifications.map((notif) => (
-                                            <div key={notif.id} className={`px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 ${!notif.isRead ? 'bg-blue-50/30' : ''}`}>
-                                                <div className="flex justify-between items-start">
-                                                    <p className="text-sm font-medium text-gray-900">{notif.title}</p>
-                                                    <span className="text-xs text-gray-400">{getTimeAgo(notif.createdAt)}</span>
+                                            <div key={notif.id} className={`px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors group ${!notif.isRead ? 'bg-blue-50/20 dark:bg-blue-500/5' : ''}`}>
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{notif.title}</p>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{getTimeAgo(notif.createdAt)}</span>
                                                 </div>
-                                                <p className="text-xs text-gray-600 mt-1">{notif.message}</p>
+                                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">{notif.message}</p>
                                             </div>
                                         ))
                                     )}
                                 </div>
-                                <div className="px-4 py-2 border-t border-gray-100 text-center">
-                                    <button className="text-xs font-medium text-blue-600 hover:text-blue-500">View all updates</button>
+                                <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-center">
+                                    <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">View All Notifications</button>
                                 </div>
                             </div>
                         )}
@@ -148,45 +170,45 @@ const Header: React.FC = () => {
                     <div className="relative">
                         <button
                             onClick={() => setShowProfileMenu(!showProfileMenu)}
-                            className="flex items-center space-x-3 focus:outline-none hover:bg-gray-50 p-1.5 rounded-lg transition-colors"
+                            className="flex items-center space-x-3 focus:outline-none hover:bg-slate-50 dark:hover:bg-slate-800/50 p-1 rounded-xl transition-all duration-200"
                         >
-                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/20">
                                 {user?.avatarInitials || 'GU'}
                             </div>
-                            <div className="hidden md:flex flex-col text-left">
-                                <span className="text-sm font-medium text-gray-700">{user?.name || 'Guest User'}</span>
-                                <span className="text-xs text-gray-500">{user?.designation || user?.role || 'Visitor'}</span>
+                            <div className="hidden lg:flex flex-col text-left mr-1">
+                                <span className="text-sm font-black text-slate-900 dark:text-white leading-tight">{user?.name || 'Guest User'}</span>
+                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">{user?.designation || user?.role || 'Visitor'}</span>
                             </div>
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                            <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform duration-200", showProfileMenu ? "rotate-180" : "")} />
                         </button>
 
                         {/* Profile Menu */}
                         {showProfileMenu && (
-                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                                <div className="px-4 py-3 border-b border-gray-100">
-                                    <p className="text-sm text-gray-900 font-medium">Signed in as</p>
-                                    <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+                            <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-200 dark:ring-slate-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 overflow-hidden">
+                                <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Signed in as</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.email}</p>
                                 </div>
-                                <div className="py-1">
+                                <div className="py-2">
                                     <button
                                         onClick={openProfile}
-                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                        className="w-full text-left px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-white flex items-center transition-colors"
                                     >
-                                        <span className="mr-3 text-gray-400"><Info className="h-4 w-4" /></span> {t('My Profile', 'My Profile')}
+                                        <span className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 mr-3 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40"><Info className="h-4 w-4" /></span> {t('My Profile', 'My Profile')}
                                     </button>
                                     <button
                                         onClick={openSettings}
-                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                        className="w-full text-left px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-white flex items-center transition-colors"
                                     >
-                                        <span className="mr-3 text-gray-400"><Settings className="h-4 w-4" /></span> {t('Preferences', 'Preferences')}
+                                        <span className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 mr-3"><Settings className="h-4 w-4" /></span> {t('Preferences', 'Preferences')}
                                     </button>
                                 </div>
-                                <div className="py-1 border-t border-gray-100">
+                                <div className="py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                                        className="w-full text-left px-5 py-2.5 text-sm font-black text-red-600 dark:text-rose-500 hover:bg-red-50 dark:hover:bg-rose-500/10 flex items-center uppercase tracking-widest"
                                     >
-                                        <span className="mr-3 text-red-400"><LogOut className="h-4 w-4" /></span> {t('Sign out', 'Sign out')}
+                                        <LogOut className="h-4 w-4 mr-3" /> {t('Sign out', 'Sign out')}
                                     </button>
                                 </div>
                             </div>
@@ -206,3 +228,4 @@ const Header: React.FC = () => {
 };
 
 export default Header;
+

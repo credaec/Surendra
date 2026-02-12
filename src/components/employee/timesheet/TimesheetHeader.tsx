@@ -23,20 +23,20 @@ const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
     return (
         <div className="flex items-center justify-between mb-6">
             <div>
-                <h1 className="text-2xl font-bold text-slate-900">Timesheet</h1>
-                <p className="text-slate-500 text-sm mt-1">Review your weekly hours and submit for approval</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Timesheet</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Review your weekly hours and submit for approval</p>
             </div>
 
             <div className="flex items-center space-x-4">
                 {/* Week Selector */}
-                <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm">
-                    <button onClick={onPrevWeek} className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-l-lg transition-colors">
+                <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm transition-colors">
+                    <button onClick={onPrevWeek} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-l-lg transition-colors">
                         <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="px-4 py-2 text-sm font-medium text-slate-700 border-x border-slate-100 table-cell align-middle min-w-[140px] text-center">
+                    <span className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 border-x border-slate-100 dark:border-slate-700 table-cell align-middle min-w-[140px] text-center">
                         {weekRange || dateRange}
                     </span>
-                    <button onClick={onNextWeek} className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-r-lg transition-colors">
+                    <button onClick={onNextWeek} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-r-lg transition-colors">
                         <ChevronRight className="h-4 w-4" />
                     </button>
                 </div>
@@ -44,16 +44,16 @@ const TimesheetHeader: React.FC<TimesheetHeaderProps> = ({
                 {/* Actions */}
                 <button
                     onClick={onAddEntry}
-                    className="flex items-center px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+                    className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                 >
-                    <Plus className="h-4 w-4 mr-2 text-slate-500" />
+                    <Plus className="h-4 w-4 mr-2 text-slate-500 dark:text-slate-400" />
                     Add Time Entry
                 </button>
 
                 <button
                     onClick={onSubmit}
                     disabled={!canSubmit}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors shadow-sm shadow-blue-200"
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed transition-colors shadow-sm shadow-blue-200 dark:shadow-none"
                 >
                     {canSubmit ? <CheckCircle2 className="h-4 w-4 mr-2" /> : null}
                     Submit Timesheet

@@ -48,7 +48,7 @@ const SendInvoiceModal: React.FC<SendInvoiceModalProps> = ({ isOpen, onClose, on
                         <input
                             type="email"
                             required
-                            className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-900"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
@@ -59,7 +59,7 @@ const SendInvoiceModal: React.FC<SendInvoiceModalProps> = ({ isOpen, onClose, on
                         <input
                             type="text"
                             required
-                            className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-900"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
                         />
@@ -70,7 +70,7 @@ const SendInvoiceModal: React.FC<SendInvoiceModalProps> = ({ isOpen, onClose, on
                         <textarea
                             rows={6}
                             required
-                            className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            className="w-full rounded-lg border-slate-200 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-900"
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
                         />

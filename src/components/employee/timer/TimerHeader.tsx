@@ -17,21 +17,21 @@ const TimerHeader: React.FC = () => {
                     <ArrowLeft className="h-6 w-6" />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Timer</h1>
-                    <p className="text-slate-500 text-sm mt-1">Track your working time live</p>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Timer</h1>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Track your working time live</p>
                 </div>
             </div>
             <div className="flex items-center space-x-3">
                 <button
                     onClick={() => navigate('/employee/timesheet', { state: { openAddEntry: true } })}
-                    className="flex items-center px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+                    className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                 >
                     <Calendar className="h-4 w-4 mr-2 text-slate-500" />
                     Manual Entry
                 </button>
                 <button
                     onClick={() => navigate('/employee/timesheet')}
-                    className="flex items-center px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+                    className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                 >
                     <FileText className="h-4 w-4 mr-2 text-slate-500" />
                     View Timesheet

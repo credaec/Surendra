@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PauseCircle, MonitorPlay, Clock } from 'lucide-react';
-import { mockBackend } from '../../../services/mockBackend';
+import { backendService } from '../../../services/backendService';
 import type { TimeEntry } from '../../../types/schema';
 
 // Extended type for Live active timers which have extra UI metadata stored
@@ -16,54 +16,33 @@ const LiveTrackingTab: React.FC = () => {
     useEffect(() => {
         // Poll for active timers
         const fetchTimers = () => {
-            const timers = mockBackend.getAllActiveTimers();
-            const categories = mockBackend.getTaskCategories();
-
-            // Enrich with category name
-            const enriched = timers.map(t => {
-                const category = categories.find(c => c.id === t.categoryId);
-                return {
-                    ...t,
-                    userName: t.userName, // Already coming from getAllActiveTimers? 
-                    // Wait, getAllActiveTimers in mockBackend returns ActiveTimer mock which has userName? 
-                    // Let's check mockBackend.getAllActiveTimers return type implementation if needed.
-                    // Assuming getAllActiveTimers returns enriched user/project but not category name yet based on previous file read.
-                    // Actually previous file read of LiveStatusTable showed it calls getAllActiveTimers() and THEN manual enrichment.
-                    // But LiveTrackingTab.tsx (lines 19-20) just casts it.
-                    // Let's be safe and re-map.
-
-                    // Actually, looking at LiveTrackingTab.tsx lines 19-20: 
-                    // const timers = mockBackend.getAllActiveTimers();
-                    // setLiveTimers(timers as unknown as ActiveTimer[]);
-
-                    // distinct naming collision: ActiveTimer interface in this file vs mockBackend?
-                    // The interface in this file (lines 7-11) expects userName, projectName, taskCategory.
-
-                    // mockBackend.getAllActiveTimers() likely returns objects with userId, projectId, categoryId, etc.
-                    // and maybe 'userName' / 'projectName' if the mock function is fancy, but usually it returns basic info.
-                    // I should explicitly enrich it here like I did in LiveStatusTable.
-
-                    ...t,
-                    // If mockBackend returns userName/projectName, keep them. 
-                    // If not, I might need to fetch users/projects too.
-                    // Let's assume for now I need to enrich everything to be safe, standard pattern.
-                };
-            });
+            const timers = backendService.getAllActiveTimers();
+            const categories = backendService.getTaskCategories();
 
             // Re-fetch all metadata to be safe
-            const allUsers = mockBackend.getUsers();
-            const allProjects = mockBackend.getProjects();
+            const allUsers = backendService.getUsers();
+            const allProjects = backendService.getProjects();
 
             const fullyEnriched = timers.map(t => {
                 const user = allUsers.find(u => u.id === t.userId);
                 const project = allProjects.find(p => p.id === t.projectId);
                 const category = categories.find(c => c.id === t.categoryId);
 
+                // Calculate live duration
+                let duration = 0;
+                if (t.startTime) {
+                    const start = new Date(t.startTime);
+                    const now = new Date();
+                    const diffMs = now.getTime() - start.getTime();
+                    duration = Math.max(0, Math.floor(diffMs / 60000));
+                }
+
                 return {
                     ...t,
-                    userName: user?.name || 'Unknown User', // active timer might typically have this, but let's ensure
+                    userName: user?.name || 'Unknown User',
                     projectName: project?.name || 'Unknown Project',
-                    taskCategory: category?.name || t.categoryId
+                    taskCategory: category?.name || t.categoryId,
+                    durationMinutes: duration // Override with calculated duration
                 };
             });
 
@@ -76,58 +55,75 @@ const LiveTrackingTab: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const handleForceStop = (userId: string, userName: string) => {
+        if (confirm(`Are you sure you want to force stop ${userName}'s timer?`)) {
+            backendService.stopTimer(userId, "Admin Force Stop");
+            // Refresh logic is auto-handled by the interval, but we can force a fetch if we extracted it.
+            // Since fetchTimers is inside useEffect, we can't call it easily without refactoring.
+            // For now, the 5s interval will pick it up, or we can add a quick local state filter to make it snappy.
+            setLiveTimers(prev => prev.filter(t => t.userId !== userId));
+            alert("Timer stopped successfully.");
+        }
+    };
+
     return (
-        <div className="p-6">
+        <div className="p-6 transition-colors">
             {liveTimers.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {liveTimers.map((timer) => (
-                        <div key={timer.userId} className="bg-white border border-blue-200 rounded-xl p-4 shadow-sm relative overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-                            <div className="absolute top-0 right-0 p-2">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 animate-pulse">
-                                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-1.5"></span>
+                        <div key={timer.userId} className="bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden animate-in fade-in zoom-in-95 duration-300 group">
+                            <div className="absolute top-0 right-0 p-3">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 animate-pulse ring-1 ring-blue-200 dark:ring-blue-800">
+                                    <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full mr-1.5"></span>
                                     LIVE
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold border border-slate-200">
+                            <div className="flex items-center gap-4 mb-5">
+                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-inner ring-2 ring-blue-50 dark:ring-blue-950">
                                     {timer.userName.substring(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-bold text-slate-900">{timer.userName}</h4>
-                                    <p className="text-xs text-slate-500 flex items-center gap-1">
-                                        <Clock className="w-3 h-3" /> Since {new Date(timer.startTime || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    <h4 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{timer.userName}</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                        <Clock className="w-3.5 h-3.5 text-blue-500" /> Started at {new Date(timer.startTime || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="space-y-2 mb-4">
-                                <div>
-                                    <div className="text-xs text-slate-500 uppercase font-semibold">Project</div>
-                                    <div className="text-sm font-medium text-slate-900 truncate">{timer.projectName}</div>
+                            <div className="space-y-4 mb-6">
+                                <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors">
+                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest mb-1">Project</div>
+                                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">{timer.projectName}</div>
                                 </div>
-                                <div>
-                                    <div className="text-xs text-slate-500 uppercase font-semibold">Task</div>
-                                    <div className="text-sm text-slate-700">{timer.taskCategory}</div>
+                                <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 transition-colors">
+                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest mb-1">Activity</div>
+                                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">{timer.taskCategory}</div>
                                 </div>
                             </div>
 
-                            <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
-                                <div className="text-xl font-mono font-bold text-blue-600">
+                            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 -mx-5 -mb-5 px-5 pb-5">
+                                <div className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
                                     {Math.floor(timer.durationMinutes / 60)}h {timer.durationMinutes % 60}m
                                 </div>
-                                <button className="text-xs bg-rose-50 text-rose-600 px-3 py-1.5 rounded-lg font-medium border border-rose-100 hover:bg-rose-100 transition-colors flex items-center gap-1">
-                                    <PauseCircle className="w-3.5 h-3.5" /> Force Stop
+                                <button
+                                    onClick={() => handleForceStop(timer.userId, timer.userName)}
+                                    className="text-xs bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 px-4 py-2 rounded-xl font-bold border border-rose-100 dark:border-rose-900/30 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white transition-all transform active:scale-95 shadow-sm flex items-center gap-2"
+                                >
+                                    <PauseCircle className="w-4 h-4" /> Stop
                                 </button>
                             </div>
                         </div>
                     ))}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                    <MonitorPlay className="w-16 h-16 mb-4 opacity-20" />
-                    <h3 className="text-lg font-medium text-slate-600">No Active Timers</h3>
-                    <p className="text-sm mt-1">Everyone is currently offline or idle.</p>
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-600">
+                    <div className="relative mb-6">
+                        <MonitorPlay className="w-20 h-20 opacity-10 animate-pulse" />
+                        <Clock className="w-8 h-8 absolute -bottom-2 -right-2 opacity-20" />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300">No Active Timers</h3>
+                    <p className="text-sm mt-2 max-w-xs text-center opacity-70">The team is currently focused on offline tasks or taking a well-deserved break.</p>
                 </div>
             )}
         </div>
@@ -135,3 +131,4 @@ const LiveTrackingTab: React.FC = () => {
 };
 
 export default LiveTrackingTab;
+

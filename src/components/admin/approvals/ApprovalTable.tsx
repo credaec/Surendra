@@ -1,7 +1,7 @@
 import React from 'react';
 import { Eye, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import type { ApprovalRequest } from '../../../services/mockBackend';
+import type { ApprovalRequest } from '../../../services/backendService';
 
 interface ApprovalTableProps {
     data: ApprovalRequest[];
@@ -40,89 +40,98 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
     const getStatusBadge = (status: ApprovalRequest['status']) => {
         switch (status) {
             case 'SUBMITTED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Submitted</span>;
+                return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-200 dark:border-blue-800">Submitted</span>;
             case 'PENDING':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" /> Pending</span>;
+                return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800"><Clock className="w-3 h-3 mr-1" /> Pending</span>;
             case 'APPROVED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" /> Approved</span>;
+                return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400 border border-green-200 dark:border-green-800"><CheckCircle className="w-3 h-3 mr-1" /> Approved</span>;
             case 'REJECTED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" /> Rejected</span>;
+                return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-400 border border-red-200 dark:border-red-800"><XCircle className="w-3 h-3 mr-1" /> Rejected</span>;
             case 'OVERDUE':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"><AlertCircle className="w-3 h-3 mr-1" /> Overdue</span>;
+                return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 border border-orange-200 dark:border-orange-800"><AlertCircle className="w-3 h-3 mr-1" /> Overdue</span>;
             default:
                 return null;
         }
     };
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all duration-300">
             <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50/50 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                            <th className="px-4 py-4 w-10">
+                            <th className="px-5 py-4 w-12">
                                 <input
                                     type="checkbox"
-                                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    className="rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800 transition-all"
                                     checked={selectedIds.length === data.length && data.length > 0}
                                     onChange={handleSelectAll}
                                 />
                             </th>
-                            <th className="px-4 py-4">Employee</th>
-                            <th className="px-4 py-4">Week Range</th>
-                            <th className="px-4 py-4">Total Hrs</th>
-                            <th className="px-4 py-4">Billable</th>
-                            <th className="px-4 py-4">Non-Billable</th>
-                            <th className="px-4 py-4">Projects</th>
-                            <th className="px-4 py-4">Submitted On</th>
-                            <th className="px-4 py-4">Status</th>
-                            <th className="px-4 py-4 text-right">Action</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Employee</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Week Range</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Total Hrs</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Billable</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Non-Billable</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Projects</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Submitted On</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px]">Status</th>
+                            <th className="px-5 py-4 uppercase tracking-widest text-[10px] text-right">Action</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {data.length > 0 ? (
                             data.map((item) => (
-                                <tr key={item.id} className={cn("hover:bg-slate-50 transition-colors", selectedIds.includes(item.id) && "bg-blue-50/30")}>
-                                    <td className="px-4 py-4">
+                                <tr key={item.id} className={cn("group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-200", selectedIds.includes(item.id) && "bg-blue-50/30 dark:bg-blue-900/10")}>
+                                    <td className="px-5 py-4">
                                         <input
                                             type="checkbox"
-                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            className="rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800 transition-all"
                                             checked={selectedIds.includes(item.id)}
                                             onChange={() => handleSelectOne(item.id)}
                                         />
                                     </td>
-                                    <td className="px-4 py-4">
+                                    <td className="px-5 py-4">
                                         <div className="flex items-center">
-                                            <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 mr-3">
+                                            <div className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-xs font-black text-slate-600 dark:text-slate-300 mr-4 border border-slate-200 dark:border-slate-700 shadow-inner group-hover:scale-110 transition-transform">
                                                 {item.avatarInitials}
                                             </div>
                                             <div>
-                                                <div className="font-medium text-slate-900">{item.employeeName}</div>
-                                                <div className="text-xs text-slate-400">{item.employeeId.split('/')[0]}</div>
+                                                <div className="font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.employeeName}</div>
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-0.5">{item.employeeId.split('/')[0]}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4 text-slate-600">{item.weekRange}</td>
-                                    <td className="px-4 py-4 font-mono font-medium text-slate-900">{item.totalHours.toFixed(1)}</td>
-                                    <td className="px-4 py-4 text-emerald-600 font-medium">{item.billableHours.toFixed(1)}</td>
-                                    <td className="px-4 py-4 text-slate-500">{item.nonBillableHours.toFixed(1)}</td>
-                                    <td className="px-4 py-4 text-slate-600">
+                                    <td className="px-5 py-4 font-bold text-slate-600 dark:text-slate-400">{item.weekRange}</td>
+                                    <td className="px-5 py-4">
+                                        <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter">{item.totalHours.toFixed(1)}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">h</span>
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{item.billableHours.toFixed(1)}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 ml-1">b</span>
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <span className="text-slate-500 dark:text-slate-500 font-medium">{item.nonBillableHours.toFixed(1)}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500/50 ml-1">nb</span>
+                                    </td>
+                                    <td className="px-5 py-4">
                                         <div className="flex flex-col">
-                                            <span className="truncate max-w-[150px]" title={item.projects.join(', ')}>
+                                            <span className="truncate max-w-[150px] font-bold text-slate-700 dark:text-slate-300" title={item.projects.join(', ')}>
                                                 {item.projects[0]}
-                                                {item.projects.length > 1 && <span className="text-xs text-slate-400 ml-1">+{item.projects.length - 1} more</span>}
+                                                {item.projects.length > 1 && <span className="inline-block bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg text-[10px] text-slate-500 dark:text-slate-400 ml-2 font-black">+{item.projects.length - 1}</span>}
                                             </span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4 text-slate-500">{item.submittedOn}</td>
-                                    <td className="px-4 py-4">
+                                    <td className="px-5 py-4 text-slate-500 dark:text-slate-500 text-[11px] font-black uppercase tracking-widest">{item.submittedOn}</td>
+                                    <td className="px-5 py-4">
                                         {getStatusBadge(item.status)}
                                     </td>
-                                    <td className="px-4 py-4 text-right">
-                                        <div className="flex items-center justify-end space-x-2">
+                                    <td className="px-5 py-4 text-right">
+                                        <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => onView(item)}
-                                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm active:scale-90"
                                                 title="View Details"
                                             >
                                                 <Eye className="h-4 w-4" />
@@ -131,14 +140,14 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
                                                 <>
                                                     <button
                                                         onClick={() => onApprove(item.id)}
-                                                        className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                                        className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm active:scale-90"
                                                         title="Quick Approve"
                                                     >
                                                         <CheckCircle className="h-4 w-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => onReject(item.id)}
-                                                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                                                        className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm active:scale-90"
                                                         title="Quick Reject"
                                                     >
                                                         <XCircle className="h-4 w-4" />
@@ -151,13 +160,13 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
+                                <td colSpan={10} className="px-6 py-24 text-center">
                                     <div className="flex flex-col items-center">
-                                        <div className="bg-slate-50 p-4 rounded-full mb-3">
-                                            <CheckCircle className="h-8 w-8 text-slate-300" />
+                                        <div className="bg-slate-50 dark:bg-slate-950 p-8 rounded-[2.5rem] mb-6 border border-slate-100 dark:border-slate-800 shadow-inner">
+                                            <CheckCircle className="h-12 w-12 text-slate-200 dark:text-slate-800" />
                                         </div>
-                                        <p className="text-base font-medium text-slate-600">No timesheets found</p>
-                                        <p className="text-sm mt-1">Try adjusting your filters to see more results.</p>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">No timesheets found</h3>
+                                        <p className="text-sm font-medium text-slate-500 dark:text-slate-500 mt-3 max-w-sm">Everything is caught up! Try adjusting your filters to see historical results.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -166,11 +175,11 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
                 </table>
             </div>
             {/* Pagination Logic (Simple Mock) */}
-            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                <span className="text-sm text-slate-500">Showing <span className="font-medium text-slate-900">{data.length}</span> results</span>
-                <div className="flex space-x-2">
-                    <button className="px-3 py-1 border border-slate-300 rounded bg-white text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Previous</button>
-                    <button className="px-3 py-1 border border-slate-300 rounded bg-white text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Next</button>
+            <div className="bg-slate-50/50 dark:bg-slate-950/50 px-6 py-5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Showing <span className="text-slate-900 dark:text-white underline decoration-blue-500/30 underline-offset-4">{data.length}</span> results</span>
+                <div className="flex space-x-3">
+                    <button className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 shadow-sm transition-all active:scale-95">Previous</button>
+                    <button className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 shadow-sm transition-all active:scale-95">Next</button>
                 </div>
             </div>
         </div>
@@ -178,3 +187,4 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
 };
 
 export default ApprovalTable;
+

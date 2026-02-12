@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockBackend } from '../services/mockBackend';
+import { backendService } from '../services/backendService';
 
 export interface AuthUser {
     id: string;
@@ -13,7 +13,7 @@ export interface AuthUser {
 
 interface AuthContextType {
     user: AuthUser | null;
-    login: (email: string, role: 'ADMIN' | 'EMPLOYEE') => Promise<void>;
+    login: (email: string, password: string) => Promise<void>;
     logout: () => void;
 }
 
@@ -22,39 +22,50 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<AuthUser | null>(null);
 
-    // Persist login (Mock)
+    // Persist login
     useEffect(() => {
-        const storedUser = localStorage.getItem('credence_user');
+        const storedUser = localStorage.getItem('pulse_user');
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            const parsed = JSON.parse(storedUser);
+            setUser(parsed);
+            backendService.initialize();
         }
     }, []);
 
-    const login = async (email: string, role: 'ADMIN' | 'EMPLOYEE') => {
-        // Find user in mock backend
-        const users = mockBackend.getUsers();
-        const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.role === role);
+    useEffect(() => {
+        if (user) {
+            backendService.initialize();
+        }
+    }, [user]);
 
-        if (foundUser) {
-            const authUser: AuthUser = {
-                id: foundUser.id,
-                name: foundUser.name,
-                email: foundUser.email,
-                role: foundUser.role,
-                avatarInitials: foundUser.avatarInitials,
-                designation: foundUser.designation,
-                department: foundUser.department // Added department to AuthUser if needed, add to interface too
-            };
+    const login = async (email: string, password: string) => {
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Login failed');
+            }
+
+            const { token, user: authUser } = await res.json();
+
             setUser(authUser);
-            localStorage.setItem('credence_user', JSON.stringify(authUser));
-        } else {
-            throw new Error('Invalid credentials or role');
+            localStorage.setItem('pulse_user', JSON.stringify(authUser));
+            localStorage.setItem('pulse_token', token);
+        } catch (error: any) {
+            console.error('Login error:', error);
+            throw error;
         }
     };
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('credence_user');
+        localStorage.removeItem('pulse_user');
+        localStorage.removeItem('pulse_token');
     };
 
     return (

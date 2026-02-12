@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock, XCircle, AlertTriangle, Timer, DollarSign, Send } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import type { ApprovalRequest } from '../../../services/mockBackend';
+import type { ApprovalRequest } from '../../../services/backendService';
 
 interface ApprovalKPICardsProps {
     approvals: ApprovalRequest[];
@@ -28,41 +28,41 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
             value: stats.submitted,
             icon: Send,
             statusKey: 'SUBMITTED',
-            color: 'text-blue-600',
-            bg: 'bg-blue-50',
-            border: 'border-blue-200'
+            color: 'text-blue-600 dark:text-blue-400',
+            bg: 'bg-blue-50 dark:bg-blue-500/10',
+            border: 'border-blue-200 dark:border-blue-800'
         },
         {
             title: 'Pending',
             value: stats.pending,
             icon: Clock,
             statusKey: 'PENDING',
-            color: 'text-amber-600',
-            bg: 'bg-amber-50',
-            border: 'border-amber-200'
+            color: 'text-amber-600 dark:text-amber-400',
+            bg: 'bg-amber-50 dark:bg-amber-500/10',
+            border: 'border-amber-200 dark:border-amber-800'
         },
         {
             title: 'Rejected',
             value: stats.rejected,
             icon: XCircle,
             statusKey: 'REJECTED',
-            color: 'text-rose-600',
-            bg: 'bg-rose-50',
-            border: 'border-rose-200'
+            color: 'text-rose-600 dark:text-rose-400',
+            bg: 'bg-rose-50 dark:bg-rose-500/10',
+            border: 'border-rose-200 dark:border-rose-800'
         },
         {
             title: 'Overdue',
             value: stats.overdue,
             icon: AlertTriangle,
             statusKey: 'OVERDUE',
-            color: 'text-orange-600',
-            bg: 'bg-orange-50',
-            border: 'border-orange-200'
+            color: 'text-orange-600 dark:text-orange-400',
+            bg: 'bg-orange-50 dark:bg-orange-500/10',
+            border: 'border-orange-200 dark:border-orange-800'
         }
     ];
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
             {/* Status Cards */}
             {cards.map((card) => {
                 const isActive = activeStatusFilter === card.statusKey;
@@ -71,45 +71,50 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
                         key={card.title}
                         onClick={() => onStatusFilter(isActive ? 'ALL' : card.statusKey as any)}
                         className={cn(
-                            "p-4 bg-white rounded-xl shadow-sm border cursor-pointer transition-all hover:shadow-md",
-                            isActive ? `ring-2 ring-offset-1 ${card.border.replace('border-', 'ring-')}` : "border-slate-100",
+                            "p-6 bg-white dark:bg-slate-900 rounded-2xl border cursor-pointer transition-all duration-300 group hover:shadow-md",
+                            isActive
+                                ? "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-950 border-blue-200 dark:border-blue-800 shadow-lg shadow-blue-500/10"
+                                : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700",
                         )}
                     >
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{card.title}</p>
-                                <h3 className="text-2xl font-bold text-slate-900">{card.value}</h3>
-                            </div>
-                            <div className={cn("p-2 rounded-lg", card.bg, card.color)}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{card.title}</h3>
+                            <div className={cn("p-2.5 rounded-xl shadow-inner group-hover:scale-110 transition-transform", card.bg, card.color)}>
                                 <card.icon className="h-5 w-5" />
                             </div>
+                        </div>
+                        <div>
+                            <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{card.value}</span>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Requests</p>
                         </div>
                     </div>
                 );
             })}
 
             {/* Non-clickable Info Cards */}
-            <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Total Hours</p>
-                        <h3 className="text-2xl font-bold text-slate-900">{stats.totalHours.toFixed(1)}</h3>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-50 text-slate-600">
+            <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Total Hours</h3>
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shadow-inner group-hover:scale-110 transition-transform">
                         <Timer className="h-5 w-5" />
                     </div>
                 </div>
+                <div>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{stats.totalHours.toFixed(1)}</span>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Hours tracked</p>
+                </div>
             </div>
 
-            <div className="p-4 bg-white rounded-xl shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Billable</p>
-                        <h3 className="text-2xl font-bold text-slate-900">{stats.billableHours.toFixed(1)}</h3>
-                    </div>
-                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+            <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between group transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Billable</h3>
+                    <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-inner group-hover:scale-110 transition-transform">
                         <DollarSign className="h-5 w-5" />
                     </div>
+                </div>
+                <div>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{stats.billableHours.toFixed(1)}</span>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Billable hours</p>
                 </div>
             </div>
         </div>
@@ -117,3 +122,4 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
 };
 
 export default ApprovalKPICards;
+

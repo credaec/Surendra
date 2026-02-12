@@ -1,0 +1,313 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e5]:
+      - generic [ref=e7] [cursor=pointer]:
+        - generic [ref=e9]: P
+        - generic [ref=e10]:
+          - generic [ref=e11]: PULSE TIME TRACKER
+          - generic [ref=e12]: Admin Portal
+      - navigation [ref=e13]:
+        - paragraph [ref=e15]: Main Menu
+        - link "Dashboard" [ref=e16] [cursor=pointer]:
+          - /url: /admin/dashboard
+          - img [ref=e17]
+          - generic [ref=e22]: Dashboard
+        - link "Time Tracker" [ref=e24] [cursor=pointer]:
+          - /url: /admin/timesheets
+          - img [ref=e25]
+          - generic [ref=e28]: Time Tracker
+        - link "Projects" [ref=e29] [cursor=pointer]:
+          - /url: /admin/projects
+          - img [ref=e30]
+          - generic [ref=e33]: Projects
+        - link "Tasks / Categories" [ref=e34] [cursor=pointer]:
+          - /url: /admin/tasks
+          - img [ref=e35]
+          - generic [ref=e38]: Tasks / Categories
+        - link "Clients" [ref=e39] [cursor=pointer]:
+          - /url: /admin/clients
+          - img [ref=e40]
+          - generic [ref=e45]: Clients
+        - link "Team / Employees" [ref=e46] [cursor=pointer]:
+          - /url: /admin/team
+          - img [ref=e47]
+          - generic [ref=e51]: Team / Employees
+        - link "Approvals" [ref=e52] [cursor=pointer]:
+          - /url: /admin/approvals
+          - img [ref=e53]
+          - generic [ref=e57]: Approvals
+        - link "Reports" [ref=e58] [cursor=pointer]:
+          - /url: /admin/reports
+          - img [ref=e59]
+          - generic [ref=e61]: Reports
+        - link "Invoices / Billing" [ref=e62] [cursor=pointer]:
+          - /url: /admin/billing/invoices
+          - img [ref=e63]
+          - generic [ref=e66]: Invoices / Billing
+        - link "Payroll / Costing" [ref=e67] [cursor=pointer]:
+          - /url: /admin/payroll
+          - img [ref=e68]
+          - generic [ref=e70]: Payroll / Costing
+        - link "Team Availability" [ref=e71] [cursor=pointer]:
+          - /url: /admin/availability
+          - img [ref=e72]
+          - generic [ref=e74]: Team Availability
+        - link "Settings" [ref=e75] [cursor=pointer]:
+          - /url: /admin/settings
+          - img [ref=e76]
+          - generic [ref=e79]: Settings
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e84]: Admin Hub
+          - button [ref=e85] [cursor=pointer]
+        - button "Terminate Session" [ref=e88] [cursor=pointer]:
+          - img [ref=e89]
+          - generic [ref=e92]: Terminate Session
+    - generic [ref=e93]:
+      - banner [ref=e94]:
+        - generic [ref=e97]:
+          - generic:
+            - img
+          - textbox "Search projects, employees..." [ref=e98]
+        - generic [ref=e99]:
+          - button "Switch to Light Mode" [active] [ref=e100] [cursor=pointer]:
+            - img [ref=e101]
+          - button "View notifications" [ref=e108] [cursor=pointer]:
+            - generic [ref=e109]: View notifications
+            - img [ref=e110]
+          - button "SA System Admin Administrator" [ref=e114] [cursor=pointer]:
+            - generic [ref=e115]: SA
+            - generic [ref=e116]:
+              - generic [ref=e117]: System Admin
+              - generic [ref=e118]: Administrator
+            - img [ref=e119]
+      - main [ref=e121]:
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - heading "Dashboard" [level=1] [ref=e126]
+              - paragraph [ref=e127]: Organization Overview & Performance
+            - generic [ref=e128]:
+              - button "This Month" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - text: This Month
+              - button [ref=e132] [cursor=pointer]:
+                - img [ref=e133]
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - generic [ref=e138]:
+                  - img [ref=e140]
+                  - paragraph [ref=e143]: Total Hours (Month)
+                - generic [ref=e144]:
+                  - img [ref=e145]
+                  - text: Live
+              - heading "133h" [level=3] [ref=e150]
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - generic [ref=e153]:
+                  - img [ref=e155]
+                  - paragraph [ref=e157]: Billable %
+                - generic [ref=e158]:
+                  - img [ref=e159]
+                  - text: "Target: 80%"
+              - generic [ref=e163]:
+                - heading "100%" [level=3] [ref=e164]
+                - paragraph [ref=e165]: 133h Billable
+            - generic [ref=e166]:
+              - generic [ref=e167]:
+                - generic [ref=e168]:
+                  - img [ref=e170]
+                  - paragraph [ref=e173]: Employee Utilization
+                - generic [ref=e174]:
+                  - img [ref=e175]
+                  - text: Stable
+              - generic [ref=e179]:
+                - heading "100%" [level=3] [ref=e180]
+                - paragraph [ref=e181]: "Target: 85%"
+            - generic [ref=e182]:
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - img [ref=e186]
+                  - paragraph [ref=e188]: Pending Approvals
+                - generic [ref=e189]:
+                  - img [ref=e190]
+                  - text: Normal
+              - generic [ref=e194]:
+                - heading "2" [level=3] [ref=e195]
+                - paragraph [ref=e196]: Timesheets to review
+            - generic [ref=e197]:
+              - generic [ref=e198]:
+                - generic [ref=e199]:
+                  - img [ref=e201]
+                  - paragraph [ref=e203]: Total Project Value
+                - generic [ref=e204]:
+                  - img [ref=e205]
+                  - text: Pipeline
+              - generic [ref=e209]:
+                - heading "$15,000" [level=3] [ref=e210]
+                - paragraph [ref=e211]: Active Budgets
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - img [ref=e216]
+                  - paragraph [ref=e219]: Total Cost
+                - generic [ref=e220]:
+                  - img [ref=e221]
+                  - text: Month to Date
+              - generic [ref=e225]:
+                - heading "$2,442" [level=3] [ref=e226]
+                - paragraph [ref=e227]: Employee Costs (Est)
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - generic [ref=e230]:
+                  - img [ref=e232]
+                  - paragraph [ref=e235]: Active Projects
+                - generic [ref=e236]:
+                  - img [ref=e237]
+                  - text: Live
+              - generic [ref=e241]:
+                - heading "2" [level=3] [ref=e242]
+                - paragraph [ref=e243]: Ongoing
+            - generic [ref=e244]:
+              - generic [ref=e245]:
+                - generic [ref=e246]:
+                  - img [ref=e248]
+                  - paragraph [ref=e250]: Over-Budget Alerts
+                - generic [ref=e251]:
+                  - img [ref=e252]
+                  - text: Critical
+              - generic [ref=e256]:
+                - heading "0" [level=3] [ref=e257]
+                - paragraph [ref=e258]: Exceeded estimates
+          - generic [ref=e259]:
+            - generic [ref=e261]:
+              - generic [ref=e262]:
+                - generic [ref=e263]:
+                  - img [ref=e265]
+                  - generic [ref=e268]:
+                    - heading "Hours Trend" [level=3] [ref=e269]
+                    - paragraph [ref=e270]: This Week
+                - combobox [ref=e271] [cursor=pointer]:
+                  - option "This Week" [selected]
+                  - option "Last Week"
+                  - option "This Month"
+              - img [ref=e275]:
+                - generic [ref=e279]:
+                  - generic [ref=e281]: Mon
+                  - generic [ref=e283]: Tue
+                  - generic [ref=e285]: Wed
+                  - generic [ref=e287]: Thu
+                  - generic [ref=e289]: Fri
+                  - generic [ref=e291]: Sat
+                  - generic [ref=e293]: Sun
+                - generic [ref=e295]:
+                  - generic [ref=e297]: "0"
+                  - generic [ref=e299]: "15"
+                  - generic [ref=e301]: "30"
+                  - generic [ref=e303]: "45"
+                  - generic [ref=e305]: "60"
+            - generic [ref=e319]:
+              - heading "Billable vs Non-Billable" [level=3] [ref=e320]
+              - generic [ref=e323]:
+                - img [ref=e324]:
+                  - img [ref=e328]
+                - list [ref=e330]:
+                  - listitem [ref=e331]:
+                    - img [ref=e332]
+                    - text: Billable
+                  - listitem [ref=e334]:
+                    - img [ref=e335]
+                    - text: Non-Billable
+              - generic:
+                - generic: 100%
+                - generic: Utilization
+          - generic [ref=e337]:
+            - generic [ref=e339]:
+              - heading "Project Budget Burn (Hours)" [level=3] [ref=e340]
+              - generic [ref=e343]:
+                - img [ref=e344]:
+                  - generic [ref=e348]:
+                    - generic [ref=e350]: Residential Building
+                    - generic [ref=e352]: Operations Support
+                  - generic [ref=e354]:
+                    - generic [ref=e356]: "0"
+                    - generic [ref=e358]: "40"
+                    - generic [ref=e360]: "80"
+                    - generic [ref=e362]: "120"
+                    - generic [ref=e364]: "160"
+                - list [ref=e378]:
+                  - listitem [ref=e379]:
+                    - img [ref=e380]
+                    - text: Planned Budget
+                  - listitem [ref=e382]:
+                    - img [ref=e383]
+                    - text: Actual Used
+            - generic [ref=e386]:
+              - generic [ref=e387]:
+                - generic [ref=e388]:
+                  - img [ref=e390]
+                  - heading "Live Team Status" [level=3] [ref=e392]
+                - generic [ref=e397]: Live Updating
+              - table [ref=e399]:
+                - rowgroup [ref=e400]:
+                  - row "Employee Current Tracking Daily Total Status" [ref=e401]:
+                    - columnheader "Employee" [ref=e402]
+                    - columnheader "Current Tracking" [ref=e403]
+                    - columnheader "Daily Total" [ref=e404]
+                    - columnheader "Status" [ref=e405]
+                - rowgroup [ref=e406]:
+                  - row "Test Employee Residential Building structure 2h 8m 56s 0h 0m Active Now" [ref=e407]:
+                    - cell "Test Employee" [ref=e408]:
+                      - generic [ref=e409]:
+                        - img [ref=e411]
+                        - generic [ref=e415]: Test Employee
+                    - cell "Residential Building structure 2h 8m 56s" [ref=e416]:
+                      - generic [ref=e417]:
+                        - generic [ref=e420]: Residential Building
+                        - generic [ref=e421]:
+                          - generic [ref=e422]:
+                            - img [ref=e423]
+                            - text: structure
+                          - generic [ref=e426]: 2h 8m 56s
+                    - cell "0h 0m" [ref=e427]:
+                      - generic [ref=e429]: 0h 0m
+                    - cell "Active Now" [ref=e431]:
+                      - generic [ref=e432]: Active Now
+          - generic [ref=e434]:
+            - generic [ref=e435]:
+              - heading "Active Projects Snapshot" [level=3] [ref=e436]
+              - link "View All" [ref=e437] [cursor=pointer]:
+                - /url: /admin/projects
+            - table [ref=e439]:
+              - rowgroup [ref=e440]:
+                - row "Project Name Client Budget / Hours Used Status Health" [ref=e441]:
+                  - columnheader "Project Name" [ref=e442]
+                  - columnheader "Client" [ref=e443]
+                  - columnheader "Budget / Hours Used" [ref=e444]
+                  - columnheader "Status" [ref=e445]
+                  - columnheader "Health" [ref=e446]
+              - rowgroup [ref=e447]:
+                - row "Residential Building carlos 74% 111 / 150 h ACTIVE GOOD" [ref=e448]:
+                  - cell "Residential Building" [ref=e449]
+                  - cell "carlos" [ref=e450]
+                  - cell "74% 111 / 150 h" [ref=e451]:
+                    - generic [ref=e455]: 74%
+                    - generic [ref=e456]: 111 / 150 h
+                  - cell "ACTIVE" [ref=e457]
+                  - cell "GOOD" [ref=e458]:
+                    - generic "GOOD" [ref=e459]
+                - row "Operations Support CRED 54% 22 / 40 h ACTIVE GOOD" [ref=e460]:
+                  - cell "Operations Support" [ref=e461]
+                  - cell "CRED" [ref=e462]
+                  - cell "54% 22 / 40 h" [ref=e463]:
+                    - generic [ref=e467]: 54%
+                    - generic [ref=e468]: 22 / 40 h
+                  - cell "ACTIVE" [ref=e469]
+                  - cell "GOOD" [ref=e470]:
+                    - generic "GOOD" [ref=e471]
+  - generic [ref=e472]: "0"
+```

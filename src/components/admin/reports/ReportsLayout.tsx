@@ -44,52 +44,52 @@ const ReportsLayout: React.FC<ReportsLayoutProps> = ({
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50/50 pb-12 animate-in fade-in duration-500">
+        <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950/50 pb-12 animate-in fade-in duration-500 transition-colors">
             {/* 1. Header Section */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-20">
+            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-20 transition-colors">
                 <div className="max-w-[1920px] mx-auto">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
                         {/* Title & Breadcrumb */}
                         <div>
-                            <div className="flex items-center text-xs text-slate-500 mb-1">
+                            <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 mb-1">
                                 <span>Dashboard</span>
                                 <span className="mx-2">/</span>
                                 <span>Reports</span>
                                 <span className="mx-2">/</span>
-                                <span className="font-medium text-slate-900">
+                                <span className="font-medium text-slate-900 dark:text-white">
                                     {tabs.find(t => t.id === activeTab)?.label}
                                 </span>
                             </div>
-                            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Analytics & Reports</h1>
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Analytics & Reports</h1>
                         </div>
 
                         {/* Top Actions */}
                         <div className="flex items-center space-x-2">
                             <button
                                 onClick={onRefresh}
-                                className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip"
+                                className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors tooltip"
                                 title="Refresh Data"
                             >
                                 <RefreshCw className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={onPrint}
-                                className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors tooltip"
+                                className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors tooltip"
                                 title="Print Report"
                             >
                                 <Printer className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={onSaveFilter}
-                                className="flex items-center px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                                className="flex items-center px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                             >
-                                <Save className="h-4 w-4 mr-2 text-slate-400" />
+                                <Save className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500" />
                                 Save Filter
                             </button>
                             <button
                                 onClick={onExport}
-                                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
+                                className="flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-500 transition-colors shadow-sm shadow-blue-200 dark:shadow-blue-900/20"
                             >
                                 <Download className="h-4 w-4 mr-2" />
                                 Export
@@ -107,13 +107,13 @@ const ReportsLayout: React.FC<ReportsLayoutProps> = ({
                                     key={tab.id}
                                     onClick={() => onTabChange(tab.id)}
                                     className={cn(
-                                        "flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
+                                        "flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap border border-transparent",
                                         isActive
-                                            ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-200"
-                                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 shadow-sm ring-1 ring-blue-200 dark:ring-blue-800/50"
+                                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
                                     )}
                                 >
-                                    <Icon className={cn("h-4 w-4 mr-2", isActive ? "text-blue-600" : "text-slate-400")} />
+                                    <Icon className={cn("h-4 w-4 mr-2", isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500")} />
                                     {tab.label}
                                 </button>
                             );
@@ -123,7 +123,7 @@ const ReportsLayout: React.FC<ReportsLayoutProps> = ({
             </div>
 
             {/* 2. Global Filter Panel */}
-            <div className="border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-[137px] z-10 shadow-sm">
+            <div className="border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-[137px] z-10 shadow-sm">
                 <div className="max-w-[1920px] mx-auto px-6 py-4">
                     <ReportsFilterPanel
                         filters={filters}

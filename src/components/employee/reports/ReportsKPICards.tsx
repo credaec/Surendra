@@ -12,13 +12,13 @@ interface KPICardProps {
 }
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, subValue, icon: Icon, iconColor, trend }) => (
-    <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between h-28">
+    <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between h-28">
         <div className="flex justify-between items-start">
             <div>
-                <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">{title}</p>
-                <h3 className="text-2xl font-bold text-slate-900 mt-1">{value}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">{title}</p>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{value}</h3>
             </div>
-            <div className={cn("p-2 rounded-lg bg-opacity-10", iconColor.replace("text-", "bg-"))}>
+            <div className={cn("p-2 rounded-lg bg-opacity-10 dark:bg-opacity-20", iconColor.replace("text-", "bg-"))}>
                 <Icon className={cn("h-5 w-5", iconColor)} />
             </div>
         </div>

@@ -34,7 +34,43 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
 
+import { useEffect, useState } from 'react';
+import { backendService } from './services/backendService';
+import { backupService } from './services/backupService';
+
+import ProtectedRoute from './components/ProtectedRoute';
+
 function App() {
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // Check for scheduled backup on app launch
+    backupService.checkAndRunScheduledBackup();
+
+    // Initialize Backend Data Cache
+    backendService.initialize().then(() => {
+      // Force clear old branding from localStorage if it exists
+      const settings = localStorage.getItem('pulse_app_settings_v1');
+      if (settings && settings.includes('Credence')) {
+        localStorage.removeItem('pulse_app_settings_v1');
+        window.location.reload();
+      }
+      setIsInitialized(true);
+    });
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Loading Application...</h2>
+          <p className="text-slate-500 dark:text-slate-400">Syncing with secure database</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ThemeProvider>
       <LanguageProvider>
@@ -49,37 +85,42 @@ function App() {
                 <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
 
-                <Route path="/admin" element={<DashboardLayout />}>
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<AdminDashboard />} />
-                  <Route path="clients" element={<ClientListPage />} />
-                  <Route path="clients/:id" element={<ClientDetail />} />
-                  <Route path="projects" element={<ProjectListPage />} />
-                  <Route path="projects/new" element={<CreateProjectPage />} />
-                  <Route path="projects/:id/edit" element={<CreateProjectPage />} />
-                  <Route path="tasks" element={<TaskListPage />} />
-                  <Route path="approvals" element={<ApprovalsPage />} />
-                  <Route path="team" element={<TeamPage />} />
-                  <Route path="timesheets" element={<AdminTimesheetsPage />} />
-                  <Route path="reports" element={<AdminReportsPage />} />
-                  <Route path="billing/invoices" element={<InvoicesPage />} />
-                  <Route path="billing/invoices/create" element={<CreateInvoicePage />} />
-                  <Route path="billing/invoices/:id" element={<CreateInvoicePage />} />
-                  <Route path="payroll" element={<PayrollPage />} />
-                  <Route path="availability" element={<AvailabilityPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
+                {/* Protected Admin Routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/admin" element={<DashboardLayout />}>
+                    <Route index element={<Navigate to="dashboard" replace />} />
+                    <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="clients" element={<ClientListPage />} />
+                    <Route path="clients/:id" element={<ClientDetail />} />
+                    <Route path="projects" element={<ProjectListPage />} />
+                    <Route path="projects/new" element={<CreateProjectPage />} />
+                    <Route path="projects/:id/edit" element={<CreateProjectPage />} />
+                    <Route path="tasks" element={<TaskListPage />} />
+                    <Route path="approvals" element={<ApprovalsPage />} />
+                    <Route path="team" element={<TeamPage />} />
+                    <Route path="timesheets" element={<AdminTimesheetsPage />} />
+                    <Route path="reports" element={<AdminReportsPage />} />
+                    <Route path="billing/invoices" element={<InvoicesPage />} />
+                    <Route path="billing/invoices/create" element={<CreateInvoicePage />} />
+                    <Route path="billing/invoices/:id" element={<CreateInvoicePage />} />
+                    <Route path="payroll" element={<PayrollPage />} />
+                    <Route path="availability" element={<AvailabilityPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                  </Route>
                 </Route>
-// ... (rest remains)
+                {/* ... (rest remains) */}
 
 
-
-                <Route path="/employee" element={<EmployeeLayout />}>
-                  <Route path="dashboard" element={<EmployeeDashboard />} />
-                  <Route path="timer" element={<TimerPage />} />
-                  <Route path="timesheet" element={<TimesheetPage />} />
-                  <Route path="projects" element={<MyProjectsPage />} />
-                  <Route path="projects/:id" element={<ProjectDetailsPage />} />
-                  <Route path="reports" element={<MyReportsPage />} />
+                {/* Protected Employee Routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/employee" element={<EmployeeLayout />}>
+                    <Route path="dashboard" element={<EmployeeDashboard />} />
+                    <Route path="timer" element={<TimerPage />} />
+                    <Route path="timesheet" element={<TimesheetPage />} />
+                    <Route path="projects" element={<MyProjectsPage />} />
+                    <Route path="projects/:id" element={<ProjectDetailsPage />} />
+                    <Route path="reports" element={<MyReportsPage />} />
+                  </Route>
                 </Route>
               </Routes>
             </Router>
@@ -91,3 +132,4 @@ function App() {
 }
 
 export default App;
+

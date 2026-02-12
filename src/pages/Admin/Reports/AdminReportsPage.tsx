@@ -5,6 +5,7 @@ import ProjectPerformanceReport from '../../../components/admin/reports/tabs/Pro
 import ClientSummaryReport from '../../../components/admin/reports/tabs/ClientSummaryReport';
 import CategoryBreakdownReport from '../../../components/admin/reports/tabs/CategoryBreakdownReport';
 import TimesheetApprovalReport from '../../../components/admin/reports/tabs/TimesheetApprovalReport';
+import { backendService } from '../../../services/backendService';
 
 
 export type ReportTabId = 'productivity' | 'projects' | 'clients' | 'categories' | 'approvals';
@@ -94,16 +95,189 @@ const AdminReportsPage: React.FC = () => {
 
         if (activeTab === 'productivity') {
             headers = 'ID,Employee Name,Total Hours,Billable,Non-Billable,Utilization,Status,Start Date,End Date\n';
-            // Mock data mirroring the report component
-            const data = [
-                { id: 1, name: 'Alice Johnson', totalHours: 160, billable: 140, nonBillable: 20, utilization: 88, status: 'All Approved' },
-                { id: 2, name: 'Bob Smith', totalHours: 155, billable: 120, nonBillable: 35, utilization: 77, status: 'Pending' },
-                { id: 3, name: 'Charlie Brown', totalHours: 168, billable: 160, nonBillable: 8, utilization: 95, status: 'All Approved' },
-                { id: 4, name: 'Diana Prince', totalHours: 140, billable: 100, nonBillable: 40, utilization: 71, status: 'Rejected Entries' },
-                { id: 5, name: 'Ethan Hunt', totalHours: 175, billable: 150, nonBillable: 25, utilization: 85, status: 'Pending' },
-            ];
-            rows = data.map(d =>
+
+            // Fetch and Calculate Data (Mirrors EmployeeProductivityReport logic)
+            const users = backendService.getUsers().filter(u => u.role === 'EMPLOYEE');
+            const entries = backendService.getEntries();
+
+
+            // Determine Date Range
+            const now = new Date();
+            let start: Date | null = null;
+            let end: Date | null = null;
+            const { dateRange, startDate, endDate } = filters;
+
+            if (dateRange === 'custom' && startDate && endDate) {
+                start = new Date(startDate);
+                end = new Date(endDate);
+            } else if (dateRange === 'this-month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            } else if (dateRange === 'last-month') {
+                start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                end = new Date(now.getFullYear(), now.getMonth(), 0);
+            } else if (dateRange === 'this-week') {
+                const day = now.getDay();
+                const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                start = new Date(now.setDate(diff));
+                end = new Date(now.setDate(start.getDate() + 6));
+            } else if (dateRange === 'today') {
+                start = new Date(now.setHours(0, 0, 0, 0));
+                end = new Date(now.setHours(23, 59, 59, 999));
+            }
+
+            const data = users.map((user: any) => {
+                const userEntries = entries.filter((e: any) => {
+                    if (e.userId !== user.id) return false;
+                    if (start && end) {
+                        const entryDate = new Date(e.date);
+                        if (entryDate < start || entryDate > end) return false;
+                    }
+                    return true;
+                });
+
+                let totalHours = 0;
+                let billable = 0;
+                let nonBillable = 0;
+                let activeProjectIds = new Set();
+
+                userEntries.forEach((e: any) => {
+                    const h = e.durationMinutes / 60;
+                    totalHours += h;
+                    if (e.isBillable) billable += h;
+                    else nonBillable += h;
+                    if (e.projectId) activeProjectIds.add(e.projectId);
+                });
+
+                const utilization = totalHours > 0 ? Math.round((billable / totalHours) * 100) : 0;
+
+                return {
+                    id: user.id,
+                    name: user.name,
+                    totalHours: parseFloat(totalHours.toFixed(1)),
+                    billable: parseFloat(billable.toFixed(1)),
+                    nonBillable: parseFloat(nonBillable.toFixed(1)),
+                    utilization,
+                    status: totalHours > 0 ? 'Active' : 'Inactive'
+                };
+            }).filter((u: any) => u.totalHours > 0 || filters.status === 'all'); // Basic filter
+
+            rows = data.map((d: any) =>
                 `${d.id},"${d.name}",${d.totalHours},${d.billable},${d.nonBillable},${d.utilization}%,${d.status},${filters.startDate || '-'},${filters.endDate || '-'}`
+            );
+        } else if (activeTab === 'projects') {
+            headers = 'Project Name,Client,Budget (Hrs),Actual (Hrs),Budget ($),Actual ($),Margin %,Status\n';
+            const projects = backendService.getProjects();
+            const entries = backendService.getEntries();
+
+            // Reuse filter logic (simplified for export - global date range)
+            const now = new Date();
+            let start: Date | null = null;
+            let end: Date | null = null;
+            const { dateRange, startDate, endDate } = filters;
+
+            if (dateRange === 'custom' && startDate && endDate) {
+                start = new Date(startDate);
+                end = new Date(endDate);
+            } else if (dateRange === 'this-month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            } else if (dateRange === 'last-month') {
+                start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                end = new Date(now.getFullYear(), now.getMonth(), 0);
+            } else if (dateRange === 'this-week') {
+                const day = now.getDay();
+                const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                start = new Date(now.setDate(diff));
+                end = new Date(now.setDate(start.getDate() + 6));
+            } else if (dateRange === 'today') {
+                start = new Date(now.setHours(0, 0, 0, 0));
+                end = new Date(now.setHours(23, 59, 59, 999));
+            }
+
+            const data = projects.map((p: any) => {
+                const projectEntries = entries.filter((e: any) => {
+                    if (e.projectId !== p.id) return false;
+                    if (start && end) {
+                        const entryDate = new Date(e.date);
+                        if (entryDate < start || entryDate > end) return false;
+                    }
+                    return true;
+                });
+
+                const actualHours = projectEntries.reduce((acc: number, e: any) => acc + (e.durationMinutes / 60), 0);
+                const rate = p.globalRate || 50;
+                const actualCost = actualHours * rate;
+                const budgetCost = (p.estimatedHours || 0) * rate;
+                const marginVal = budgetCost - actualCost;
+                const marginPercent = budgetCost > 0 ? Math.round((marginVal / budgetCost) * 100) : 0;
+
+                return {
+                    name: p.name,
+                    clientName: p.clientName,
+                    estimatedHours: p.estimatedHours || 0,
+                    actualHours: parseFloat(actualHours.toFixed(2)),
+                    budgetAmount: p.budgetAmount || budgetCost,
+                    actualCost: parseFloat(actualCost.toFixed(2)),
+                    margin: marginPercent,
+                    status: p.status
+                };
+            });
+
+            rows = data.map((p: any) =>
+                `"${p.name}","${p.clientName}",${p.estimatedHours},${p.actualHours},${p.budgetAmount},${p.actualCost},${p.margin}%,${p.status}`
+            );
+        } else if (activeTab === 'clients') {
+            headers = 'Client Name,Projects,Billable Hours,Total Billed ($),Pending Invoice ($),Status\n';
+            const invoices = backendService.getInvoices();
+            const projects = backendService.getProjects();
+
+            const clientMap = new Map<string, any>();
+
+            projects.forEach((p: any) => {
+                if (!clientMap.has(p.clientId)) {
+                    clientMap.set(p.clientId, {
+                        id: p.clientId,
+                        name: p.clientName,
+                        projects: 0,
+                        billableHours: 0,
+                        billedAmt: 0,
+                        pendingAmt: 0,
+                        status: 'Active',
+                        projectIds: []
+                    });
+                }
+                const c = clientMap.get(p.clientId);
+                c.projects += 1;
+                c.projectIds.push(p.id);
+            });
+
+            invoices.forEach((inv: any) => {
+                if (!clientMap.has(inv.clientId)) {
+                    clientMap.set(inv.clientId, {
+                        id: inv.clientId,
+                        name: inv.clientName,
+                        projects: 0,
+                        billableHours: 0,
+                        billedAmt: 0,
+                        pendingAmt: 0,
+                        status: 'Active',
+                        projectIds: []
+                    });
+                }
+                const c = clientMap.get(inv.clientId);
+                // Ensure billedAmt/pendingAmt are numbers
+                c.billedAmt += (inv.totalAmount || 0);
+                c.pendingAmt += (inv.balanceAmount || 0);
+            });
+
+            const data = Array.from(clientMap.values()).filter((c: any) => {
+                // Simplified export filter: match client filter if set
+                return !filters.client || c.id === filters.client;
+            });
+
+            rows = data.map((c: any) =>
+                `"${c.name}",${c.projects},${c.billableHours},${c.billedAmt},${c.pendingAmt},${c.status}`
             );
         } else {
             // Generic export for other tabs
