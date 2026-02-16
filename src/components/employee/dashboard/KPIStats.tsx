@@ -2,11 +2,15 @@ import React from 'react';
 import { Clock, TrendingUp, DollarSign, CalendarCheck, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { backendService } from '../../../services/backendService';
-import { isSameDay, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
+import { isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { cn } from '../../../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-const KPIStats: React.FC = () => {
+interface KPIStatsProps {
+    dateFilter?: 'this-week' | 'this-month';
+}
+
+const KPIStats: React.FC<KPIStatsProps> = ({ dateFilter = 'this-week' }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
 
@@ -28,13 +32,24 @@ const KPIStats: React.FC = () => {
     const weekHours = Math.floor(weekSeconds / 3600);
     const weekMins = Math.floor((weekSeconds % 3600) / 60);
 
-    // Billable Percentage (Week)
-    const weekBillableSeconds = weekEntries
+    // Month's Hours
+    const monthStart = startOfMonth(today);
+    const monthEnd = endOfMonth(today);
+    const monthEntries = entries.filter(e => isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }));
+    const monthSeconds = monthEntries.reduce((acc, e) => acc + (e.durationMinutes * 60 || 0), 0);
+    const monthHours = Math.floor(monthSeconds / 3600);
+    const monthMins = Math.floor((monthSeconds % 3600) / 60);
+
+    // Billable Percentage (Dynamic)
+    const targetEntries = dateFilter === 'this-week' ? weekEntries : monthEntries;
+    const targetSeconds = dateFilter === 'this-week' ? weekSeconds : monthSeconds;
+
+    const targetBillableSeconds = targetEntries
         .filter(e => e.isBillable)
         .reduce((acc, e) => acc + (e.durationMinutes * 60 || 0), 0);
 
-    const billablePct = weekSeconds > 0
-        ? Math.round((weekBillableSeconds / weekSeconds) * 100)
+    const billablePct = targetSeconds > 0
+        ? Math.round((targetBillableSeconds / targetSeconds) * 100)
         : 0;
 
     const cards = [
@@ -46,9 +61,9 @@ const KPIStats: React.FC = () => {
             color: 'blue'
         },
         {
-            title: 'This Week',
-            value: `${weekHours}h ${weekMins}m`,
-            subtitle: 'Mon–Sun total',
+            title: dateFilter === 'this-week' ? 'This Week' : 'This Month',
+            value: dateFilter === 'this-week' ? `${weekHours}h ${weekMins}m` : `${monthHours}h ${monthMins}m`,
+            subtitle: dateFilter === 'this-week' ? 'Mon–Sun total' : 'Month total',
             icon: TrendingUp,
             color: 'emerald'
         },

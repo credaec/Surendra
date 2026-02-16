@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, MoreHorizontal, FileText, ArrowRight, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '../../../lib/utils';
+import { cn, formatDuration } from '../../../lib/utils';
 import { useAuth } from '../../../context/AuthContext';
 import { backendService } from '../../../services/backendService';
 import type { TimeEntry } from '../../../types/schema';
@@ -13,7 +13,13 @@ interface RecentActivityEntry extends TimeEntry {
     notes?: string;
 }
 
-const RecentEntries: React.FC = () => {
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+
+interface RecentEntriesProps {
+    dateFilter?: 'this-week' | 'this-month';
+}
+
+const RecentEntries: React.FC<RecentEntriesProps> = ({ dateFilter = 'this-week' }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [entries, setEntries] = useState<RecentActivityEntry[]>([]);
@@ -24,15 +30,31 @@ const RecentEntries: React.FC = () => {
             const projects = backendService.getProjects();
             const categories = backendService.getTaskCategories();
 
+            // Filter based on Date Filter
+            const today = new Date();
+            let start, end;
+
+            if (dateFilter === 'this-week') {
+                start = startOfWeek(today, { weekStartsOn: 1 });
+                end = endOfWeek(today, { weekStartsOn: 1 });
+            } else {
+                start = startOfMonth(today);
+                end = endOfMonth(today);
+            }
+
+            const filteredEntries = allEntries.filter(e =>
+                isWithinInterval(parseISO(e.date), { start, end })
+            );
+
             // Sort: Newest first
-            allEntries.sort((a, b) => {
+            filteredEntries.sort((a, b) => {
                 const dateA = new Date(`${a.date}T${a.startTime || '00:00'}`);
                 const dateB = new Date(`${b.date}T${b.startTime || '00:00'}`);
                 return dateB.getTime() - dateA.getTime();
             });
 
             // Enrich entries
-            const enriched = allEntries.slice(0, 5).map(e => {
+            const enriched = filteredEntries.slice(0, 5).map(e => {
                 const project = projects.find(p => p.id === e.projectId);
                 const category = categories.find(c => c.id === e.categoryId);
                 return {
@@ -45,7 +67,7 @@ const RecentEntries: React.FC = () => {
             });
             setEntries(enriched as any);
         }
-    }, [user]);
+    }, [user, dateFilter]);
 
     const getStatusStyles = (status: string) => {
         switch (status) {
@@ -58,13 +80,7 @@ const RecentEntries: React.FC = () => {
         }
     };
 
-    // Helper to format seconds to duration string
-    const formatDuration = (seconds?: number) => {
-        if (!seconds) return '-';
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        return `${h}h ${m}m`;
-    };
+
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full transition-all duration-300">
@@ -105,12 +121,14 @@ const RecentEntries: React.FC = () => {
                                     <td className="px-6 py-4">
                                         <div className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{entry.projectName}</div>
                                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-1 flex items-center">
-                                            <span className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-lg mr-3 shadow-sm">{entry.date}</span>
+                                            <span className="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-lg mr-3 shadow-sm text-xs">
+                                                {new Date(entry.date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                            </span>
                                             {entry.taskCategory}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-right font-black text-slate-700 dark:text-slate-300 font-mono tracking-tighter">
-                                        {formatDuration(entry.durationSeconds)}
+                                        {entry.durationSeconds ? formatDuration(entry.durationSeconds, 'seconds') : '-'}
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex items-center justify-center space-x-2">

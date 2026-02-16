@@ -12,6 +12,7 @@ import ProjectClientSettings from '../../../components/admin/settings/ProjectCli
 import TimesheetRules from '../../../components/admin/settings/TimesheetRules';
 import BillingSettings from '../../../components/admin/settings/BillingSettings';
 import PayrollSettings from '../../../components/admin/settings/PayrollSettings';
+import ProjectRolesSettings from '../../../components/admin/settings/ProjectRolesSettings';
 import CategoriesSetup from '../../../components/admin/settings/CategoriesSetup';
 import NotificationSettings from '../../../components/admin/settings/NotificationSettings';
 import SecuritySettings from '../../../components/admin/settings/SecuritySettings';
@@ -113,6 +114,8 @@ const SettingsPage: React.FC = () => {
                 return <IntegrationsSettings />;
             case 'BACKUP':
                 return <BackupSettings />;
+            case 'ROLES':
+                return <ProjectRolesSettings />;
             default: return null;
         }
     };

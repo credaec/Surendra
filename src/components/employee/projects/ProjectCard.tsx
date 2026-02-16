@@ -2,6 +2,7 @@ import React from 'react';
 import { MoreHorizontal, Play, Calendar, User } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import type { Project } from '../../../types/schema'; // Safely import interface
+import { backendService } from '../../../services/backendService';
 
 interface ProjectCardProps {
     project: Project;
@@ -11,8 +12,20 @@ interface ProjectCardProps {
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onStartTimer, onViewDetails }) => {
 
-    // React Component
+    // Resolve allowed tasks
+    const allCategories = backendService.getTaskCategories();
+    let allowedCategories = allCategories;
 
+    if (project.allowedCategoryIds && project.allowedCategoryIds.length > 0) {
+        allowedCategories = allCategories.filter(c => project.allowedCategoryIds?.includes(c.id));
+    }
+
+    // Sort by name for consistency
+    allowedCategories.sort((a, b) => a.name.localeCompare(b.name));
+
+    const displayLimit = 3;
+    const visibleCategories = allowedCategories.slice(0, displayLimit);
+    const remainingCount = allowedCategories.length - displayLimit;
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full">
@@ -62,7 +75,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onStartTimer, onView
                     )}
                     <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
                         <Calendar className="h-3.5 w-3.5 mr-2 text-slate-400 dark:text-slate-500" />
-                        Due: <span className="text-slate-700 dark:text-slate-300 font-medium ml-1">{project.endDate || 'Ongoing'}</span>
+                        Due: <span className="text-slate-700 dark:text-slate-300 font-medium ml-1">{project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}</span>
                     </div>
                 </div>
 
@@ -93,14 +106,21 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onStartTimer, onView
                     <div className="mt-auto">
                         <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-2 tracking-wide">Allowed Tasks</p>
                         <div className="flex flex-wrap gap-2">
-                            {['Engineering', 'Drafting', 'Modelling'].map(cat => (
-                                <span key={cat} className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md shadow-sm">
-                                    {cat}
+                            {visibleCategories.map(cat => (
+                                <span key={cat.id} className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md shadow-sm">
+                                    {cat.name}
                                 </span>
                             ))}
-                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 px-2 py-1 rounded-md">
-                                +2 more
-                            </span>
+                            {remainingCount > 0 && (
+                                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 px-2 py-1 rounded-md">
+                                    +{remainingCount} more
+                                </span>
+                            )}
+                            {allowedCategories.length === 0 && (
+                                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 italic">
+                                    All tasks allowed
+                                </span>
+                            )}
                         </div>
                     </div>
                 )}

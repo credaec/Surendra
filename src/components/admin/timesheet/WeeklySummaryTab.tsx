@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MoreHorizontal, FileText, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { backendService } from '../../../services/backendService';
 import { startOfWeek, endOfWeek, format, parseISO, startOfMonth, endOfMonth, subMonths, subWeeks, isWithinInterval } from 'date-fns';
+import { formatDuration } from '../../../lib/utils';
 
 interface WeeklySummaryTabProps {
     onViewDetail: (employeeId: string) => void;
@@ -123,9 +124,9 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
             avatarInitials: emp.avatarInitials,
             department: emp.department,
             weekRange: weekDisplay,
-            totalHours: totalMinutes / 60,
-            billableHours: billableMinutes / 60,
-            nonBillableHours: nonBillableMinutes / 60,
+            totalHours: formatDuration(totalMinutes),
+            billableHours: formatDuration(billableMinutes),
+            nonBillableHours: formatDuration(nonBillableMinutes),
             status: status,
             submittedDate: submittedDate,
             approvedBy: approvedById,
@@ -228,9 +229,9 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
                                     </div>
                                 </div>
                             </td>
-                            <td className="px-6 py-4 font-mono font-medium text-slate-900 dark:text-slate-200">{item!.totalHours.toFixed(2)}h</td>
-                            <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{item!.billableHours.toFixed(2)}h</td>
-                            <td className="px-6 py-4 font-mono text-slate-500 dark:text-slate-500">{item!.nonBillableHours.toFixed(2)}h</td>
+                            <td className="px-6 py-4 font-mono font-medium text-slate-900 dark:text-slate-200">{item!.totalHours}</td>
+                            <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{item!.billableHours}</td>
+                            <td className="px-6 py-4 font-mono text-slate-500 dark:text-slate-500">{item!.nonBillableHours}</td>
 
                             <td className="px-6 py-4">{getStatusBadge(item!.status)}</td>
                             <td className="px-6 py-4 text-right">
@@ -274,4 +275,3 @@ const WeeklySummaryTab: React.FC<WeeklySummaryTabProps> = ({
 };
 
 export default WeeklySummaryTab;
-

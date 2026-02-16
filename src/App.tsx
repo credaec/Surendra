@@ -56,6 +56,8 @@ function App() {
         window.location.reload();
       }
       setIsInitialized(true);
+      // Run cleanup for stale timers
+      backendService.autoStopStaleTimers();
     });
   }, []);
 
@@ -95,6 +97,7 @@ function App() {
                     <Route path="projects" element={<ProjectListPage />} />
                     <Route path="projects/new" element={<CreateProjectPage />} />
                     <Route path="projects/:id/edit" element={<CreateProjectPage />} />
+                    <Route path="projects/:id" element={<ProjectDetailsPage />} />
                     <Route path="tasks" element={<TaskListPage />} />
                     <Route path="approvals" element={<ApprovalsPage />} />
                     <Route path="team" element={<TeamPage />} />

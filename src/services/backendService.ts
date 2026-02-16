@@ -48,7 +48,9 @@ export interface ApprovalRequest {
     projects: string[];
     approvedBy?: string;
     lastUpdated?: string;
-    remarks?: string;
+    today?: string; // Optional helper
+    weekStartDate?: string;
+    weekEndDate?: string;
 }
 
 export interface InvoiceItem {
@@ -162,6 +164,7 @@ const cache = {
     approvals: [] as ApprovalRequest[],
     employeeRates: [] as EmployeeRate[],
     notifications: [] as any[],
+    projectRoles: ['Project Manager', 'Engineer', 'Drafter', 'Reviewer'] as string[],
     isInitialized: false
 };
 
@@ -185,7 +188,10 @@ export const backendService = {
                 api.get('/payroll-records'),
                 api.get('/approvals'),
                 api.get('/employee-rates'),
-                api.get('/notifications')
+                api.get('/approvals'),
+                api.get('/employee-rates'),
+                api.get('/notifications'),
+                api.get('/settings/roles')
             ]);
 
             const getVal = (idx: number) => results[idx].status === 'fulfilled' ? results[idx].value : [];
@@ -203,7 +209,9 @@ export const backendService = {
             cache.payrollRecords = getVal(10);
             cache.approvals = getVal(11);
             cache.employeeRates = getVal(12);
+            cache.employeeRates = getVal(12);
             cache.notifications = getVal(13);
+            cache.projectRoles = getVal(14) || ['Project Manager', 'Engineer', 'Drafter', 'Reviewer'];
 
             cache.isInitialized = true;
             console.log('Backend Synced (Partial Success possibly)');
@@ -385,6 +393,12 @@ export const backendService = {
     addTimeEntry: async (entry: any): Promise<TimeEntry> => {
         const newEntry = await api.post('/time-entries', entry);
         cache.timeEntries.unshift(newEntry);
+
+        // Check Overrun
+        if (entry.projectId) {
+            await backendService.checkProjectOverrun(entry.projectId);
+        }
+
         return newEntry;
     },
 
@@ -392,6 +406,12 @@ export const backendService = {
         const updated = await api.put(`/time-entries/${entry.id}`, entry);
         const idx = cache.timeEntries.findIndex(te => te.id === entry.id);
         if (idx !== -1) cache.timeEntries[idx] = updated;
+
+        // Check Overrun (in case duration increased)
+        if (entry.projectId) {
+            await backendService.checkProjectOverrun(entry.projectId);
+        }
+
         return updated;
     },
 
@@ -407,11 +427,144 @@ export const backendService = {
     },
 
     getAllActiveTimers: (): TimeEntry[] => {
-        return cache.timeEntries.filter(te => !te.endTime && te.startTime);
+        return cache.timeEntries.filter(te => !te.endTime && (te.startTime || te.status === 'PAUSED'));
     },
 
     getActiveTimer: (userId: string): TimeEntry | undefined => {
-        return cache.timeEntries.find(te => te.userId === userId && !te.endTime && te.startTime);
+        return cache.timeEntries.find(te => te.userId === userId && !te.endTime && (te.startTime || te.status === 'PAUSED'));
+    },
+
+    // Refreshes the active timer from the backend (for cross-component/tab sync)
+    refreshActiveTimer: async (userId: string): Promise<TimeEntry | undefined> => {
+        try {
+            // Fetch latest entries for user
+            const entries = await api.get(`/time-entries?userId=${userId}`);
+            // Merge into cache (simplified: just replace/add the active one if found)
+            // Ideally we merge all, but for sync we care about the active one.
+            const active = entries.find((e: TimeEntry) => !e.endTime);
+
+            if (active) {
+                const idx = cache.timeEntries.findIndex(te => te.id === active.id);
+                if (idx !== -1) cache.timeEntries[idx] = active;
+                else cache.timeEntries.unshift(active);
+            } else {
+                // If no active found in backend, ensure cache doesn't have a stale one
+                // This is harder since we don't know which one was active without checking cache.
+                // We can filter cache for active ones for this user and mark them as finished? 
+                // Or just trust the fetch list is comprehensive?
+                // The fetch is specific to userId, so we can update cache.timeEntries for this user.
+                // BUT cache.timeEntries might contain other users if admin? No, usually filtered.
+                // Let's just update based on the list returned.
+            }
+            return active;
+        } catch (e) {
+            console.error("Failed to refresh active timer", e);
+            return undefined;
+        }
+    },
+
+    // --- Overrun Handling ---
+    checkProjectOverrun: async (projectId: string) => {
+        const project = cache.projects.find(p => p.id === projectId);
+        if (!project) return;
+        if (!project.estimatedHours || project.estimatedHours <= 0) return;
+
+        const entries = cache.timeEntries.filter(te => te.projectId === projectId);
+        const totalMinutes = entries.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+        const totalHours = totalMinutes / 60;
+
+        // Check if limit exceeded (or close to it? User said "finished and work is done", typically means >= budget)
+        if (totalHours >= project.estimatedHours) {
+            // 1. Notify Admin
+            // Check if we already notified recently? For now, we'll just add a notification.
+            // Avoid spamming if already over budget?
+            // Simple check: check if the notification already exists at top of stack?
+            // Or just fire it.
+            await backendService.addNotification(
+                'admin', // Target admin
+                'Project Overrun Warning',
+                `Project "${project.name}" has exceeded its estimated budget of ${project.estimatedHours}h. Current: ${totalHours.toFixed(1)}h.`
+            );
+
+            // 2. Generate Draft Invoice (Comprehensive)
+            await backendService.generateDraftInvoice(projectId);
+        }
+    },
+
+    generateDraftInvoice: async (projectId: string) => {
+        const project = cache.projects.find(p => p.id === projectId);
+        if (!project) return;
+        const client = cache.clients.find(c => c.id === project.clientId);
+
+        // Fetch ALL entries (Billed & Unbilled) as requested
+        const projectEntries = cache.timeEntries.filter(te => te.projectId === projectId);
+
+        if (projectEntries.length === 0) return;
+
+        // Check for existing DRAFT invoice for this project
+        const existingDraft = cache.invoices.find(i => i.projectId === projectId && i.status === 'DRAFT');
+
+        const invoiceItems: InvoiceItem[] = projectEntries.map(entry => {
+            // Calculate Amount
+            // Logic: isBillable ? duration * rate : 0
+            let amount = 0;
+            if (entry.isBillable) {
+                // Determine Rate: Entry specific -> User Rate -> Project Default
+                // Simplified: use Project Global Rate or User Cost Rate
+                const rate = project.globalRate || 50; // Mock default
+                amount = (entry.durationMinutes / 60) * rate;
+            }
+
+            return {
+                id: crypto.randomUUID(), // New ID or preserve? Re-generating items for draft is safer for sync
+                description: `${entry.description || 'Time Log'} (${new Date(entry.date).toLocaleDateString()})`,
+                quantity: parseFloat((entry.durationMinutes / 60).toFixed(2)),
+                unitPrice: entry.isBillable ? (project.globalRate || 50) : 0,
+                amount: parseFloat(amount.toFixed(2)),
+                timeEntryId: entry.id
+            };
+        });
+
+        const totalAmount = invoiceItems.reduce((sum, item) => sum + item.amount, 0);
+
+        if (existingDraft) {
+            // Update Existing Draft
+            const updatedDraft: Invoice = {
+                ...existingDraft,
+                items: invoiceItems,
+                subtotal: totalAmount,
+                taxAmount: totalAmount * 0.1, // Mock Tax 10%
+                totalAmount: totalAmount * 1.1,
+                balanceAmount: totalAmount * 1.1 - existingDraft.paidAmount
+            };
+            await backendService.updateInvoice(updatedDraft);
+            await backendService.addNotification('admin', 'Invoice Updated', `Draft invoice for "${project.name}" updated with latest entries.`);
+        } else {
+            // Create New Draft
+            const newInvoice: any = {
+                invoiceNo: `INV-${Date.now().toString().slice(-6)}`,
+                clientId: project.clientId,
+                clientName: client?.name || 'Unknown',
+                projectId: project.id,
+                projectName: project.name,
+                date: new Date().toISOString().split('T')[0],
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +7 days
+                currency: project.currency || 'USD',
+                status: 'DRAFT',
+                items: invoiceItems,
+                subtotal: totalAmount,
+                taxAmount: totalAmount * 0.1,
+                totalAmount: totalAmount * 1.1,
+                paidAmount: 0,
+                balanceAmount: totalAmount * 1.1,
+                type: 'TIMESHEET',
+                createdBy: 'System (Overrun Automator)',
+                createdAt: new Date().toISOString(),
+                payments: []
+            };
+            await backendService.addInvoice(newInvoice);
+            await backendService.addNotification('admin', 'Draft Invoice Created', `Draft invoice created for over-budget project "${project.name}".`);
+        }
     },
 
     // --- Timer Actions ---
@@ -429,6 +582,9 @@ export const backendService = {
         };
         const newEntry = await api.post('/time-entries', entry);
         cache.timeEntries.unshift(newEntry);
+
+        // Check overrun immediately? No, duration is 0 at start.
+
         return newEntry;
     },
 
@@ -460,6 +616,12 @@ export const backendService = {
         const updated = await api.put(`/time-entries/${active.id}`, update);
         const idx = cache.timeEntries.findIndex(te => te.id === active.id);
         if (idx !== -1) cache.timeEntries[idx] = updated;
+
+        // Check Overrun
+        if (updated.projectId) {
+            await backendService.checkProjectOverrun(updated.projectId);
+        }
+
         return updated;
     },
 
@@ -513,6 +675,29 @@ export const backendService = {
         if (active) {
             const merged = { ...active, ...updates };
             await backendService.updateTimeEntry(merged);
+        }
+    },
+
+    // --- Auto-Stop Logic ---
+    autoStopStaleTimers: async () => {
+        // Threshold: 12 Hours
+        const MAX_DURATION_MS = 12 * 60 * 60 * 1000;
+        const now = Date.now();
+
+        const activeTimers = cache.timeEntries.filter(te => !te.endTime && te.startTime);
+        let stoppedCount = 0;
+
+        for (const timer of activeTimers) {
+            const start = new Date(timer.startTime!).getTime();
+            if (now - start > MAX_DURATION_MS) {
+                // Auto-stop this timer
+                await backendService.stopTimer(timer.userId, "Auto-paused by system (end of day/stale)");
+                stoppedCount++;
+            }
+        }
+
+        if (stoppedCount > 0) {
+            console.log(`Auto-stopped ${stoppedCount} stale timers.`);
         }
     },
 
@@ -722,5 +907,30 @@ export const backendService = {
         await api.put(`/notifications/${id}`, { isRead: true });
         const idx = cache.notifications.findIndex(n => n.id === id);
         if (idx !== -1) cache.notifications[idx].isRead = true;
+    },
+
+    // --- Project Roles ---
+    // --- Project Roles ---
+    getProjectRoles: () => {
+        if (!cache.projectRoles || cache.projectRoles.length === 0) {
+            return ['Project Manager', 'Engineer', 'Drafter', 'Reviewer'];
+        }
+        return [...cache.projectRoles];
+    },
+
+    addProjectRole: async (role: string) => {
+        if (!cache.projectRoles.includes(role)) {
+            const newRoles = [...cache.projectRoles, role];
+            await api.post('/settings/roles', { roles: newRoles });
+            cache.projectRoles = newRoles;
+        }
+        return [...cache.projectRoles];
+    },
+
+    deleteProjectRole: async (role: string) => {
+        const newRoles = cache.projectRoles.filter(r => r !== role);
+        await api.post('/settings/roles', { roles: newRoles });
+        cache.projectRoles = newRoles;
+        return [...cache.projectRoles];
     }
 };

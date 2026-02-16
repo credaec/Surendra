@@ -1,7 +1,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { BarChart, Bar, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useTheme } from '../../../context/ThemeContext';
 
 interface ReportDrillDownDrawerProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface ReportDrillDownDrawerProps {
 const ReportDrillDownDrawer: React.FC<ReportDrillDownDrawerProps> = ({
     isOpen, onClose, type, title
 }) => {
+    const { isDarkMode } = useTheme();
 
     // Mock Data based on type (Generic fallback)
     const renderContent = () => {
@@ -41,6 +43,18 @@ const ReportDrillDownDrawer: React.FC<ReportDrillDownDrawerProps> = ({
                                     { day: 'Mon', hours: 8 }, { day: 'Tue', hours: 8.5 }, { day: 'Wed', hours: 7 },
                                     { day: 'Thu', hours: 9 }, { day: 'Fri', hours: 8 }, { day: 'Sat', hours: 0 }, { day: 'Sun', hours: 0 }
                                 ]}>
+                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 10 }} />
+                                    <Tooltip
+                                        cursor={{ fill: isDarkMode ? '#1e293b' : '#f8fafc' }}
+                                        contentStyle={{
+                                            backgroundColor: isDarkMode ? '#1e293b' : '#fff',
+                                            borderRadius: '8px',
+                                            border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0',
+                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                            color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                        }}
+                                        itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
+                                    />
                                     <Bar dataKey="hours" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>

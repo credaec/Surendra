@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle, Download, Printer, Loader2 } from 'lucide-react';
 import { backendService } from '../../../services/backendService';
 import { useToast } from '../../../context/ToastContext';
+import { formatDuration } from '../../../lib/utils';
 
 interface TimesheetDetailViewProps {
     employeeId: string;
@@ -143,15 +144,15 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
             <div className="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-200 bg-slate-50/50 print:bg-white print:border-slate-300">
                 <div className="p-4 text-center">
                     <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Hours</div>
-                    <div className="text-xl font-bold text-slate-900">{stats.total.toFixed(1)}h</div>
+                    <div className="text-xl font-bold text-slate-900">{formatDuration(stats.total * 60)}</div>
                 </div>
                 <div className="p-4 text-center">
                     <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Billable</div>
-                    <div className="text-xl font-bold text-emerald-600">{stats.billable.toFixed(1)}h</div>
+                    <div className="text-xl font-bold text-emerald-600">{formatDuration(stats.billable * 60)}</div>
                 </div>
                 <div className="p-4 text-center">
                     <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Non-Billable</div>
-                    <div className="text-xl font-bold text-slate-600">{stats.nonBillable.toFixed(1)}h</div>
+                    <div className="text-xl font-bold text-slate-600">{formatDuration(stats.nonBillable * 60)}</div>
                 </div>
                 <div className="p-4 text-center">
                     <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Entries</div>
@@ -167,7 +168,7 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
                         <div key={idx} className="border border-slate-200 rounded-lg overflow-hidden break-inside-avoid">
                             <div className="bg-slate-50 px-4 py-2 flex justify-between items-center border-b border-slate-200 print:bg-slate-100">
                                 <span className="font-medium text-slate-700 text-sm">{day.date}</span>
-                                <span className="text-sm font-bold text-slate-900">{day.hours.toFixed(1)}h</span>
+                                <span className="text-sm font-bold text-slate-900">{formatDuration(day.hours * 60)}</span>
                             </div>
                             <div className="divide-y divide-slate-100">
                                 {day.entries.map((entry, i) => {
@@ -182,7 +183,7 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
                                                 )}
                                             </div>
                                             <div className="text-right pl-4">
-                                                <div className="font-mono font-medium text-slate-700">{(entry.durationMinutes / 60).toFixed(2)}h</div>
+                                                <div className="font-mono font-medium text-slate-700">{formatDuration(entry.durationMinutes)}</div>
                                                 <div className={`text-xs mt-1 flex items-center justify-end gap-1 ${entry.isBillable ? 'text-emerald-600' : 'text-slate-400'}`}>
                                                     {entry.isBillable ? <><CheckCircle className="w-3 h-3" /> Billable</> : 'Non-Billable'}
                                                 </div>
@@ -204,4 +205,3 @@ const TimesheetDetailView: React.FC<TimesheetDetailViewProps> = ({ employeeId, w
 };
 
 export default TimesheetDetailView;
-

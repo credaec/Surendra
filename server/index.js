@@ -240,7 +240,10 @@ app.get('/api/projects', async (req, res) => {
             teamMembers: p.teamMembers ? JSON.parse(p.teamMembers) : [],
             entryRules: p.entryRules ? JSON.parse(p.entryRules) : {},
             alerts: p.alerts ? JSON.parse(p.alerts) : {},
-            milestones: p.milestones ? JSON.parse(p.milestones) : []
+            milestones: p.milestones ? JSON.parse(p.milestones) : [],
+            milestones: p.milestones ? JSON.parse(p.milestones) : [],
+            allowedCategoryIds: p.allowedCategoryIds ? JSON.parse(p.allowedCategoryIds) : [],
+            documents: p.documents ? JSON.parse(p.documents) : []
         }));
         res.json(parsed);
     } catch (error) {
@@ -256,6 +259,9 @@ app.post('/api/projects', async (req, res) => {
         if (data.entryRules) data.entryRules = JSON.stringify(data.entryRules);
         if (data.alerts) data.alerts = JSON.stringify(data.alerts);
         if (data.milestones) data.milestones = JSON.stringify(data.milestones);
+        if (data.milestones) data.milestones = JSON.stringify(data.milestones);
+        if (data.allowedCategoryIds) data.allowedCategoryIds = JSON.stringify(data.allowedCategoryIds);
+        if (data.documents) data.documents = JSON.stringify(data.documents);
 
         // Date Parsing
         if (data.startDate) data.startDate = new Date(data.startDate);
@@ -279,7 +285,11 @@ app.post('/api/projects', async (req, res) => {
             teamMembers: JSON.parse(project.teamMembers || '[]'),
             entryRules: JSON.parse(project.entryRules || '{}'),
             alerts: JSON.parse(project.alerts || '{}'),
-            milestones: JSON.parse(project.milestones || '[]')
+            milestones: JSON.parse(project.milestones || '[]'),
+            allowedCategoryIds: JSON.parse(project.allowedCategoryIds || '[]'),
+            milestones: JSON.parse(project.milestones || '[]'),
+            allowedCategoryIds: JSON.parse(project.allowedCategoryIds || '[]'),
+            documents: JSON.parse(project.documents || '[]')
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -294,6 +304,9 @@ app.put('/api/projects/:id', async (req, res) => {
         if (data.entryRules) data.entryRules = JSON.stringify(data.entryRules);
         if (data.alerts) data.alerts = JSON.stringify(data.alerts);
         if (data.milestones) data.milestones = JSON.stringify(data.milestones);
+        if (data.milestones) data.milestones = JSON.stringify(data.milestones);
+        if (data.allowedCategoryIds) data.allowedCategoryIds = JSON.stringify(data.allowedCategoryIds);
+        if (data.documents) data.documents = JSON.stringify(data.documents);
 
         // Date Parsing
         if (data.startDate) data.startDate = new Date(data.startDate);
@@ -311,7 +324,11 @@ app.put('/api/projects/:id', async (req, res) => {
             teamMembers: JSON.parse(project.teamMembers || '[]'),
             entryRules: JSON.parse(project.entryRules || '{}'),
             alerts: JSON.parse(project.alerts || '{}'),
-            milestones: JSON.parse(project.milestones || '[]')
+            milestones: JSON.parse(project.milestones || '[]'),
+            allowedCategoryIds: JSON.parse(project.allowedCategoryIds || '[]'),
+            milestones: JSON.parse(project.milestones || '[]'),
+            allowedCategoryIds: JSON.parse(project.allowedCategoryIds || '[]'),
+            documents: JSON.parse(project.documents || '[]')
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -337,7 +354,10 @@ app.get('/api/projects/:id', async (req, res) => {
             teamMembers: project.teamMembers ? JSON.parse(project.teamMembers) : [],
             entryRules: project.entryRules ? JSON.parse(project.entryRules) : {},
             alerts: project.alerts ? JSON.parse(project.alerts) : {},
-            milestones: project.milestones ? JSON.parse(project.milestones) : []
+            milestones: project.milestones ? JSON.parse(project.milestones) : [],
+            milestones: project.milestones ? JSON.parse(project.milestones) : [],
+            allowedCategoryIds: project.allowedCategoryIds ? JSON.parse(project.allowedCategoryIds) : [],
+            documents: project.documents ? JSON.parse(project.documents) : []
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -381,6 +401,37 @@ app.post('/api/time-entries', async (req, res) => {
 
         if (!data.id) data.id = `time_${Date.now()}`;
 
+        // ENFORCE SINGLE ACTIVE TIMER: Stop any existing active timers for this user
+        try {
+            const activeTimers = await prisma.timeEntry.findMany({
+                where: { userId: data.userId, endTime: null }
+            });
+
+            for (const active of activeTimers) {
+                const now = new Date();
+                let duration = active.durationMinutes || 0;
+                if (active.startTime && active.status !== 'PAUSED') {
+                    const start = new Date(active.startTime);
+                    duration += Math.floor((now.getTime() - start.getTime()) / 60000);
+                }
+
+                await prisma.timeEntry.update({
+                    where: { id: active.id },
+                    data: {
+                        endTime: now,
+                        status: 'SUBMITTED',
+                        durationMinutes: duration,
+                        // Update logs to reflect auto-stop if needed, but keeping simple
+                    }
+                });
+                console.log(`Auto-stopped active timer ${active.id} for user ${data.userId}`);
+            }
+        } catch (e) {
+            console.error("Error auto-stopping timers:", e);
+        }
+
+
+
         console.log(`Creating Time Entry:`, JSON.stringify(data, null, 2));
 
         const entry = await prisma.timeEntry.create({ data });
@@ -404,10 +455,14 @@ app.put('/api/time-entries/:id', async (req, res) => {
         delete data.project;
         delete data.task;
         delete data.category;
-        delete data.activityLogs; // prevent direct overwrite if not intended
+        // delete data.activityLogs; // Allow updating logs (Fixed for Timer Persistence)
 
         // Date Parsing
         if (data.date && typeof data.date === 'string') data.date = new Date(data.date);
+
+        // Auto-set edited flags
+        data.isEdited = true;
+        data.lastEditedAt = new Date();
 
         const entry = await prisma.timeEntry.update({
             where: { id: req.params.id },
@@ -706,6 +761,124 @@ app.delete('/api/tasks/:id', async (req, res) => {
 const distPath = path.join(__dirname, '../dist');
 app.use(express.static(distPath));
 
+// 8. Invoices
+app.get('/api/invoices', async (req, res) => {
+    try {
+        const invoices = await prisma.invoice.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // Parse JSON fields
+        const parsed = invoices.map(inv => ({
+            ...inv,
+            items: inv.items ? JSON.parse(inv.items) : [],
+            payments: inv.payments ? JSON.parse(inv.payments) : []
+        }));
+
+        res.json(parsed);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/invoices', async (req, res) => {
+    try {
+        const data = req.body;
+
+        // Ensure JSON fields are stringified
+        const invoiceData = {
+            ...data,
+            items: data.items ? JSON.stringify(data.items) : '[]',
+            payments: data.payments ? JSON.stringify(data.payments) : '[]',
+            // Ensure dates are valid
+            date: new Date(data.date),
+            dueDate: new Date(data.dueDate)
+        };
+
+        const newInvoice = await prisma.invoice.create({
+            data: {
+                ...invoiceData,
+                id: data.id || `inv_${Date.now()}` // Fallback ID if not provided
+            }
+        });
+
+        res.json({
+            ...newInvoice,
+            items: JSON.parse(newInvoice.items),
+            payments: JSON.parse(newInvoice.payments || '[]')
+        });
+    } catch (error) {
+        console.error('Create Invoice Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/invoices/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+
+        // Prepare update data
+        const updateData = { ...data };
+        if (updateData.items) updateData.items = JSON.stringify(updateData.items);
+        if (updateData.payments) updateData.payments = JSON.stringify(updateData.payments);
+        if (updateData.date) updateData.date = new Date(updateData.date);
+        if (updateData.dueDate) updateData.dueDate = new Date(updateData.dueDate);
+
+        // Remove ID from update data to avoid P2025/P2002
+        delete updateData.id;
+
+        const updated = await prisma.invoice.update({
+            where: { id },
+            data: updateData
+        });
+
+        res.json({
+            ...updated,
+            items: updated.items ? JSON.parse(updated.items) : [],
+            payments: updated.payments ? JSON.parse(updated.payments) : []
+        });
+    } catch (error) {
+        console.error('Update Invoice Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/invoices/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.invoice.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Send Invoice Email
+app.post('/api/invoices/:id/send', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { email, subject, message } = req.body;
+
+        const invoice = await prisma.invoice.findUnique({ where: { id } });
+        if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+        // Mock send
+        console.log(`[MOCK EMAIL] To: ${email}, Subject: ${subject}`);
+
+        // Update status to SENT
+        const updatedInvoice = await prisma.invoice.update({
+            where: { id },
+            data: { status: 'SENT' }
+        });
+
+        res.json({ success: true, invoice: updatedInvoice });
+    } catch (error) {
+        console.error('Error sending invoice:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Payroll Runs
 app.get('/api/payroll-runs', async (req, res) => {
     try {
@@ -850,6 +1023,7 @@ app.get('/api/notifications', async (req, res) => {
         const { userId } = req.query;
         const where = userId ? { userId } : {};
         const notifications = await prisma.notification.findMany({ where, orderBy: { createdAt: 'desc' } });
+        console.log('[DEBUG] GET /api/notifications result:', JSON.stringify(notifications, null, 2));
         res.json(notifications);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -858,9 +1032,62 @@ app.get('/api/notifications', async (req, res) => {
 
 app.post('/api/notifications', async (req, res) => {
     try {
-        const notification = await prisma.notification.create({ data: req.body });
+        const { title, message, userId } = req.body;
+
+        // Validation
+        if (!title || !message || typeof title !== 'string' || typeof message !== 'string') {
+            return res.status(400).json({ error: 'Title and message are required strings' });
+        }
+
+        const notification = await prisma.notification.create({
+            data: {
+                id: req.body.id || `notif_${Date.now()}`,
+                userId,
+                title,
+                message,
+                isRead: false
+            }
+        });
         res.json(notification);
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/notifications/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isRead } = req.body;
+        const notification = await prisma.notification.update({
+            where: { id },
+            data: { isRead }
+        });
+        res.json(notification);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Cleanup Ghost Notifications
+app.delete('/api/notifications/cleanup', async (req, res) => {
+    try {
+        // Delete notifications where title or message is empty or null
+        // Note: SQLite might treat empty string different from null
+        // We will fetch all and filter to be safe or use simple deleteMany if supported constraints
+
+        const deleted = await prisma.notification.deleteMany({
+            where: {
+                OR: [
+                    { title: '' },
+                    { message: '' }
+                ]
+            }
+        });
+
+        console.log(`Cleaned up ${deleted.count} ghost notifications.`);
+        res.json({ success: true, count: deleted.count });
+    } catch (error) {
+        console.error('Cleanup error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -937,6 +1164,55 @@ app.post('/api/settings', async (req, res) => {
             create: { id: 'GLOBAL', content: JSON.stringify(req.body) }
         });
         res.json(JSON.parse(settings.content));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/settings/roles', async (req, res) => {
+    try {
+        const settings = await prisma.appSettings.findUnique({
+            where: { id: 'GLOBAL' }
+        });
+
+        let roles = ['Project Manager', 'Engineer', 'Drafter', 'Reviewer'];
+        if (settings && settings.content) {
+            const parsed = JSON.parse(settings.content);
+            if (parsed.projectRoles && Array.isArray(parsed.projectRoles)) {
+                roles = parsed.projectRoles;
+            }
+        }
+        res.json(roles);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/settings/roles', async (req, res) => {
+    try {
+        const { roles } = req.body;
+        if (!Array.isArray(roles)) {
+            return res.status(400).json({ error: 'Roles must be an array of strings' });
+        }
+
+        // Get current settings first
+        const current = await prisma.appSettings.findUnique({ where: { id: 'GLOBAL' } });
+        let newContent = {};
+
+        if (current) {
+            newContent = JSON.parse(current.content);
+        }
+
+        // Update roles
+        newContent.projectRoles = roles;
+
+        const settings = await prisma.appSettings.upsert({
+            where: { id: 'GLOBAL' },
+            update: { content: JSON.stringify(newContent) },
+            create: { id: 'GLOBAL', content: JSON.stringify(newContent) }
+        });
+
+        res.json(roles);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1062,28 +1338,31 @@ app.post('/api/backup/now', async (req, res) => {
 // Approvals (Derived from TimeEntries)
 app.get('/api/approvals', async (req, res) => {
     try {
-        // Find SUBMITTED time entries
+        // Find SUBMITTED, APPROVED, REJECTED time entries
         const entries = await prisma.timeEntry.findMany({
-            where: { status: 'SUBMITTED' },
+            where: {
+                status: { in: ['SUBMITTED', 'APPROVED', 'REJECTED'] }
+            },
             include: { user: true, project: true }
         });
 
-        // Group by user and week (simplified to just user for this audit/mock replacement)
-        // In a real app, you'd aggregate more carefully.
-        // We'll mimic the ApprovalRequest interface.
+        console.log(`[API] Fetching approvals. Found ${entries.length} entries.`);
+
+        // Group by user and status
         const approvals = [];
         const userGroups = {};
 
         for (const entry of entries) {
-            if (!userGroups[entry.userId]) {
-                userGroups[entry.userId] = {
-                    id: `req_${entry.userId}`, // Stable ID
+            const key = `${entry.userId}_${entry.status}`;
+            if (!userGroups[key]) {
+                userGroups[key] = {
+                    id: `req_${entry.userId}_${entry.status}`, // Unique ID per user-status pair
                     employeeId: entry.userId,
                     employeeName: entry.user.name,
                     avatarInitials: entry.user.avatarInitials,
                     weekRange: 'Current Week',
                     submittedOn: entry.date.toISOString(),
-                    status: 'SUBMITTED',
+                    status: entry.status, // Use actual status
                     totalHours: 0,
                     billableHours: 0,
                     nonBillableHours: 0,
@@ -1091,23 +1370,51 @@ app.get('/api/approvals', async (req, res) => {
                     projects: new Set()
                 };
             }
-            const group = userGroups[entry.userId];
+            const group = userGroups[key];
             const hours = entry.durationMinutes / 60;
             group.totalHours += hours;
             if (entry.isBillable) group.billableHours += hours;
             else group.nonBillableHours += hours;
             group.projects.add(entry.project.name);
+            const date = new Date(entry.date);
+            if (!group.minDate || date < group.minDate) group.minDate = date;
+            if (!group.maxDate || date > group.maxDate) group.maxDate = date;
         }
 
-        for (const userId in userGroups) {
-            const group = userGroups[userId];
+        for (const key in userGroups) {
+            const group = userGroups[key];
+
+            // Format Week Range
+            let weekRange = 'Current Week';
+            let startDate = null;
+            let endDate = null;
+
+            if (group.minDate && group.maxDate) {
+                const start = new Date(group.minDate);
+                const end = new Date(group.maxDate);
+
+                // Keep the actual dates for filtering
+                startDate = start.toISOString();
+                endDate = end.toISOString();
+
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                weekRange = `${months[start.getMonth()]} ${start.getDate()} - ${months[end.getMonth()]} ${end.getDate()}`;
+            }
+
             approvals.push({
                 ...group,
+                // Remove raw date objects from JSON response
+                minDate: undefined,
+                maxDate: undefined,
+                weekStartDate: startDate,
+                weekEndDate: endDate,
+                weekRange: weekRange,
                 projectCount: group.projects.size,
                 projects: Array.from(group.projects)
             });
         }
 
+        console.log(`[API] Returning ${approvals.length} approval groups.`);
         res.json(approvals);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -1168,7 +1475,11 @@ app.put('/api/approvals/:id', async (req, res) => {
             return res.status(400).json({ error: 'Invalid approval ID' });
         }
 
-        const userId = approvalId.replace('req_', '');
+        // ID format: req_userId_status
+        const parts = approvalId.replace('req_', '').split('_');
+        const userId = parts[0];
+        // We don't strictly need the old status from ID, but good to know
+
 
         // Update all SUBMITTED entries for this user
         // We only update SUBMITTED ones to avoiding touching already approved ones if any

@@ -175,7 +175,7 @@ const ProjectListPage: React.FC = () => {
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProjects.map((project) => (
-                    <div key={project.id} className="bg-white dark:bg-surface border border-slate-200 dark:border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                    <div key={project.id} onClick={() => navigate(`/admin/projects/${project.id}`)} className="bg-white dark:bg-surface border border-slate-200 dark:border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-start gap-3">
                                 <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-primary/10 flex items-center justify-center text-blue-600 dark:text-primary border border-blue-100 dark:border-primary/20">

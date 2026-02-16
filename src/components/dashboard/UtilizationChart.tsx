@@ -18,8 +18,8 @@ const UtilizationChart: React.FC = () => {
         const nonBillableHours = Math.round(nonBillableMinutes / 60);
 
         const chartData = [
-            { name: 'Billable', value: billableHours, color: '#3b82f6' }, // Blue
-            { name: 'Non-Billable', value: nonBillableHours, color: isDarkMode ? '#475569' : '#cbd5e1' }, // Slate-600 dark, Slate-300 light
+            { name: 'Billable', value: billableHours, color: '#3b82f6' }, // Blue-500
+            { name: 'Non-Billable', value: nonBillableHours, color: isDarkMode ? '#94a3b8' : '#cbd5e1' }, // Slate-400 (visible) vs Slate-300
         ];
 
         const utilPct = totalMinutes > 0 ? Math.round((billableMinutes / totalMinutes) * 100) : 0;
@@ -27,7 +27,7 @@ const UtilizationChart: React.FC = () => {
         return { data: chartData, utilization: utilPct };
     }, [isDarkMode]);
 
-    const textColor = isDarkMode ? '#94a3b8' : '#64748b';
+    const textColor = isDarkMode ? '#f1f5f9' : '#64748b'; // Slate-100 (Bright White) vs Slate-500
 
     return (
         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm h-96 transition-colors">
@@ -40,8 +40,8 @@ const UtilizationChart: React.FC = () => {
                             data={data}
                             cx="50%"
                             cy="50%"
-                            innerRadius={80}
-                            outerRadius={110}
+                            innerRadius={60}
+                            outerRadius={90}
                             paddingAngle={5}
                             dataKey="value"
                             stroke="none"
@@ -53,18 +53,26 @@ const UtilizationChart: React.FC = () => {
                         </Pie>
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: isDarkMode ? '#0f172a' : '#fff',
+                                backgroundColor: isDarkMode ? '#1e293b' : '#fff',
                                 borderRadius: '12px',
-                                border: isDarkMode ? '1px solid #1e293b' : '1px solid #e2e8f0',
-                                color: isDarkMode ? '#fff' : '#000'
+                                border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                color: isDarkMode ? '#f8fafc' : '#0f172a'
                             }}
+                            itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                         />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', color: textColor }} />
+                        <Legend
+                            verticalAlign="bottom"
+                            height={36}
+                            iconType="circle"
+                            wrapperStyle={{ fontSize: '11px' }}
+                            formatter={(value) => <span style={{ color: textColor }}>{value}</span>}
+                        />
                     </PieChart>
                 </ResponsiveContainer>
             </div>
 
-            <div className="text-center mt-[-140px] pointer-events-none mb-[110px]">
+            <div className="text-center mt-[-162px] pointer-events-none mb-[125px]">
                 <div className="text-3xl font-bold text-slate-800 dark:text-white">{utilization}%</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">Utilization</div>
             </div>

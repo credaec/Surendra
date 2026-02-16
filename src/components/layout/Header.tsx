@@ -23,7 +23,9 @@ const Header: React.FC = () => {
     const loadNotifications = () => {
         if (user?.id) {
             const data = backendService.getNotifications(user.id);
-            setNotifications(data);
+            // Filter out ghost records (missing title or message)
+            const validData = data.filter((n: any) => n.title && n.message && n.title.trim() !== '' && n.message.trim() !== '');
+            setNotifications(validData);
         }
     };
 

@@ -95,7 +95,7 @@ const TimesheetPage: React.FC = () => {
                 endTime: formatTime(e.endTime),
                 duration: `${Math.floor(e.durationMinutes / 60)}h ${e.durationMinutes % 60}m`,
                 project: backendService.getProjectById(e.projectId)?.name || 'Unknown Project',
-                category: e.categoryId,
+                category: backendService.getTaskCategories().find(c => c.id === e.categoryId)?.name || e.categoryId,
                 notes: e.description,
                 isBillable: e.isBillable,
                 status: e.status,

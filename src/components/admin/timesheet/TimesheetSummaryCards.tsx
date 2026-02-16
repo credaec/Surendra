@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle2, PieChart, Briefcase } from 'lucide-react';
 import { backendService } from '../../../services/backendService';
 import { startOfWeek, endOfWeek, isWithinInterval, subWeeks, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { formatDuration } from '../../../lib/utils';
 
 interface TimesheetSummaryCardsProps {
     dateRange: string;
@@ -121,7 +122,7 @@ const TimesheetSummaryCards: React.FC<TimesheetSummaryCardsProps> = ({
                     <Clock className="w-12 h-12 text-blue-600 dark:text-blue-400" />
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Total Hours</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalHours.toFixed(1)} <span className="text-sm font-normal text-slate-400">h</span></h3>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{formatDuration(stats.totalHours * 60)}</h3>
                 <div className={`mt-2 flex items-center text-xs font-medium ${stats.weekOverWeekTrend >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                     {stats.weekOverWeekTrend >= 0 ? '+' : ''}{stats.weekOverWeekTrend.toFixed(0)}% <span className="text-slate-400 ml-1 font-normal">vs last period</span>
                 </div>
@@ -133,7 +134,7 @@ const TimesheetSummaryCards: React.FC<TimesheetSummaryCardsProps> = ({
                     <Briefcase className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Billable Hours</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{stats.billableHours.toFixed(1)} <span className="text-sm font-normal text-slate-400">h</span></h3>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{formatDuration(stats.billableHours * 60)}</h3>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
                     <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(stats.billablePercentage, 100)}%` }}></div>
                 </div>
@@ -152,7 +153,7 @@ const TimesheetSummaryCards: React.FC<TimesheetSummaryCardsProps> = ({
             {/* Non-Billable */}
             <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm group hover:border-slate-300 dark:hover:border-slate-600 transition-all">
                 <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Non-Billable</p>
-                <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-200">{stats.nonBillableHours.toFixed(1)} <span className="text-sm font-normal text-slate-400">h</span></h3>
+                <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-200">{formatDuration(stats.nonBillableHours * 60)}</h3>
                 <p className="text-xs text-slate-400 mt-2">Internal meetings, training</p>
             </div>
 

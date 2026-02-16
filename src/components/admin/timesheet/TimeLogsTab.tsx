@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { backendService } from '../../../services/backendService';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, subWeeks, isWithinInterval } from 'date-fns';
-
+import { formatDuration } from '../../../lib/utils';
 import TimeEntryEditModal from './TimeEntryEditModal';
 
 interface TimeLogsTabProps {
@@ -67,16 +67,13 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
             const user = users.find(u => u.id === entry.userId);
             const project = projects.find(p => p.id === entry.projectId);
 
-            const hours = Math.floor(entry.durationMinutes / 60);
-            const minutes = entry.durationMinutes % 60;
-
             return {
                 id: entry.id,
                 date: format(parseISO(entry.date), 'MMM dd'),
                 employee: user ? user.name : 'Unknown User',
                 project: project ? project.name : 'Unknown Project',
                 task: entry.categoryId, // Using categoryId as task/category name
-                duration: `${hours}h ${minutes}m`,
+                duration: formatDuration(entry.durationMinutes),
                 billable: entry.isBillable,
                 proof: !!entry.proofUrl,
                 status: entry.status,
@@ -198,4 +195,3 @@ const TimeLogsTab: React.FC<TimeLogsTabProps> = ({
 };
 
 export default TimeLogsTab;
-

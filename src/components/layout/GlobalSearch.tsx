@@ -6,7 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 
 interface SearchResult {
     id: string;
-    type: 'PAGE' | 'PROJECT' | 'EMPLOYEE';
+    type: 'PAGE' | 'PROJECT' | 'EMPLOYEE' | 'CLIENT';
     title: string;
     subtitle?: string;
     path: string;
@@ -65,12 +65,26 @@ const GlobalSearch: React.FC = () => {
                 type: 'PROJECT' as const,
                 title: p.name,
                 subtitle: p.clientName,
-                path: '/projects', // TODO: Go to detail
+                path: `/admin/projects/${p.id}`,
                 icon: <Briefcase className="h-4 w-4" />
             }));
         newResults.push(...matchedProjects);
 
-        // 3. Search Employees (from Backend)
+        // 3. Search Clients (from Backend) - NEW
+        const clients = backendService.getClients();
+        const matchedClients = clients
+            .filter(c => c.name.toLowerCase().includes(searchQuery) || c.email?.toLowerCase().includes(searchQuery))
+            .map(c => ({
+                id: c.id,
+                type: 'CLIENT' as const, // We'll need to cast or update type definition below if strict
+                title: c.name,
+                subtitle: c.companyName || c.email,
+                path: `/admin/clients/${c.id}`,
+                icon: <Briefcase className="h-4 w-4" /> // Using Briefcase for now or Building if imported
+            }));
+        newResults.push(...matchedClients);
+
+        // 4. Search Employees (from Backend)
         const users = backendService.getUsers();
         const matchedUsers = users
             .filter(u => u.name.toLowerCase().includes(searchQuery) || u.email.toLowerCase().includes(searchQuery))
@@ -79,7 +93,7 @@ const GlobalSearch: React.FC = () => {
                 type: 'EMPLOYEE' as const,
                 title: u.name,
                 subtitle: u.designation,
-                path: '/team', // TODO: Go to detail or filter
+                path: `/admin/team?search=${encodeURIComponent(u.name)}`,
                 icon: <UserIcon className="h-4 w-4" />
             }));
         newResults.push(...matchedUsers);
@@ -143,8 +157,9 @@ const GlobalSearch: React.FC = () => {
                             >
                                 <div className="flex items-center min-w-0">
                                     <div className={`flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover/item:scale-110 ${result.type === 'PAGE' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' :
-                                        result.type === 'PROJECT' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' :
-                                            'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                            result.type === 'PROJECT' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                                                result.type === 'CLIENT' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                                    'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                         }`}>
                                         {result.icon}
                                     </div>

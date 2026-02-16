@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import { backendService } from '../../../../services/backendService';
 import { useTheme } from '../../../../context/ThemeContext';
+import { formatDuration } from '../../../../lib/utils';
 
 const COLORS = ['#3b82f6', '#60a5fa', '#f59e0b', '#10b981', '#94a3b8', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -12,14 +13,26 @@ const CategoryBreakdownReport: React.FC<any> = ({ filters }) => {
 
     const filteredData = React.useMemo(() => {
         const entries = backendService.getEntries();
+        const categories = backendService.getTaskCategories();
+        const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+
         // Aggregate by Category
         const catMap = new Map<string, any>();
 
         entries.forEach(e => {
-            const catName = e.categoryId || 'Uncategorized';
+            // Use name from map, or fallback to 'Uncategorized'
+            // If categoryId is missing, it's Uncategorized.
+            // If categoryId exists but not in map (deleted?), show ID or 'Unknown'. 
+            // Better to show ID so they know something is wrong, or 'Unknown'.
+            // Let's try name -> ID fallback.
+            let catName = 'Uncategorized';
+            if (e.categoryId) {
+                catName = categoryMap.get(e.categoryId) || 'Uncategorized';
+            }
+
             if (!catMap.has(catName)) {
                 catMap.set(catName, {
-                    id: catName,
+                    id: catName, // Using name as ID for grouping
                     name: catName,
                     totalHours: 0,
                     billable: 0,
@@ -54,10 +67,11 @@ const CategoryBreakdownReport: React.FC<any> = ({ filters }) => {
         return filteredData.reduce((acc, curr) => acc + curr.totalHours, 0);
     }, [filteredData]);
 
-    const textColor = isDarkMode ? '#94a3b8' : '#64748b';
-    const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
-    const tooltipBg = isDarkMode ? '#0f172a' : '#fff';
-    const tooltipBorder = isDarkMode ? '#1e293b' : '#e2e8f0';
+    // Improved visibility for dark mode
+    const textColor = isDarkMode ? '#cbd5e1' : '#475569'; // slate-300 : slate-600
+    const gridColor = isDarkMode ? '#334155' : '#e2e8f0'; // slate-700 : slate-200
+    const tooltipBg = isDarkMode ? '#1e293b' : '#fff';
+    const tooltipBorder = isDarkMode ? '#334155' : '#e2e8f0';
 
     return (
         <div className="space-y-6">
@@ -87,7 +101,14 @@ const CategoryBreakdownReport: React.FC<any> = ({ filters }) => {
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: tooltipBg, borderRadius: '8px', border: `1px solid ${tooltipBorder}`, color: isDarkMode ? '#fff' : '#000' }}
+                                    contentStyle={{
+                                        backgroundColor: tooltipBg,
+                                        borderRadius: '12px',
+                                        border: `1px solid ${tooltipBorder}`,
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                        color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                    }}
+                                    itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                                 />
                                 <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ color: textColor }} />
                             </PieChart>
@@ -106,7 +127,15 @@ const CategoryBreakdownReport: React.FC<any> = ({ filters }) => {
                                 <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: textColor }} axisLine={false} tickLine={false} />
                                 <Tooltip
                                     cursor={{ fill: isDarkMode ? '#1e293b' : '#f8fafc' }}
-                                    contentStyle={{ backgroundColor: tooltipBg, borderRadius: '8px', border: `1px solid ${tooltipBorder}`, color: isDarkMode ? '#fff' : '#000' }}
+                                    contentStyle={{
+                                        backgroundColor: tooltipBg,
+                                        borderRadius: '12px',
+                                        border: `1px solid ${tooltipBorder}`,
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                        color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                    }}
+                                    itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
+                                    labelStyle={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}
                                 />
                                 <Bar dataKey="totalHours" radius={[0, 4, 4, 0]} barSize={20} name="Total Hours">
                                     {filteredData.map((entry, index) => (
@@ -147,9 +176,9 @@ const CategoryBreakdownReport: React.FC<any> = ({ filters }) => {
                                             <span className="h-3 w-3 rounded-full mr-3" style={{ backgroundColor: cat.color }}></span>
                                             {cat.name}
                                         </td>
-                                        <td className="px-6 py-4 text-right text-slate-900 dark:text-white font-medium">{cat.totalHours}h</td>
-                                        <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400">{cat.billable}h</td>
-                                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400">{cat.nonBillable}h</td>
+                                        <td className="px-6 py-4 text-right text-slate-900 dark:text-white font-medium">{formatDuration(cat.totalHours * 60)}</td>
+                                        <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400">{formatDuration(cat.billable * 60)}</td>
+                                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400">{formatDuration(cat.nonBillable * 60)}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-center">
                                                 <div className="w-16 bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mr-2">
@@ -174,4 +203,3 @@ const CategoryBreakdownReport: React.FC<any> = ({ filters }) => {
 };
 
 export default CategoryBreakdownReport;
-

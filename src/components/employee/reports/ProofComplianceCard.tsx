@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { TimeEntry } from '../../../types/schema';
+import { backendService } from '../../../services/backendService';
 
 interface ProofComplianceCardProps {
     entries: TimeEntry[];
@@ -18,9 +19,10 @@ const ProofComplianceCard: React.FC<ProofComplianceCardProps> = ({ entries }) =>
             // For now, let's say "Drafting" and "Site Visits" require proof.
             // Mock enrichment:
             const categoryId = e.categoryId;
-            // Assume category IDs '1' and '2' require proof, or just use ID directly if strings. 
-            // Use mock logic since names aren't here:
-            const proofRequired = ['Drafting', 'Site Visits'].includes(categoryId); // If categoryId is name, fine. If ID, this fails silently.
+            const categoryName = backendService.getTaskCategories().find(c => c.id === categoryId)?.name || categoryId;
+
+            // Assume category names 'Drafting' and 'Site Visits' require proof
+            const proofRequired = ['Drafting', 'Site Visits', 'Construction'].includes(categoryName);
             // Mock proofUploaded based on random or description
             const proofUploaded = e.description?.includes('proof') || false;
 

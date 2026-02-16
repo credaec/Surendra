@@ -56,11 +56,13 @@ const ProjectBudgetBurnChart: React.FC = () => {
                         <Tooltip
                             cursor={{ fill: isDarkMode ? '#1e293b' : '#f8fafc' }}
                             contentStyle={{
-                                backgroundColor: isDarkMode ? '#0f172a' : '#fff',
+                                backgroundColor: isDarkMode ? '#1e293b' : '#fff',
                                 borderRadius: '12px',
-                                border: isDarkMode ? '1px solid #1e293b' : '1px solid #e2e8f0',
-                                color: isDarkMode ? '#fff' : '#000'
+                                border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                color: isDarkMode ? '#f8fafc' : '#0f172a'
                             }}
+                            itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                         />
                         <Legend verticalAlign="top" align="right" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', color: textColor }} />
                         <Bar dataKey="planned" fill={barBaseColor} name="Planned Budget" radius={[4, 4, 0, 0]} />

@@ -9,7 +9,7 @@ import { cn } from '../../../lib/utils';
 export type SettingsSection =
     | 'COMPANY' | 'USERS' | 'PROJECTS' | 'TIMESHEETS'
     | 'BILLING' | 'PAYROLL' | 'CATEGORIES' | 'NOTIFICATIONS'
-    | 'EMAIL' | 'SECURITY' | 'BACKUP' | 'DATA' | 'INTEGRATIONS';
+    | 'EMAIL' | 'SECURITY' | 'BACKUP' | 'DATA' | 'INTEGRATIONS' | 'ROLES';
 
 interface SettingsSidebarProps {
     activeSection: SettingsSection;
@@ -30,6 +30,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ activeSection, onSele
         { id: 'SECURITY', label: 'Security & Access', icon: Shield },
         { id: 'BACKUP', label: 'Backup & Restore', icon: Cloud },
         { id: 'DATA', label: 'Audit Logs', icon: Database },
+        { id: 'ROLES', label: 'Project Roles', icon: Shield },
         { id: 'INTEGRATIONS', label: 'Integrations', icon: Zap },
     ];
 

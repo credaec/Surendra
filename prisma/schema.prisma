@@ -103,6 +103,7 @@ model Project {
   teamMembers    String? // JSON: { userId, role, accessLevel, rates }[]
   entryRules     String? // JSON
   alerts         String? // JSON
+  documents      String? // JSON: ProjectDocument[]
 
   // Metrics (Legacy/Cache)
   usedHours      Float   @default(0)

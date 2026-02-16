@@ -137,6 +137,35 @@ const TimerPage: React.FC = () => {
         }
     }, [user, location.state]); // Re-run if location changes (new intent) or user loads
 
+    // NEW: Poll for external state changes (Sync with Dashboard/other tabs)
+    useEffect(() => {
+        if (!user || isRunning) return; // If running locally, we trust our ref loop? 
+        // actually if running, we might still want to check if it was stopped elsewhere.
+        // But if we poll and it says stopped, we should stop local.
+
+        const checkExternal = async () => {
+            await backendService.refreshActiveTimer(user.id);
+            const active = backendService.getActiveTimer(user.id);
+
+            // If we think we are running/paused but backend says no active timer -> we should reset
+            if (!active && (isRunning || isPaused)) {
+                setIsRunning(false);
+                setIsPaused(false);
+                setElapsedSeconds(0);
+                setNotes('');
+            }
+
+            // If we think we are stopped but backend says active -> we should restore (e.g. started on dashboard)
+            if (active && !isRunning && !isPaused) {
+                // Restore logic (similar to initial load) - simplified
+                window.location.reload(); // Simplest way to re-trigger the initial load logic
+            }
+        };
+
+        const interval = setInterval(checkExternal, 5000); // Check every 5s
+        return () => clearInterval(interval);
+    }, [user, isRunning, isPaused]);
+
     // Auto-save Notes (Debounced) to prevent data loss on crash/force stop
     useEffect(() => {
         if (!user || (!isRunning && !isPaused)) return;
@@ -219,6 +248,7 @@ const TimerPage: React.FC = () => {
                 try {
                     // @ts-ignore
                     const timer = await backendService.resumeTimer(user.id);
+
                     if (timer && timer.startTime) {
                         // Update Refs
                         let start = new Date(timer.startTime).getTime();
@@ -229,7 +259,7 @@ const TimerPage: React.FC = () => {
                         let acc = 0;
                         if (timer.activityLogs) {
                             try {
-                                const logs = JSON.parse(timer.activityLogs);
+                                const logs = typeof timer.activityLogs === 'string' ? JSON.parse(timer.activityLogs) : timer.activityLogs;
                                 acc = logs.accumulatedSeconds || 0;
                             } catch (e) { }
                         }
@@ -299,6 +329,7 @@ const TimerPage: React.FC = () => {
 
     // ID to Name helper
     const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || id;
+    const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || id;
 
     return (
         <div className="max-w-[1600px] mx-auto pb-12">
@@ -318,7 +349,7 @@ const TimerPage: React.FC = () => {
                             isPaused={isPaused} // Assume we add this prop or just use styling
                             elapsedSeconds={elapsedSeconds}
                             project={selectedProject ? getProjectName(selectedProject) : undefined}
-                            task={selectedCategory || undefined}
+                            task={selectedCategory ? getCategoryName(selectedCategory) : undefined}
                             onStart={handleStart}
                             onPause={handlePause}
                             onStop={handleStopRequest}
@@ -348,6 +379,27 @@ const TimerPage: React.FC = () => {
                             >
                                 <Play className="h-5 w-5 fill-current" />
                                 Start Timer
+                            </button>
+                        </div>
+                    )}
+
+                    {!isRunning && !isPaused && recentEntries.length > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1">Last Active Session</p>
+                                <p className="font-bold text-slate-800 dark:text-white text-sm">
+                                    {projects.find(p => p.id === recentEntries[0].projectId)?.name || 'Unknown'} <span className="text-slate-400">•</span> {getCategoryName(recentEntries[0].categoryId)}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedProject(recentEntries[0].projectId);
+                                    setSelectedCategory(recentEntries[0].categoryId);
+                                    setTimeout(handleStart, 100);
+                                }}
+                                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+                            >
+                                <Play className="w-4 h-4 fill-current" /> Resume
                             </button>
                         </div>
                     )}

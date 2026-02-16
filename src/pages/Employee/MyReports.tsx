@@ -11,6 +11,9 @@ import type { TimeEntry, Project } from '../../types/schema';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, startOfDay, endOfDay, startOfWeek, addDays } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 const MyReportsPage: React.FC = () => {
     const { user } = useAuth();
@@ -108,7 +111,7 @@ const MyReportsPage: React.FC = () => {
             return {
                 ...entry,
                 projectName: project?.name || 'Unknown Project',
-                taskCategory: entry.categoryId,
+                taskCategory: backendService.getTaskCategories().find(c => c.id === entry.categoryId)?.name || entry.categoryId,
                 durationSeconds: entry.durationMinutes * 60
             };
         });
@@ -157,10 +160,102 @@ const MyReportsPage: React.FC = () => {
 
     const { showToast } = useToast();
 
-    const handleExport = (type: 'PDF' | 'EXCEL' | 'CSV') => {
+
+
+    const handleExport = async (type: 'PDF' | 'EXCEL' | 'CSV') => {
         if (type === 'PDF') {
-            showToast('Preparing PDF for print...', 'info');
-            setTimeout(() => window.print(), 500);
+            showToast('Generating PDF...', 'info');
+            try {
+                const doc = new jsPDF();
+                const pageWidth = doc.internal.pageSize.getWidth();
+
+                // 1. Header
+                doc.setFontSize(20);
+                doc.setTextColor(40, 40, 40);
+                doc.text('Employee Productivity Report', 14, 22);
+
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Generated for: ${user?.name || 'Employee'}`, 14, 30);
+                doc.text(`Date Range: ${dateRangeLabel}`, 14, 35);
+                doc.text(`Generated on: ${format(new Date(), 'MMM d, yyyy HH:mm')}`, 14, 40);
+
+                // 2. KPI Summary
+                doc.setDrawColor(200, 200, 200);
+                doc.line(14, 45, pageWidth - 14, 45);
+
+                let yPos = 55;
+                const kpiX = [14, 70, 130];
+
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`Total Hours: ${stats.totalHours.toFixed(1)}h`, kpiX[0], yPos);
+                doc.text(`Billable: ${stats.billableHours.toFixed(1)}h (${Math.round(stats.billablePercentage)}%)`, kpiX[1], yPos);
+                doc.text(`Productivity: ${stats.productivity}%`, kpiX[2], yPos);
+
+                yPos += 15;
+
+                // 3. Charts (Capture as Image)
+                const chartsContainer = document.getElementById('report-charts-container');
+                if (chartsContainer) {
+                    try {
+                        const canvas = await html2canvas(chartsContainer, { scale: 2 });
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgProps = doc.getImageProperties(imgData);
+                        const pdfWidth = pageWidth - 28;
+                        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                        // Check for page break
+                        if (yPos + pdfHeight > doc.internal.pageSize.getHeight() - 20) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+
+                        doc.addImage(imgData, 'PNG', 14, yPos, pdfWidth, pdfHeight);
+                        yPos += pdfHeight + 10;
+                    } catch (err) {
+                        console.error("Chart capture failed", err);
+                    }
+                }
+
+                // 4. Table
+                const tableRows = filteredEntries.map(e => {
+                    const project = projects.find(p => p.id === e.projectId);
+                    return [
+                        format(parseISO(e.date), 'MMM d, yyyy'),
+                        project?.name || 'Unknown',
+                        backendService.getTaskCategories().find(c => c.id === e.categoryId)?.name || e.categoryId,
+                        (e.durationMinutes / 60).toFixed(2) + ' h',
+                        e.isBillable ? 'Yes' : 'No',
+                        e.status
+                    ];
+                });
+
+                autoTable(doc, {
+                    startY: yPos > 250 ? undefined : yPos, // Auto-page if too low
+                    head: [['Date', 'Project', 'Task Category', 'Duration', 'Billable', 'Status']],
+                    body: tableRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [59, 130, 246] }, // Blue-500
+                    styles: { fontSize: 8 },
+                    margin: { top: 20 }
+                });
+
+                // Footer
+                const pageCount = (doc as any).internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150);
+                    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+                }
+
+                doc.save(`Report_${user?.name?.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+                showToast('PDF downloaded successfully!', 'success');
+            } catch (error) {
+                console.error("PDF Gen Error:", error);
+                showToast('Failed to generate PDF.', 'error');
+            }
             return;
         }
 
@@ -272,12 +367,14 @@ const MyReportsPage: React.FC = () => {
                 {/* Main Content (Charts & Breakdowns) - 8 Cols */}
                 <div className="xl:col-span-8">
                     <ErrorBoundary name="Charts">
-                        <ReportsCharts
-                            trendData={trendData}
-                            pieData={pieData}
-                            trendView={trendView}
-                            onTrendViewChange={setTrendView}
-                        />
+                        <div id="report-charts-container">
+                            <ReportsCharts
+                                trendData={trendData}
+                                pieData={pieData}
+                                trendView={trendView}
+                                onTrendViewChange={setTrendView}
+                            />
+                        </div>
                     </ErrorBoundary>
 
                     <ErrorBoundary name="Breakdown">

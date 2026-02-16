@@ -5,6 +5,7 @@ import type { TimeEntry } from '../../types/schema';
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, parseISO, subWeeks, startOfMonth, endOfMonth } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { Clock } from 'lucide-react';
+import { formatDuration } from '../../lib/utils';
 
 const HoursTrendChart: React.FC = () => {
     const { isDarkMode } = useTheme();
@@ -86,11 +87,11 @@ const HoursTrendChart: React.FC = () => {
                     <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
                                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                             </linearGradient>
                             <linearGradient id="colorBillable" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
                                 <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                             </linearGradient>
                         </defs>
@@ -110,10 +111,11 @@ const HoursTrendChart: React.FC = () => {
                             dx={-10}
                         />
                         <Tooltip
+                            cursor={{ stroke: isDarkMode ? '#334155' : '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
                             contentStyle={{
-                                backgroundColor: isDarkMode ? '#0f172a' : '#fff',
-                                borderRadius: '1rem',
-                                border: isDarkMode ? '1px solid #1e293b' : '1px solid #e2e8f0',
+                                backgroundColor: isDarkMode ? '#1e293b' : '#fff',
+                                borderRadius: '12px',
+                                border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0',
                                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                             }}
                             itemStyle={{
@@ -129,10 +131,29 @@ const HoursTrendChart: React.FC = () => {
                                 letterSpacing: '0.05em',
                                 fontWeight: '900'
                             }}
-                            labelFormatter={(label, payload) => payload[0]?.payload.fullDate || label}
+                            labelFormatter={(label: any, payload: any) => payload[0]?.payload.fullDate || label}
+                            formatter={(value: number) => [formatDuration(value * 60), undefined]}
                         />
-                        <Area type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorTotal)" name="Total Hours" activeDot={{ r: 6, strokeWidth: 0 }} />
-                        <Area type="monotone" dataKey="billable" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorBillable)" name="Billable Hours" activeDot={{ r: 6, strokeWidth: 0 }} />
+                        <Area
+                            type="monotone"
+                            dataKey="total"
+                            stroke="#3b82f6"
+                            strokeWidth={4}
+                            fillOpacity={1}
+                            fill="url(#colorTotal)"
+                            name="Total Hours"
+                            activeDot={{ r: 6, strokeWidth: 3, stroke: isDarkMode ? '#0f172a' : '#fff' }}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="billable"
+                            stroke="#10b981"
+                            strokeWidth={4}
+                            fillOpacity={1}
+                            fill="url(#colorBillable)"
+                            name="Billable Hours"
+                            activeDot={{ r: 6, strokeWidth: 3, stroke: isDarkMode ? '#0f172a' : '#fff' }}
+                        />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>

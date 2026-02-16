@@ -6,6 +6,7 @@ import {
 import { ArrowRight } from 'lucide-react';
 import { backendService } from '../../../../services/backendService';
 import { useTheme } from '../../../../context/ThemeContext';
+import { formatDuration } from '../../../../lib/utils';
 
 const EmployeeProductivityReport: React.FC<any> = ({ filters }) => {
     const { isDarkMode } = useTheme();
@@ -152,12 +153,23 @@ const EmployeeProductivityReport: React.FC<any> = ({ filters }) => {
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: textColor, fontSize: 12 }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fill: textColor, fontSize: 12 }} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: tooltipBg, borderRadius: '8px', border: `1px solid ${tooltipBorder}`, color: isDarkMode ? '#fff' : '#000' }}
                                     cursor={{ fill: isDarkMode ? '#1e293b' : '#f8fafc' }}
+                                    contentStyle={{
+                                        backgroundColor: tooltipBg,
+                                        borderRadius: '12px',
+                                        border: `1px solid ${tooltipBorder}`,
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                        color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                    }}
+                                    itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
+                                    labelStyle={{ color: isDarkMode ? '#94a3b8' : '#64748b' }}
                                 />
-                                <Legend wrapperStyle={{ paddingTop: 20 }} />
+                                <Legend
+                                    wrapperStyle={{ paddingTop: 20 }}
+                                    formatter={(value) => <span style={{ color: textColor }}>{value}</span>}
+                                />
                                 <Bar dataKey="billable" name="Billable Hours" fill="#3b82f6" radius={[4, 4, 0, 0]} stackId="a" />
-                                <Bar dataKey="nonBillable" name="Non-Billable" fill={isDarkMode ? '#475569' : '#94a3b8'} radius={[4, 4, 0, 0]} stackId="a" />
+                                <Bar dataKey="nonBillable" name="Non-Billable" fill={isDarkMode ? '#64748b' : '#94a3b8'} radius={[4, 4, 0, 0]} stackId="a" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -183,9 +195,20 @@ const EmployeeProductivityReport: React.FC<any> = ({ filters }) => {
                                     <Cell fill={isDarkMode ? '#1e293b' : '#e2e8f0'} />
                                 </Pie>
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: tooltipBg, borderRadius: '8px', border: `1px solid ${tooltipBorder}`, color: isDarkMode ? '#fff' : '#000' }}
+                                    contentStyle={{
+                                        backgroundColor: tooltipBg,
+                                        borderRadius: '12px',
+                                        border: `1px solid ${tooltipBorder}`,
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                        color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                    }}
+                                    itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                                 />
-                                <Legend verticalAlign="bottom" height={36} />
+                                <Legend
+                                    verticalAlign="bottom"
+                                    height={36}
+                                    formatter={(value) => <span style={{ color: textColor }}>{value}</span>}
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-x-0 bottom-[140px] flex items-center justify-center pointer-events-none">
@@ -236,9 +259,9 @@ const EmployeeProductivityReport: React.FC<any> = ({ filters }) => {
                                         className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer"
                                     >
                                         <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{emp.name}</td>
-                                        <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400">{emp.totalHours}h</td>
-                                        <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400 font-medium">{emp.billable}h</td>
-                                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-500">{emp.nonBillable}h</td>
+                                        <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400">{formatDuration(emp.totalHours * 60)}</td>
+                                        <td className="px-6 py-4 text-right text-emerald-600 dark:text-emerald-400 font-medium">{formatDuration(emp.billable * 60)}</td>
+                                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-500">{formatDuration(emp.nonBillable * 60)}</td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${emp.utilization >= 80 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400' :
                                                 emp.utilization >= 70 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
@@ -249,8 +272,9 @@ const EmployeeProductivityReport: React.FC<any> = ({ filters }) => {
                                         <td className="px-6 py-4 text-center text-slate-600 dark:text-slate-400">{emp.activeProjects}</td>
                                         <td className="px-6 py-4 text-slate-700 dark:text-slate-300">
                                             <div className="flex items-center">
-                                                <span className={`h-2 w-2 rounded-full mr-2 ${emp.status === 'All Approved' ? 'bg-emerald-500' :
-                                                    emp.status === 'Pending' ? 'bg-amber-500' : 'bg-red-500'
+                                                <span className={`h-2 w-2 rounded-full mr-2 ${(emp.status === 'All Approved' || emp.status === 'Working' || emp.status === 'Active') ? 'bg-emerald-500' :
+                                                    emp.status === 'Pending' ? 'bg-amber-500' :
+                                                        'bg-red-500'
                                                     }`}></span>
                                                 {emp.status}
                                             </div>

@@ -140,31 +140,6 @@ const MyProjectsPage: React.FC = () => {
         navigate(`/employee/projects/${projectId}`);
     };
 
-    // Error Boundary (Inline)
-    class ErrorBoundary extends React.Component<{ name: string, children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
-        constructor(props: any) {
-            super(props);
-            this.state = { hasError: false, error: null };
-        }
-        static getDerivedStateFromError(error: Error) {
-            return { hasError: true, error };
-        }
-        componentDidCatch(error: Error, errorInfo: any) {
-            console.error(`Error in ${this.props.name}:`, error, errorInfo);
-        }
-        render() {
-            if (this.state.hasError) {
-                return (
-                    <div className="p-4 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                        <strong>Error in {this.props.name}:</strong>
-                        <pre className="mt-2 text-xs overflow-auto">{this.state.error?.message}</pre>
-                    </div>
-                );
-            }
-            return this.props.children;
-        }
-    }
-
     return (
         <div className="max-w-[1600px] mx-auto pb-12">
 
@@ -190,6 +165,7 @@ const MyProjectsPage: React.FC = () => {
                         projects={filteredProjects}
                         onStartTimer={handleStartTimer}
                         onViewDetails={handleViewDetails}
+                        viewMode={viewMode}
                     />
                 ) : (
                     <EmptyState onRefresh={() => { setSearchQuery(''); setStatusFilter('ACTIVE'); }} />
@@ -199,6 +175,31 @@ const MyProjectsPage: React.FC = () => {
         </div>
     );
 };
+
+// Error Boundary (Moved Outside)
+class ErrorBoundary extends React.Component<{ name: string, children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+    constructor(props: any) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error: Error, errorInfo: any) {
+        console.error(`Error in ${this.props.name}:`, error, errorInfo);
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="p-4 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    <strong>Error in {this.props.name}:</strong>
+                    <pre className="mt-2 text-xs overflow-auto">{this.state.error?.message}</pre>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
 export default MyProjectsPage;
 

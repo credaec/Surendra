@@ -3,6 +3,8 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
 } from 'recharts';
+import { useTheme } from '../../../context/ThemeContext';
+import { formatDuration } from '../../../lib/utils';
 
 interface ReportsChartsProps {
     trendData: { name: string; hours: number }[];
@@ -12,10 +14,11 @@ interface ReportsChartsProps {
 }
 
 const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData, trendView, onTrendViewChange }) => {
+    const { isDarkMode } = useTheme();
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
-            {/* Chart A: Hours Trend */}
             {/* Chart A: Hours Trend */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
                 <div className="flex items-center justify-between mb-6">
@@ -40,33 +43,42 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData, trend
                         <AreaChart data={trendData}>
                             <defs>
                                 <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
                                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
                             <XAxis
                                 dataKey="name"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                tick={{ fontSize: 12, fill: isDarkMode ? '#94a3b8' : '#64748b' }}
                             />
                             <YAxis
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fontSize: 12, fill: '#64748b' }}
+                                tick={{ fontSize: 12, fill: isDarkMode ? '#94a3b8' : '#64748b' }}
                             />
                             <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                cursor={{ stroke: isDarkMode ? '#334155' : '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                contentStyle={{
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#fff',
+                                    borderRadius: '12px',
+                                    border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0',
+                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                    color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                }}
+                                itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
+                                formatter={(value: number) => [formatDuration(value * 60), 'Hours']}
                             />
                             <Area
                                 type="monotone"
                                 dataKey="hours"
                                 stroke="#3b82f6"
-                                strokeWidth={2}
+                                strokeWidth={3}
                                 fillOpacity={1}
                                 fill="url(#colorHours)"
+                                activeDot={{ r: 6, strokeWidth: 2, stroke: isDarkMode ? '#0f172a' : '#fff' }}
                             />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -87,15 +99,29 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ trendData, pieData, trend
                                 outerRadius={80}
                                 paddingAngle={5}
                                 dataKey="value"
+                                stroke={isDarkMode ? '#0f172a' : '#fff'}
+                                strokeWidth={2}
                             >
                                 {pieData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
                                 ))}
                             </Pie>
                             <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                contentStyle={{
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#fff',
+                                    borderRadius: '12px',
+                                    border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0',
+                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                    color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                }}
+                                itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                             />
-                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                            <Legend
+                                verticalAlign="bottom"
+                                height={36}
+                                iconType="circle"
+                                wrapperStyle={{ paddingTop: '10px' }}
+                            />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>

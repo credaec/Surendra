@@ -3,7 +3,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { ArrowRight, AlertTriangle } from 'lucide-react';
-import { cn } from '../../../../lib/utils';
+import { cn, formatDuration } from '../../../../lib/utils';
 import { backendService } from '../../../../services/backendService';
 import { useTheme } from '../../../../context/ThemeContext';
 
@@ -114,7 +114,7 @@ const ProjectPerformanceReport: React.FC<any> = ({ filters }) => {
 
     const formatTooltip = (value: any) => {
         if (viewMode === 'cost') return `$${(value || 0).toLocaleString()}`;
-        return `${(value || 0).toLocaleString()}h`;
+        return formatDuration((value || 0) * 60);
     };
 
     const textColor = isDarkMode ? '#94a3b8' : '#64748b';
@@ -167,8 +167,15 @@ const ProjectPerformanceReport: React.FC<any> = ({ filters }) => {
                             />
                             <Tooltip
                                 cursor={{ fill: isDarkMode ? '#1e293b' : '#f8fafc' }}
-                                contentStyle={{ backgroundColor: tooltipBg, borderRadius: '8px', border: `1px solid ${tooltipBorder}`, color: isDarkMode ? '#fff' : '#000' }}
+                                contentStyle={{
+                                    backgroundColor: tooltipBg,
+                                    borderRadius: '12px',
+                                    border: `1px solid ${tooltipBorder}`,
+                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                    color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                }}
                                 formatter={formatTooltip}
+                                itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                             />
                             <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingTop: 0, paddingBottom: 20 }} />
                             <Bar dataKey="budget" name={viewMode === 'cost' ? "Total Budget ($)" : "Budget (Hrs)"} fill={isDarkMode ? '#1e293b' : '#e2e8f0'} radius={[4, 4, 0, 0]} barSize={32} />
@@ -220,7 +227,7 @@ const ProjectPerformanceReport: React.FC<any> = ({ filters }) => {
                                             <div className="text-xs text-slate-500 dark:text-slate-400">{project.client}</div>
                                         </td>
                                         <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400 font-mono">{project.budgetHours}</td>
-                                        <td className="px-6 py-4 text-right text-slate-900 dark:text-white font-mono font-medium">{project.actualHours}</td>
+                                        <td className="px-6 py-4 text-right text-slate-900 dark:text-white font-mono font-medium">{formatDuration(project.actualHours * 60)}</td>
                                         <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400 font-mono">${project.budgetAmt.toLocaleString()}</td>
                                         <td className="px-6 py-4 text-right text-slate-900 dark:text-white font-mono font-medium">${project.usedAmt.toLocaleString()}</td>
                                         <td className="px-6 py-4 text-center">
@@ -266,4 +273,3 @@ const ProjectPerformanceReport: React.FC<any> = ({ filters }) => {
 };
 
 export default ProjectPerformanceReport;
-

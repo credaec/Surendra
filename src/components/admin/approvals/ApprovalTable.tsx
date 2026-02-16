@@ -40,7 +40,7 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
     const getStatusBadge = (status: ApprovalRequest['status']) => {
         switch (status) {
             case 'SUBMITTED':
-                return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-200 dark:border-blue-800">Submitted</span>;
+                return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800"><Clock className="w-3 h-3 mr-1" /> Pending</span>;
             case 'PENDING':
                 return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800"><Clock className="w-3 h-3 mr-1" /> Pending</span>;
             case 'APPROVED':
@@ -128,7 +128,7 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
                                         {getStatusBadge(item.status)}
                                     </td>
                                     <td className="px-5 py-4 text-right">
-                                        <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end space-x-2">
                                             <button
                                                 onClick={() => onView(item)}
                                                 className="p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all shadow-sm active:scale-90"

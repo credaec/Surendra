@@ -92,10 +92,10 @@ const LiveStatusTable: React.FC = () => {
                 <table className="w-full text-left text-sm whitespace-nowrap">
                     <thead className="bg-slate-50/50 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Employee</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Current Tracking</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Daily Total</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-right">Status</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Employee</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Current Tracking</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Daily Total</th>
+                            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-right">Status</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -113,11 +113,11 @@ const LiveStatusTable: React.FC = () => {
                                                     <User className="h-5 w-5 text-slate-400 dark:text-slate-500" />
                                                 </div>
                                                 <div>
-                                                    <div className="font-black text-slate-900 dark:text-white leading-tight transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">{timer.userName}</div>
+                                                    <div className="font-bold text-slate-900 dark:text-white leading-tight transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">{timer.userName}</div>
                                                     {isOvertime && (
                                                         <div className="mt-1 flex items-center">
                                                             <div className="h-1.5 w-1.5 rounded-full bg-purple-500 mr-2 animate-pulse" />
-                                                            <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400">Overtime Warning</span>
+                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400">Overtime Warning</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -130,7 +130,7 @@ const LiveStatusTable: React.FC = () => {
                                                     <span>{timer.projectName}</span>
                                                 </div>
                                                 <div className="flex items-center space-x-3">
-                                                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center">
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center">
                                                         <Clock className="h-3 w-3 mr-1.5" />
                                                         {timer.taskCategory}
                                                     </div>
@@ -155,7 +155,7 @@ const LiveStatusTable: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-5 text-right">
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-colors">
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-colors">
                                                 Active Now
                                             </span>
                                         </td>

@@ -1,8 +1,9 @@
 import React from 'react';
-import { cn } from '../../../lib/utils';
+import { cn, formatDuration } from '../../../lib/utils';
 import { DollarSign, Search, Eye } from 'lucide-react';
 
 import type { TimeEntry } from '../../../types/schema';
+import { backendService } from '../../../services/backendService';
 
 interface ExtendedTimeEntry extends TimeEntry {
     projectName: string;
@@ -24,14 +25,8 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
         e.taskCategory.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const formatDuration = (seconds: number) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        return `${h}h ${m}m`;
-    };
-
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="font-semibold text-slate-900 dark:text-white">Detailed Time Entries</h3>
@@ -43,15 +38,15 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
                         placeholder="Search project/category..."
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 transition-colors"
+                        className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-500/40 w-full sm:w-64 transition-all shadow-sm"
                     />
                 </div>
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase text-xs font-semibold">
+            <div className="overflow-auto border-t border-slate-100 dark:border-slate-800" style={{ height: '600px' }}>
+                <table className="w-full text-sm text-left relative">
+                    <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase text-xs font-semibold sticky top-0 z-10 shadow-sm">
                         <tr>
                             <th className="px-6 py-3">Date</th>
                             <th className="px-6 py-3">Project</th>
@@ -65,15 +60,15 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ entries, searchQuery, onSea
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filteredEntries.map((entry) => (
                             <tr key={entry.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{entry.date}</td>
+                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{new Date(entry.date).toLocaleDateString()}</td>
                                 <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{entry.projectName}</td>
                                 <td className="px-6 py-4">
                                     <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-xs font-medium border border-slate-200 dark:border-slate-700">
-                                        {entry.taskCategory}
+                                        {backendService.getTaskCategories().find(c => c.id === entry.taskCategory)?.name || entry.taskCategory}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right font-mono font-medium text-slate-900 dark:text-white">
-                                    {formatDuration(entry.durationSeconds)}
+                                    {formatDuration(entry.durationSeconds, 'seconds')}
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center justify-center space-x-2">

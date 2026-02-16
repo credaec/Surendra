@@ -41,11 +41,13 @@ const ReportsBreakdown: React.FC<ReportsBreakdownProps> = ({ entries }) => {
     // Calculate Category Breakdown
     const categoryStats = useMemo(() => {
         const stats = new Map<string, number>();
+        const categories = backendService.getTaskCategories();
 
         entries.forEach(e => {
             const hours = e.durationMinutes / 60;
-            // Use categoryId as name for now
-            stats.set(e.categoryId, (stats.get(e.categoryId) || 0) + hours);
+            const category = categories.find(c => c.id === e.categoryId);
+            const name = category?.name || e.categoryId;
+            stats.set(name, (stats.get(name) || 0) + hours);
         });
 
         return Array.from(stats.entries()).map(([name, hours]) => ({

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PauseCircle, MonitorPlay, Clock } from 'lucide-react';
 import { backendService } from '../../../services/backendService';
+import { formatDuration } from '../../../lib/utils';
 import type { TimeEntry } from '../../../types/schema';
 
 // Extended type for Live active timers which have extra UI metadata stored
@@ -104,7 +105,7 @@ const LiveTrackingTab: React.FC = () => {
 
                             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 -mx-5 -mb-5 px-5 pb-5">
                                 <div className="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                                    {Math.floor(timer.durationMinutes / 60)}h {timer.durationMinutes % 60}m
+                                    {formatDuration(timer.durationMinutes)}
                                 </div>
                                 <button
                                     onClick={() => handleForceStop(timer.userId, timer.userName)}
@@ -131,4 +132,3 @@ const LiveTrackingTab: React.FC = () => {
 };
 
 export default LiveTrackingTab;
-

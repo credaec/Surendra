@@ -10,12 +10,16 @@ import TimesheetDetailView from '../../components/admin/timesheet/TimesheetDetai
 import ManualEntryModal from '../../components/admin/ManualEntryModal';
 import { backendService } from '../../services/backendService';
 
+import { useSearchParams } from 'react-router-dom';
+
 const AdminTimesheetsPage: React.FC = () => {
+    const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState<'weekly' | 'logs' | 'live'>('weekly');
 
     // Filter States
     const [dateRange, setDateRange] = useState('this_week');
-    const [filterEmployeeId, setFilterEmployeeId] = useState('all');
+    // Initialize filter from URL if present, otherwise default to 'all'
+    const [filterEmployeeId, setFilterEmployeeId] = useState(searchParams.get('employeeId') || 'all');
     const [filterProjectId, setFilterProjectId] = useState('all');
     const [filterClientId, setFilterClientId] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -23,6 +27,14 @@ const AdminTimesheetsPage: React.FC = () => {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0); // Trigger re-feth
+
+    // Update filter if URL changes (optional, but good for back/forward nav)
+    React.useEffect(() => {
+        const empId = searchParams.get('employeeId');
+        if (empId) {
+            setFilterEmployeeId(empId);
+        }
+    }, [searchParams]);
 
     const handleViewDetail = (employeeId: string) => {
         setSelectedEmployeeId(employeeId);

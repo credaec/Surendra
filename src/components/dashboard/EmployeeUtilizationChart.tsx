@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { backendService } from '../../services/backendService';
+import { useTheme } from '../../context/ThemeContext';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { X, ExternalLink } from 'lucide-react';
 
@@ -8,6 +9,7 @@ const EmployeeUtilizationChart: React.FC = () => {
     const [chartData, setChartData] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [fullData, setFullData] = useState<any[]>([]);
+    const { isDarkMode } = useTheme();
 
     useEffect(() => {
         const loadData = () => {
@@ -57,14 +59,17 @@ const EmployeeUtilizationChart: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const textColor = isDarkMode ? '#94a3b8' : '#64748b';
+    const gridColor = isDarkMode ? '#334155' : '#e2e8f0';
+
     return (
         <>
-            <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm h-96 flex flex-col">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm h-96 flex flex-col transition-colors">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-semibold text-slate-800">Employee Utilization %</h3>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Employee Utilization %</h3>
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
+                        className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center"
                     >
                         View All <ExternalLink className="h-3 w-3 ml-1" />
                     </button>
@@ -73,12 +78,19 @@ const EmployeeUtilizationChart: React.FC = () => {
                 <div className="h-full w-full" style={{ minWidth: 0, minHeight: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
+                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={gridColor} />
                             <XAxis type="number" domain={[0, 100]} hide />
-                            <YAxis dataKey="shortName" type="category" axisLine={false} tickLine={false} width={60} tick={{ fill: '#64748b', fontSize: 12 }} />
+                            <YAxis dataKey="shortName" type="category" axisLine={false} tickLine={false} width={60} tick={{ fill: textColor, fontSize: 12 }} />
                             <Tooltip
-                                cursor={{ fill: '#f1f5f9' }}
-                                contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                                cursor={{ fill: isDarkMode ? '#1e293b' : '#f1f5f9' }}
+                                contentStyle={{
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#fff',
+                                    borderRadius: '12px',
+                                    border: isDarkMode ? '1px solid #334155' : '1px solid #e2e8f0',
+                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                    color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                }}
+                                itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                             />
                             <Bar dataKey="utilization" radius={[0, 4, 4, 0]} barSize={20} name="Utilization %">
                                 {chartData.map((entry, index) => (

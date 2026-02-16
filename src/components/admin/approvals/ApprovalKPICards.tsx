@@ -1,6 +1,6 @@
 import React from 'react';
-import { Clock, XCircle, AlertTriangle, Timer, DollarSign, Send } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { Clock, XCircle, AlertTriangle, Timer, DollarSign, CheckCircle } from 'lucide-react';
+import { cn, formatDuration } from '../../../lib/utils';
 import type { ApprovalRequest } from '../../../services/backendService';
 
 interface ApprovalKPICardsProps {
@@ -14,8 +14,11 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
     // Calculate metrics based on the passed approvals data
     // In a real app, these might come from a separate "stats" API to avoid calculating on client if data is huge
     const stats = {
-        submitted: approvals.filter(a => a.status === 'SUBMITTED').length,
-        pending: approvals.filter(a => a.status === 'PENDING').length,
+        // Submitted now represents ALL requests (Total)
+        submitted: approvals.length,
+        // Pending now represents items waiting for approval (DB status 'SUBMITTED')
+        pending: approvals.filter(a => a.status === 'SUBMITTED').length,
+        approved: approvals.filter(a => a.status === 'APPROVED').length,
         rejected: approvals.filter(a => a.status === 'REJECTED').length,
         overdue: approvals.filter(a => a.status === 'OVERDUE').length,
         totalHours: approvals.reduce((acc, curr) => acc + curr.totalHours, 0),
@@ -25,9 +28,9 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
     const cards = [
         {
             title: 'Submitted',
-            value: stats.submitted,
-            icon: Send,
-            statusKey: 'SUBMITTED',
+            value: stats.approved,
+            icon: CheckCircle,
+            statusKey: 'APPROVED',
             color: 'text-blue-600 dark:text-blue-400',
             bg: 'bg-blue-50 dark:bg-blue-500/10',
             border: 'border-blue-200 dark:border-blue-800'
@@ -36,11 +39,12 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
             title: 'Pending',
             value: stats.pending,
             icon: Clock,
-            statusKey: 'PENDING',
-            color: 'text-amber-600 dark:text-amber-400',
-            bg: 'bg-amber-50 dark:bg-amber-500/10',
-            border: 'border-amber-200 dark:border-amber-800'
+            statusKey: 'SUBMITTED', // Filters for Submitted (which label says Pending)
+            color: 'text-yellow-600 dark:text-yellow-400',
+            bg: 'bg-yellow-50 dark:bg-yellow-500/10',
+            border: 'border-yellow-200 dark:border-yellow-800'
         },
+
         {
             title: 'Rejected',
             value: stats.rejected,
@@ -100,7 +104,7 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
                     </div>
                 </div>
                 <div>
-                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{stats.totalHours.toFixed(1)}</span>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{formatDuration(stats.totalHours * 60)}</span>
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Hours tracked</p>
                 </div>
             </div>
@@ -113,7 +117,7 @@ const ApprovalKPICards: React.FC<ApprovalKPICardsProps> = ({ approvals, onStatus
                     </div>
                 </div>
                 <div>
-                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{stats.billableHours.toFixed(1)}</span>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{formatDuration(stats.billableHours * 60)}</span>
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-2">Billable hours</p>
                 </div>
             </div>

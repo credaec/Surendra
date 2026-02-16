@@ -130,8 +130,15 @@ const ClientSummaryReport: React.FC<any> = ({ filters }) => {
                             />
                             <Tooltip
                                 cursor={{ fill: isDarkMode ? '#1e293b' : '#f8fafc' }}
-                                contentStyle={{ backgroundColor: tooltipBg, borderRadius: '8px', border: `1px solid ${tooltipBorder}`, color: isDarkMode ? '#fff' : '#000' }}
+                                contentStyle={{
+                                    backgroundColor: tooltipBg,
+                                    borderRadius: '12px',
+                                    border: `1px solid ${tooltipBorder}`,
+                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                    color: isDarkMode ? '#f8fafc' : '#0f172a'
+                                }}
                                 formatter={(value: any) => [`$${(value || 0).toLocaleString()}`, 'Billed Revenue']}
+                                itemStyle={{ color: isDarkMode ? '#f8fafc' : '#0f172a' }}
                             />
                             <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40}>
                                 {chartData.map((_, index) => (

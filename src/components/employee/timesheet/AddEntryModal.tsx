@@ -90,7 +90,9 @@ const AddEntryModal: React.FC<AddEntryModalProps> = ({ isOpen, onClose, onSave, 
                 status: 'PENDING' as const,
                 categoryId: formData.categoryId,
                 isBillable: editData?.isBillable !== undefined ? editData.isBillable : true,
-                date: formData.date
+                date: formData.date,
+                // Tag as Manual Entry
+                activityLogs: editData ? undefined : JSON.stringify({ source: 'MANUAL', action: 'CREATED_MANUALLY', timestamp: new Date().toISOString() })
             };
 
             if (editData) {

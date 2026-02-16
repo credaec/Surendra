@@ -3,12 +3,15 @@ import { Plus, Search, Filter, MoreHorizontal, Mail, Shield, User as UserIcon } 
 import { backendService, type User } from '../../services/backendService';
 import AddEmployeeModal from '../../components/admin/team/AddEmployeeModal';
 
+import { useSearchParams } from 'react-router-dom';
+
 const TeamPage: React.FC = () => {
+    const [searchParams] = useSearchParams();
     const [users, setUsers] = useState<User[]>([]);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterRole, setFilterRole] = useState<'ALL' | 'ADMIN' | 'EMPLOYEE'>('ALL');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
     const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [editingUser, setEditingUser] = useState<User | null>(null);

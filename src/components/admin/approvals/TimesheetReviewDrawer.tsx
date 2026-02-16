@@ -98,12 +98,27 @@ const TimesheetReviewDrawer: React.FC<TimesheetReviewDrawerProps> = ({
                         <div className="space-y-4">
                             {(() => {
                                 const entries = backendService.getEntries(approval.employeeId);
+                                // Filter by Week Range if available
+                                const filteredEntries = entries.filter(e => {
+                                    if (!approval.weekStartDate || !approval.weekEndDate) return true;
+                                    const date = new Date(e.date);
+                                    const start = new Date(approval.weekStartDate);
+                                    // Set start to beginning of day
+                                    start.setHours(0, 0, 0, 0);
+
+                                    const end = new Date(approval.weekEndDate);
+                                    // Set end to end of day
+                                    end.setHours(23, 59, 59, 999);
+
+                                    return date >= start && date <= end;
+                                });
+
                                 const projects = backendService.getProjects();
                                 const categories = backendService.getTaskCategories();
 
-                                return entries.length > 0 ? (
+                                return filteredEntries.length > 0 ? (
                                     <div className="space-y-3">
-                                        {entries.map(entry => {
+                                        {filteredEntries.map(entry => {
                                             const projName = projects.find(p => p.id === entry.projectId)?.name || 'Unknown Project';
                                             const catName = categories.find(c => c.id === entry.categoryId)?.name || 'General';
 
@@ -123,7 +138,22 @@ const TimesheetReviewDrawer: React.FC<TimesheetReviewDrawerProps> = ({
                                                             <div className="font-bold text-slate-900 dark:text-white text-base leading-tight">{projName}</div>
                                                             <div className="text-xs font-bold text-slate-500 dark:text-slate-500 mt-0.5 uppercase tracking-wide">{catName}</div>
                                                             <div className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2">
-                                                                {fmtDate(entry.date)} • {fmtTime(entry.startTime)} - {fmtTime(entry.endTime)}
+                                                                {(() => {
+                                                                    if (!entry.startTime || !entry.endTime) {
+                                                                        return `${fmtDate(entry.date)} • ${fmtTime(entry.startTime)} - ${fmtTime(entry.endTime)}`;
+                                                                    }
+                                                                    const start = parseISO(entry.startTime);
+                                                                    const end = parseISO(entry.endTime);
+                                                                    const isSameDay = start.getDate() === end.getDate() &&
+                                                                        start.getMonth() === end.getMonth() &&
+                                                                        start.getFullYear() === end.getFullYear();
+
+                                                                    if (isSameDay) {
+                                                                        return `${fmtDate(entry.startTime)} • ${fmtTime(entry.startTime)} - ${fmtTime(entry.endTime)}`;
+                                                                    } else {
+                                                                        return `${fmtDate(entry.startTime)} ${fmtTime(entry.startTime)} - ${fmtDate(entry.endTime)} ${fmtTime(entry.endTime)}`;
+                                                                    }
+                                                                })()}
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
@@ -149,11 +179,20 @@ const TimesheetReviewDrawer: React.FC<TimesheetReviewDrawerProps> = ({
                                                             if (entry.activityLogs) {
                                                                 try {
                                                                     const parsed = JSON.parse(entry.activityLogs);
-                                                                    // Future proofing: if we store logs array in JSON
-                                                                    if (Array.isArray(parsed.logs)) logs = parsed.logs;
+                                                                    if (Array.isArray(parsed.logs)) {
+                                                                        logs = parsed.logs;
+                                                                    } else if (parsed.logs) {
+                                                                        // If logs is string or single obj
+                                                                        logs.push(String(parsed.logs));
+                                                                    } else {
+                                                                        // Fallback: If entire obj is the log (e.g. { source: 'MANUAL', ... })
+                                                                        const timestamp = parsed.timestamp ? new Date(parsed.timestamp).toLocaleTimeString() : '';
+                                                                        const action = parsed.action || parsed.source || 'Updated';
+                                                                        logs.push(`${action} ${timestamp ? `at ${timestamp}` : ''}`);
+                                                                    }
                                                                 } catch (e) {
-                                                                    // If it was legacy array, it won't be string, but typescript expects string now. 
-                                                                    // If runtime data is still array, JSON.parse might fail or we might need type guard.
+                                                                    // If simple string
+                                                                    logs.push(entry.activityLogs);
                                                                 }
                                                             }
 
@@ -177,6 +216,23 @@ const TimesheetReviewDrawer: React.FC<TimesheetReviewDrawerProps> = ({
                                                                     </div>
                                                                 );
                                                             }
+                                                            return null;
+                                                        })()}
+                                                        {(() => {
+                                                            try {
+                                                                const logsObj = entry.activityLogs ? JSON.parse(entry.activityLogs) : {};
+                                                                // Handle both object (new) and array (legacy) log formats
+                                                                const isManual = logsObj.source === 'MANUAL';
+
+                                                                if (isManual) {
+                                                                    return (
+                                                                        <div className="flex items-center text-[10px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-widest mr-3" title="Added manually by employee">
+                                                                            <Edit2 className="h-3 w-3 mr-1" />
+                                                                            Manual
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                            } catch (e) { }
                                                             return null;
                                                         })()}
                                                         {entry.isEdited && (
@@ -210,7 +266,8 @@ const TimesheetReviewDrawer: React.FC<TimesheetReviewDrawerProps> = ({
                                 const entries = backendService.getEntries(approval.employeeId);
                                 const relevantEntries = entries.filter(e =>
                                     (e.status === 'SUBMITTED' || e.status === 'APPROVED') &&
-                                    approval.projects.includes(projects.find(p => p.id === e.projectId)?.name || '')
+                                    approval.projects.includes(projects.find(p => p.id === e.projectId)?.name || '') &&
+                                    (!approval.weekStartDate || !approval.weekEndDate || (new Date(e.date) >= new Date(approval.weekStartDate) && new Date(e.date) <= new Date(approval.weekEndDate)))
                                 );
 
                                 if (relevantEntries.length > 0) {

@@ -124,6 +124,16 @@ export interface Project {
     usedBudget?: number;
     billableHours: number;
     projectManagerId?: string; // Kept for quick lookup
+    documents?: ProjectDocument[];
+}
+
+export interface ProjectDocument {
+    id: string;
+    name: string;
+    size: string;
+    type: string;
+    uploadedAt: string;
+    uploadedBy: string;
 }
 
 export interface TaskCategory {
